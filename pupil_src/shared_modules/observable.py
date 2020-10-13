@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import functools
 import inspect
+import types
 import weakref
 
 
@@ -61,7 +62,7 @@ class Observable:
         Args:
             method_name (String): The name of a bound method to which the observer
                 will be added. Unbound methods (i.e. static and class methods) are NOT
-                supported.
+                supported. Additionally, private methods are not supported.
             observer (Callable): Will be called every time the method is invoked.
 
         Raises:
@@ -69,7 +70,8 @@ class Observable:
                 the class
             TypeError: The attribute specified by method_name is
                 1) no method, or
-                2) a class or static method.
+                2) a class or static method, or
+                3) a private method.
 
         """
         add_observer(self, method_name, observer)
@@ -130,9 +132,9 @@ def add_observer(obj, method_name, observer):
     Observable and use the corresponding method there.
 
     """
-    observable = _get_wrapper_and_create_if_not_exists(obj, method_name)
-    observable.add_observer(observer)
-    _install_protection_descriptor_if_not_exists(obj, method_name)
+    wrapper = _get_wrapper_and_create_if_not_exists(obj, method_name)
+    wrapper.add_observer(observer)
+    _install_protection_descriptor_if_not_exists(wrapper)
 
 
 def _get_wrapper_and_create_if_not_exists(obj, method_name):
@@ -152,12 +154,6 @@ def _get_wrapper_and_create_if_not_exists(obj, method_name):
             f"Attribute '{method_name}' of object {obj} is a class method and, thus, "
             "cannot be observed!"
         )
-    elif _method_was_modified(obj, method_name):
-        raise TypeError(
-            f"Attribute '{method_name}' of object {obj} cannot be observed because it "
-            "is not part of the original class definition or has been assigned to a "
-            "method of a different object!"
-        )
     else:
         return _ObservableMethodWrapper(obj, method_name)
 
@@ -170,27 +166,24 @@ def _is_classmethod(obj, method_name):
         return False
 
 
-def _method_was_modified(obj, method_name):
-    method_in_original_class = hasattr(obj.__class__, method_name)
-    if not method_in_original_class:
-        return True
-    expected_func = getattr(obj.__class__, method_name)
-    expected_self = obj
-
-    method = getattr(obj, method_name)
-    bound_func = method.__func__
-    bound_self = method.__self__
-
-    return expected_self is not bound_self or expected_func is not bound_func
-
-
-def _install_protection_descriptor_if_not_exists(obj, method_name):
-    type_ = type(obj)
-    already_installed = isinstance(
-        getattr(type_, method_name), _WrapperProtectionDescriptor
-    )
+def _install_protection_descriptor_if_not_exists(wrapper):
+    # we need to get class and method name from the wrapped method, not the observed
+    # method. Let's say we have objects a = A() and b = B(). We monkey patch a.a = b.b
+    # and observe a.a. Then we need to install the descriptor for B.b (the wrapped
+    # method) and not for A.a (the observed method)
+    wrapped_method = wrapper.get_wrapped_bound_method()
+    cls_ = type(wrapped_method.__self__)
+    name = wrapped_method.__func__.__name__
+    if hasattr(cls_, name):
+        already_installed = isinstance(
+            getattr(cls_, name), _WrapperProtectionDescriptor
+        )
+    else:
+        # this can happen when the method was artificially created like, for example, in
+        # test_wrapped_monkey_patched_methods_not_referenced_elsewhere_are_called
+        already_installed = False
     if not already_installed:
-        setattr(type_, method_name, _WrapperProtectionDescriptor(type_, method_name))
+        setattr(cls_, name, _WrapperProtectionDescriptor(cls_, name))
 
 
 class _WrapperProtectionDescriptor:
@@ -200,7 +193,7 @@ class _WrapperProtectionDescriptor:
     """
 
     def __init__(self, type, name):
-        self.original = getattr(type, name)
+        self.original = getattr(type, name, None)
         assert not inspect.isdatadescriptor(self.original)
         self.name = name
 
@@ -213,10 +206,19 @@ class _WrapperProtectionDescriptor:
         # 3.) original is in object's class or some of its parents: We don't need to
         #     worry about if it's in the class or some parent, this is covered by
         #     getattr() in __init__
+        # 4.) if there is no original we raise the correct AttributeError
         if obj is not None and self.name in obj.__dict__:
             return obj.__dict__[self.name]
-        else:
+        elif self.original is not None:
             return self.original.__get__(obj, type)
+        elif type is None:
+            raise AttributeError(
+                f"type object '{obj.__name__}' has no attribute '{self.name}'"
+            )
+        else:
+            raise AttributeError(
+                f"'{type.__name__}' object has no attribute '{self.name}'"
+            )
 
     def __set__(self, obj, value):
         instance_method_wrapped = isinstance(
@@ -275,36 +277,58 @@ class _ObservableMethodWrapper:
         # the wrapper should not block garbage collection by reference counting for the
         # observable object. Hence, we need to avoid strong references to the object,
         # which would lead to cyclic references:
-        #   - The object is only referenced weakly
+        #   - The object is only referenced weakly. This is ok, because the wrapper
+        #     only needs to function as long as the object exists, so there is no need
+        #     to keep it alive with a strong reference.
         #   - The original wrapped method is only stored as an unbound method
+        #   - In case the originally wrapped method was monkey patched, we also need to
+        #     store the object it belongs to. This object we have to reference strongly
+        #     as the wrapper might be (or become) the only object referencing it. This
+        #     likely causes cyclic references hindering fast garbage collection in many
+        #     cases, but it cannot be avoided.
         self._obj_ref = weakref.ref(obj)
-        self._wrapped_func = getattr(obj.__class__, method_name)
+
+        wrapped_method = getattr(obj, method_name)
+        wrapped_method_self = wrapped_method.__self__
+        if wrapped_method_self is obj:
+            self._wrapped_method_self = None
+        else:
+            self._wrapped_method_self = wrapped_method_self
+        self._wrapped_method_func = wrapped_method.__func__
+
         self._method_name = method_name
         self._observers = []
         self._was_removed = False
-        self._patch_method_to_call_wrapper_instead()
 
-    def _patch_method_to_call_wrapper_instead(self):
-        functools.update_wrapper(self, self._wrapped_func)
+        self._patch_wrapper_to_look_like_original_method(wrapped_method)
+        self._patch_object_to_call_wrapper_instead()
+
+    def _patch_wrapper_to_look_like_original_method(self, wrapped_method):
+        functools.update_wrapper(self, wrapped_method)
         # functools adds a reference to the wrapped method that we need to delete
         # to avoid cyclic references
         self.__wrapped__ = None
+
+    def _patch_object_to_call_wrapper_instead(self):
         setattr(self._obj_ref(), self._method_name, self)
 
     def remove_wrapper(self):
         try:
             setattr(
-                self._obj_ref(), self._method_name, self._get_wrapped_bound_method()
+                self._obj_ref(),
+                self._method_name,
+                self.get_wrapped_bound_method(),
             )
         except ReplaceWrapperError:
             pass
         self._was_removed = True
 
-    def _get_wrapped_bound_method(self):
-        obj = self._obj_ref()
-        # see https://stackoverflow.com/a/1015405
-        original_bound_method = self._wrapped_func.__get__(obj, obj.__class__)
-        return original_bound_method
+    def get_wrapped_bound_method(self):
+        if self._wrapped_method_self is None:
+            wrapped_method_self = self._obj_ref()
+        else:
+            wrapped_method_self = self._wrapped_method_self
+        return types.MethodType(self._wrapped_method_func, wrapped_method_self)
 
     def add_observer(self, observer):
         # Observers that are bound methods are referenced weakly. That means,
@@ -315,7 +339,7 @@ class _ObservableMethodWrapper:
         # referenced strongly. Otherwise, lambdas or callables would get garbage
         # collected instantly.
         if inspect.ismethod(observer):
-            observer_ref = _WeakReferenceToMethod(observer)
+            observer_ref = _WeakReferenceToMethodByName(observer)
         else:
             observer_ref = _StrongReferenceToCallable(observer)
         self._observers.append(observer_ref)
@@ -339,7 +363,7 @@ class _ObservableMethodWrapper:
                 "elsewhere and called via this reference after you "
                 "removed the wrapper!"
             )
-        wrapped_bound_method = self._get_wrapped_bound_method()
+        wrapped_bound_method = self.get_wrapped_bound_method()
         try:
             return wrapped_bound_method(*args, **kwargs)
         except Exception:
@@ -379,38 +403,45 @@ class _StrongReferenceToCallable:
         return self._observer == other_observer
 
 
-class _WeakReferenceToMethod:
+class _WeakReferenceToMethodByName:
     # One cannot create weakrefs to bound class methods directly, because Python
     # returns a new reference each time some method is accessed and that reference
     # gets deleted instantly with weakref (see https://stackoverflow.com/a/19443624
     # for more details).
     # That's why we store two weak refs, one to the method's object and one to the
-    # unbound class method. Later, we can get the "actual" method via getattr (see e.g.
-    # https://stackoverflow.com/a/6975682)
-    def __init__(self, observer):
-        self._obj_ref = weakref.ref(observer.__self__)
-        self._func_ref = weakref.ref(observer.__func__)
+    # unbound class method. Later, we can get the "actual" method via getattr.
+    # The method is dereferenced by its name, i.e. if the method was replaced in the
+    # meantime by a different one, you would get the new one when dereferencing.
+    # This is to allow observers to be observed (see test case
+    # test_observers_can_be_observed for a longer explanation)
+    def __init__(self, method):
+        self._obj_ref = weakref.ref(method.__self__)
+        self._func_ref = weakref.ref(method.__func__)
         # Sanity check. Try to dereference method, to make sure that the arguments
         # are valid. Otherwise, in some cases (e.g. methods starting with '__')
         # trying to call the method will fail with _ReferenceNoLongerValidError,
         # and the observer will get silently removed. This check ensures that
         # the method is valid on creation.
-        _ = self._deref_method()
+        try:
+            _ = self._deref_method()
+        except _ReferenceNoLongerValidError:
+            raise TypeError(
+                f"The method {method} cannot be an observer, because it cannot be "
+                "referenced by its name. Most likely, you tried to add a private method"
+                " (starting with __) for which name mangling prevents referencing."
+            )
 
     def __call__(self, *args, **kwargs):
-        try:
-            method = self._deref_method()
-        except AttributeError:
-            raise _ReferenceNoLongerValidError
+        method = self._deref_method()
         return method(*args, **kwargs)
 
-    def __eq__(self, other_observer):
-        if inspect.ismethod(other_observer):
+    def __eq__(self, other):
+        if inspect.ismethod(other):
             obj_deref = self._obj_ref()
             func_deref = self._func_ref()
             if self._method_still_exists(func_deref, obj_deref):
-                equal_obj = obj_deref == other_observer.__self__
-                equal_func = func_deref == other_observer.__func__
+                equal_obj = obj_deref == other.__self__
+                equal_func = func_deref == other.__func__
                 return equal_obj and equal_func
             else:
                 return False
@@ -420,7 +451,14 @@ class _WeakReferenceToMethod:
     def _deref_method(self):
         obj_deref = self._obj_ref()
         func_deref = self._func_ref()
-        return getattr(obj_deref, func_deref.__name__)
+        if obj_deref is None or func_deref is None:
+            raise _ReferenceNoLongerValidError
+        # see https://stackoverflow.com/a/6975682)
+        try:
+            deref_method = getattr(obj_deref, func_deref.__name__)
+        except AttributeError:
+            raise _ReferenceNoLongerValidError from None
+        return deref_method
 
     @staticmethod
     def _method_still_exists(func_deref, obj_deref):
