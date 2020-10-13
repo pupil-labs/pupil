@@ -703,6 +703,16 @@ def world(
         ipc_pub.notify({"subject": "world_process.started"})
         logger.warning("Process started.")
 
+        if platform.system() == "Darwin":
+            # On macOS, calls to glfw.swap_buffers() deliberately take longer in case of
+            # occluded windows, based on the swap interval value. This causes an FPS drop
+            # and leads to problems when recording. To side-step this behaviour, the swap
+            # interval is set to zero.
+            #
+            # Read more about window occlusion on macOS here:
+            # https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/WorkWhenVisible.html
+            glfw.swap_interval(0)
+
         # Event loop
         while not glfw.window_should_close(main_window) and not process_was_interrupted:
 
