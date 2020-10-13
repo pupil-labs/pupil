@@ -152,7 +152,19 @@ class TestDifferentKindsOfObservers:
         observable.bound_method()
         mock_function.assert_called_once()
 
-    def test_private_method_cannot_be_observer(self, observable):
+    def test_private_method_cannot_be_observer_from_inside(self, observable):
+        class FakeController:
+            def __private_method(self):
+                pass
+
+            def add_private_observer(self, observable):
+                observable.add_observer("bound_method", self.__private_method)
+
+        controller = FakeController()
+        with pytest.raises(TypeError):
+            controller.add_private_observer(observable)
+
+    def test_private_method_cannot_be_observer_from_outside(self, observable):
         class FakeController:
             def __private_method(self):
                 pass
