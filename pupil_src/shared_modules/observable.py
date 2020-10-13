@@ -315,7 +315,9 @@ class _ObservableMethodWrapper:
     def remove_wrapper(self):
         try:
             setattr(
-                self._obj_ref(), self._method_name, self.get_wrapped_bound_method(),
+                self._obj_ref(),
+                self._method_name,
+                self.get_wrapped_bound_method(),
             )
         except ReplaceWrapperError:
             pass
