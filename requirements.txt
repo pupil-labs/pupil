@@ -26,17 +26,23 @@ pupil-apriltags==1.0.3
 pupil-detectors==1.1.1
 
 # pupil-labs/PyAV 0.4.5
-av @ https://github.com/pupil-labs/PyAV/archive/v0.4.5.zip ; platform_system != "Windows"
+# TODO: Replace the line below with the following:
+# av @ git+https://github.com/pupil-labs/PyAV@v0.4.5 ; platform_system != "Windows"
+# when the branch `add-pyproject` is merged and there is a new release
+av @ git+https://github.com/pupil-labs/PyAV@add-pyproject ; platform_system != "Windows"
 av @ https://github.com/pupil-labs/PyAV/releases/download/v0.4.5/av-0.4.5-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
 
 # pupil-labs/pyuvc
-uvc @ https://github.com/pupil-labs/pyuvc/archive/v0.13.zip ; platform_system != "Windows"
+# TODO: Replace the line below with the following:
+# uvc @ git+https://github.com/pupil-labs/pyuvc@v0.13 ; platform_system != "Windows"
+# when there is a new release
+uvc @ git+https://github.com/pupil-labs/pyuvc@master ; platform_system != "Windows"
 uvc @ https://github.com/pupil-labs/pyuvc/releases/download/v0.13/uvc-0.13-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
 
 # pupil-labs/pyglui 1.28
-pyglui @ https://github.com/pupil-labs/pyglui/archive/v1.28.zip ; platform_system != "Windows"
+pyglui @ git+https://github.com/pupil-labs/pyglui@v1.28 ; platform_system != "Windows"
 pyglui @ https://github.com/pupil-labs/pyglui/releases/download/v1.28/pyglui-1.28-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
 
 # pupil-labs/pyndsi 1.3
-ndsi @ https://github.com/pupil-labs/pyndsi/archive/v1.3.zip ; platform_system != "Windows"
+ndsi @ git+https://github.com/pupil-labs/pyndsi@v1.3 ; platform_system != "Windows"
 ndsi @ https://github.com/pupil-labs/pyndsi/releases/download/v1.3/ndsi-1.3-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
