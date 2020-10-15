@@ -48,10 +48,9 @@ If you downloaded the linked installer:
 - Check the box `Add Python to PATH`. This will add Python to your System PATH Environment Variable.
 - Check the box `Install for all users`. **Note:** By default this will install Python to `C:\Program Files\Python36`. Some build scripts may fail to start Python due to spaces in the path name. So, you may want to consider installing Python to `C:\Python36` instead.
 
-
 ## Install Python Libraries
 
-We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil.
+We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil. To install all Python dependencies, you can use the [`requirements.txt`](https://github.com/pupil-labs/pupil/blob/master/requirements.txt) file from the root of the `pupil` repository.
 
 ```sh
 # Upgrade pip to latest version. This is necessary for some dependencies.

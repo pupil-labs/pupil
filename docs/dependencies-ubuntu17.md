@@ -152,7 +152,7 @@ sudo ldconfig
 
 ### Install Python Libraries
 
-We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil.
+We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil. To install all Python dependencies, you can use the [`requirements.txt`](https://github.com/pupil-labs/pupil/blob/master/requirements.txt) file from the root of the `pupil` repository.
 
 ```sh
 # Upgrade pip to latest version. This is necessary for some dependencies.
