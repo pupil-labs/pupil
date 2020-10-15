@@ -264,6 +264,10 @@ class Video:
         time_diff = np.diff(timestamps)
         invalid_idc = np.flatnonzero(time_diff < 0)
 
+        has_invalid_idc = invalid_idc.shape[0] > 0
+        if not has_invalid_idc:
+            return timestamps
+
         # Check edge case where last timestamp causes negative jump
         last_ts_is_invalid = invalid_idc[-1] == timestamps.shape[0] - 2
         if last_ts_is_invalid:
