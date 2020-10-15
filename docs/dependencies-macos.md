@@ -67,27 +67,7 @@ We recommend using a [virtual environment](https://docs.python.org/3/tutorial/ve
 ```sh
 # Upgrade pip to latest version. This is necessary for some dependencies.
 python -m pip install --upgrade pip
-
-pip install cysignals
-pip install cython
-pip install msgpack==0.5.6
-pip install numexpr
-pip install packaging
-pip install psutil
-pip install pyaudio
-pip install pyopengl
-pip install pyzmq
-pip install scikit-learn
-pip install scipy
-pip install glfw
-pip install git+https://github.com/zeromq/pyre
-
-pip install pupil-apriltags
-pip install pupil-detectors
-pip install git+https://github.com/pupil-labs/PyAV
-pip install git+https://github.com/pupil-labs/pyuvc
-pip install git+https://github.com/pupil-labs/pyndsi
-pip install git+https://github.com/pupil-labs/pyglui
+pip install -r requirements.txt
 ```
 
 **NOTE:** Installing **pyglui** might fail on newer versions of **macOS** due to missing OpenGL headers. In this case, you need to install Xcode which comes with the required header files.
