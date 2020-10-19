@@ -20,6 +20,21 @@ sudo apt install -y libgoogle-glog-dev libatlas-base-dev libeigen3-dev
 sudo apt install -y libceres-dev
 ```
 
+## glfw
+Pupil requires glfw v3.3.2, which you can install from source with:
+```sh
+sudo apt install xorg-dev
+git clone https://github.com/glfw/glfw
+cd glfw
+git checkout 3.3.2
+mkdir build
+cd build
+cmake -DBUILD_SHARED_LIBS=ON ..
+make
+sudo make install
+sudo ldconfig
+```
+
 ## Turbojpeg
 
 ```sh
