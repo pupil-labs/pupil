@@ -8,8 +8,11 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import glfw
 
-from glfw import get_content_scale, glfwGetCurrentContext, glfwGetCursorPos, GLFW_PRESS
+glfw.ERROR_REPORTING = "raise"
+
+import gl_utils
 from methods import normalize, denormalize
 
 
@@ -24,7 +27,7 @@ class Draggable:
         if not self.overlay.valid_video_loaded:
             return False  # click event has not been consumed
 
-        click_engaged = action == GLFW_PRESS
+        click_engaged = action == glfw.PRESS
         if click_engaged and self._in_bounds(pos):
             self.drag_offset = self._calculate_offset(pos)
             return True
@@ -60,8 +63,8 @@ class Draggable:
 
 
 def current_mouse_pos(window, camera_render_size, frame_size):
-    content_scale = get_content_scale(window)
-    x, y = glfwGetCursorPos(glfwGetCurrentContext())
+    content_scale = gl_utils.get_content_scale(window)
+    x, y = glfw.get_cursor_pos(glfw.get_current_context())
     pos = x * content_scale, y * content_scale
     pos = normalize(pos, camera_render_size)
     # Position in img pixels

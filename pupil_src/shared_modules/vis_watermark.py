@@ -17,7 +17,10 @@ from glob import glob
 import os
 from pyglui import ui
 
-from glfw import glfwGetCursorPos, glfwGetWindowSize, glfwGetCurrentContext
+import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 from methods import normalize, denormalize
 import logging
 
@@ -80,8 +83,8 @@ class Vis_Watermark(Plugin):
         if not frame:
             return
         if self.drag_offset is not None:
-            pos = glfwGetCursorPos(glfwGetCurrentContext())
-            pos = normalize(pos, glfwGetWindowSize(glfwGetCurrentContext()))
+            pos = glfw.get_cursor_pos(glfw.get_current_context())
+            pos = normalize(pos, glfw.get_window_size(glfw.get_current_context()))
             pos = denormalize(
                 pos, (frame.img.shape[1], frame.img.shape[0])
             )  # Position in img pixels

@@ -21,6 +21,8 @@ from video_overlay.models.config import Configuration
 from video_overlay.ui.management import UIManagementEyes
 from video_overlay.utils.constraints import ConstraintedValue, BooleanConstraint
 
+from pupil_recording import PupilRecording
+
 
 class Eye_Overlay(Observable, Plugin):
     icon_chr = chr(0xEC02)
@@ -94,14 +96,14 @@ class Eye_Overlay(Observable, Plugin):
         )
         return overlay
 
-    def _video_path_for_eye(self, eye_id):
-        rec_dir = self.g_pool.rec_dir
-        video_file_pattern = "eye{}.*".format(eye_id)
-        video_path_pattern = os.path.join(rec_dir, video_file_pattern)
-        try:
-            video_path_candidates = glob.iglob(video_path_pattern)
-            return next(video_path_candidates)
-        except StopIteration:
+    def _video_path_for_eye(self, eye_id: int) -> str:
+        # Get all eye videos for eye_id
+        recording = PupilRecording(self.g_pool.rec_dir)
+        eye_videos = list(recording.files().videos().eye_id(eye_id))
+
+        if eye_videos:
+            return str(eye_videos[0])
+        else:
             return "/not/found/eye{}.mp4".format(eye_id)
 
     def get_init_dict(self):

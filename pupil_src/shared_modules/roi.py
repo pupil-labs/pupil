@@ -19,6 +19,9 @@ from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
 
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 from methods import denormalize, normalize
 from observable import Observable
 from plugin import Plugin
@@ -289,12 +292,12 @@ class Roi(Plugin):
         if not self.has_frame or self.model.is_invalid():
             return False
 
-        if action == glfw.GLFW_PRESS:
+        if action == glfw.PRESS:
             clicked_handle = self.get_handle_at(pos)
             if clicked_handle != self.active_handle:
                 self.active_handle = clicked_handle
                 return True
-        elif action == glfw.GLFW_RELEASE:
+        elif action == glfw.RELEASE:
             if self.active_handle != Handle.NONE:
                 self.active_handle = Handle.NONE
                 return True

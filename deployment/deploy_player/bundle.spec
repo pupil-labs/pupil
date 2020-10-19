@@ -1,7 +1,15 @@
 # -*- mode: python -*-
 
 
-import platform, sys, os, os.path, zmq, glob, numpy, pathlib
+import glob
+import os
+import os.path
+import pathlib
+import platform
+import sys
+
+import numpy
+import pkg_resources
 from PyInstaller.utils.hooks import collect_submodules
 
 hidden_imports = []
@@ -14,8 +22,9 @@ hidden_imports += collect_submodules("pyglui")
 hidden_imports += collect_submodules("pupil_apriltags")
 hidden_imports += collect_submodules("sklearn")
 
-from pyglui import ui
+import glfw
 import pupil_apriltags
+from pyglui import ui
 
 apriltag_lib_path = pathlib.Path(pupil_apriltags.__file__).parent
 
@@ -24,6 +33,12 @@ def apriltag_relative_path(absolute_path):
     """Returns pupil_apriltags/lib/*"""
     return os.path.join(*absolute_path.parts[-3:])
 
+
+glfw_name = glfw._glfw._name
+glfw_path = pathlib.Path(glfw_name)
+if not glfw_path.exists():
+    glfw_path = pathlib.Path(pkg_resources.resource_filename("glfw", glfw_name))
+glfw_binaries = [(glfw_path.name, str(glfw_path), "BINARY")]
 
 if platform.system() == "Darwin":
     sys.path.append(".")
@@ -64,11 +79,11 @@ if platform.system() == "Darwin":
         a.binaries - libSystem,
         a.zipfiles,
         a.datas,
-        [("libglfw.dylib", "/usr/local/lib/libglfw.dylib", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
+        glfw_binaries,
         strip=None,
         upx=True,
         name="Pupil Player",
@@ -127,19 +142,21 @@ elif platform.system() == "Linux":
         binaries,
         a.zipfiles,
         a.datas,
-        [("libglfw.so", "/usr/local/lib/libglfw.so", "BINARY")],
         [("libGLEW.so", "/usr/lib/x86_64-linux-gnu/libGLEW.so", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
+        glfw_binaries,
         strip=True,
         upx=True,
         name="pupil_player",
     )
 
 elif platform.system() == "Windows":
-    import sys, os, os.path
+    import os
+    import os.path
+    import sys
 
     np_path = os.path.dirname(numpy.__file__)
     np_dlls = glob.glob(np_path + "/core/*.dll")
@@ -191,11 +208,11 @@ elif platform.system() == "Windows":
         a.binaries,
         a.zipfiles,
         a.datas,
-        [("glfw3.dll", "../../pupil_external/glfw3.dll", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
+        glfw_binaries,
         vc_redist_libs,
         np_dll_list,
         strip=None,

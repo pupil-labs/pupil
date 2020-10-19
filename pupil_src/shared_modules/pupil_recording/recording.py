@@ -113,6 +113,9 @@ class PupilRecording:
                 "eye0", "eye1", mode=PupilRecording.FileFilter.FilterMode.UNION
             )
 
+        def eye_id(self, eye_id: int) -> FilterType:
+            return self.filter(f"eye{eye_id}")
+
         def videos(self) -> FilterType:
             return self.filter("videos")
 

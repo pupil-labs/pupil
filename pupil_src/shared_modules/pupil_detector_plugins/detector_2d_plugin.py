@@ -15,6 +15,9 @@ from pyglui import ui
 from pyglui.cygl.utils import draw_gl_texture
 
 import glfw
+
+glfw.ERROR_REPORTING = "raise"
+
 from gl_utils import (
     adjust_gl_view,
     basic_gl_setup,

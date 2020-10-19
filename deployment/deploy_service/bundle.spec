@@ -1,7 +1,15 @@
 # -*- mode: python -*-
 
 
-import platform, sys, os, os.path, numpy, glob, pathlib
+import glob
+import os
+import os.path
+import pathlib
+import platform
+import sys
+
+import numpy
+import pkg_resources
 from PyInstaller.utils.hooks import collect_submodules
 
 hidden_imports = []
@@ -13,7 +21,14 @@ if platform.system() != "Windows":
 hidden_imports += collect_submodules("pyglui")
 hidden_imports += collect_submodules("sklearn")
 
+import glfw
 from pyglui import ui
+
+glfw_name = glfw._glfw._name
+glfw_path = pathlib.Path(glfw_name)
+if not glfw_path.exists():
+    glfw_path = pathlib.Path(pkg_resources.resource_filename("glfw", glfw_name))
+glfw_binaries = [(glfw_path.name, str(glfw_path), "BINARY")]
 
 if platform.system() == "Darwin":
     sys.path.append(".")
@@ -48,10 +63,10 @@ if platform.system() == "Darwin":
         a.binaries - libSystem,
         a.zipfiles,
         a.datas,
-        [("libglfw.dylib", "/usr/local/lib/libglfw.dylib", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
+        glfw_binaries,
         strip=None,
         upx=True,
         name="Pupil Service",
@@ -105,18 +120,20 @@ elif platform.system() == "Linux":
         binaries,
         a.zipfiles,
         a.datas,
-        [("libglfw.so", "/usr/local/lib/libglfw.so", "BINARY")],
         [("libGLEW.so", "/usr/lib/x86_64-linux-gnu/libGLEW.so", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
+        glfw_binaries,
         strip=True,
         upx=True,
         name="pupil_service",
     )
 
 elif platform.system() == "Windows":
-    import sys, os, os.path
+    import os
+    import os.path
+    import sys
 
     np_path = os.path.dirname(numpy.__file__)
     np_dlls = glob.glob(np_path + "/core/*.dll")
@@ -168,10 +185,10 @@ elif platform.system() == "Windows":
         a.zipfiles,
         a.datas,
         [("PupilDrvInst.exe", "../../pupil_external/PupilDrvInst.exe", "BINARY")],
-        [("glfw3.dll", "../../pupil_external/glfw3.dll", "BINARY")],
         [("pyglui/OpenSans-Regular.ttf", ui.get_opensans_font_path(), "DATA")],
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
+        glfw_binaries,
         np_dll_list,
         vc_redist_libs,
         strip=False,

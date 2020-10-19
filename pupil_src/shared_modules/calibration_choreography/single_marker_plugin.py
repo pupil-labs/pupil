@@ -25,7 +25,10 @@ from plugin import Plugin
 from circle_detector import CircleTracker
 from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
 import OpenGL.GL as gl
-from glfw import *
+
+import glfw
+
+glfw.ERROR_REPORTING = "raise"
 
 from .mixin import MonitorSelectionMixin
 from .controller import (

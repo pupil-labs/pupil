@@ -123,6 +123,9 @@ def eye(
 
         # display
         import glfw
+
+        glfw.ERROR_REPORTING = "raise"
+
         from pyglui import ui, graph, cygl
         from pyglui.cygl.utils import draw_points, RGBA, draw_polyline
         from pyglui.cygl.utils import Named_Texture
@@ -233,7 +236,7 @@ def eye(
         ]
 
         def consume_events_and_render_buffer():
-            glfw.glfwMakeContextCurrent(main_window)
+            glfw.make_context_current(main_window)
             clear_gl_screen()
 
             if all(c > 0 for c in g_pool.camera_render_size):
@@ -248,18 +251,19 @@ def eye(
 
             # render GUI
             try:
-                clipboard = glfw.glfwGetClipboardString(main_window).decode()
-            except AttributeError:  # clipboard is None, might happen on startup
+                clipboard = glfw.get_clipboard_string(main_window).decode()
+            except (AttributeError, glfw.GLFWError):
+                # clipboard is None, might happen on startup
                 clipboard = ""
             g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()
             if user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+                glfw.set_clipboard_string(main_window, user_input.clipboard)
 
             for button, action, mods in user_input.buttons:
-                x, y = glfw.glfwGetCursorPos(main_window)
-                pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                x, y = glfw.get_cursor_pos(main_window)
+                pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                     main_window, x, y, cached_scale=None
                 )
                 pos = normalize(pos, g_pool.camera_render_size)
@@ -283,14 +287,14 @@ def eye(
                         break
 
             # update screen
-            glfw.glfwSwapBuffers(main_window)
+            glfw.swap_buffers(main_window)
 
         # Callback functions
         def on_resize(window, w, h):
             nonlocal window_size
             nonlocal content_scale
 
-            is_minimized = bool(glfw.glfwGetWindowAttrib(window, glfw.GLFW_ICONIFIED))
+            is_minimized = bool(glfw.get_window_attrib(window, glfw.ICONIFIED))
 
             if is_minimized:
                 return
@@ -300,10 +304,10 @@ def eye(
             gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
-            active_window = glfw.glfwGetCurrentContext()
-            glfw.glfwMakeContextCurrent(window)
-            content_scale = glfw.get_content_scale(window)
-            framebuffer_scale = glfw.get_framebuffer_scale(window)
+            active_window = glfw.get_current_context()
+            glfw.make_context_current(window)
+            content_scale = gl_utils.get_content_scale(window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(window)
             g_pool.gui.scale = content_scale
             window_size = w, h
             g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
@@ -313,15 +317,19 @@ def eye(
                 g.scale = content_scale
                 g.adjust_window_size(w, h)
             adjust_gl_view(w, h)
-            glfw.glfwMakeContextCurrent(active_window)
+            glfw.make_context_current(active_window)
 
             # Minimum window size required, otherwise parts of the UI can cause openGL
             # issues with permanent effects. Depends on the content scale, which can
             # potentially be dynamically modified, so we re-adjust the size limits every
             # time here.
             min_size = int(2 * icon_bar_width * g_pool.gui.scale / framebuffer_scale)
-            glfw.glfwSetWindowSizeLimits(
-                window, min_size, min_size, glfw.GLFW_DONT_CARE, glfw.GLFW_DONT_CARE
+            glfw.set_window_size_limits(
+                window,
+                min_size,
+                min_size,
+                glfw.DONT_CARE,
+                glfw.DONT_CARE,
             )
 
             # Needed, to update the window buffer while resizing
@@ -340,7 +348,7 @@ def eye(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+            x, y = gl_utils.window_coordinate_to_framebuffer_coordinate(
                 window, x, y, cached_scale=None
             )
             g_pool.gui.update_mouse(x, y)
@@ -358,8 +366,7 @@ def eye(
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
-        def on_drop(window, count, paths):
-            paths = [paths[x].decode("utf-8") for x in range(count)]
+        def on_drop(window, paths):
             for plugin in g_pool.plugins:
                 if plugin.on_drop(paths):
                     break
@@ -399,10 +406,10 @@ def eye(
             general_settings.collapsed = collapsed
 
         # Initialize glfw
-        glfw.glfwInit()
-        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
+        glfw.init()
+        glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
-            glfw.glfwWindowHint(glfw.GLFW_VISIBLE, 0)  # hide window
+            glfw.window_hint(glfw.VISIBLE, 0)  # hide window
         title = "Pupil Capture - eye {}".format(eye_id)
 
         # Pupil Cam1 uses 4:3 resolutions. Pupil Cam2 and Cam3 use 1:1 resolutions.
@@ -412,7 +419,7 @@ def eye(
         default_window_size = 500 + icon_bar_width, 500
         width, height = session_settings.get("window_size", default_window_size)
 
-        main_window = glfw.glfwCreateWindow(width, height, title, None, None)
+        main_window = glfw.create_window(width, height, title, None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
@@ -420,9 +427,9 @@ def eye(
             default_position=window_position_default,
             previous_position=session_settings.get("window_position", None),
         )
-        glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
+        glfw.set_window_pos(main_window, window_pos[0], window_pos[1])
 
-        glfw.glfwMakeContextCurrent(main_window)
+        glfw.make_context_current(main_window)
         cygl.utils.init()
 
         # gl_state settings
@@ -453,8 +460,8 @@ def eye(
             f_height *= frame_scale_factor
 
             # Get current display scale factor
-            content_scale = glfw.get_content_scale(main_window)
-            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            content_scale = gl_utils.get_content_scale(main_window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(main_window)
             display_scale_factor = content_scale / framebuffer_scale
 
             # Scale the capture frame size by display scale factor
@@ -465,7 +472,7 @@ def eye(
             f_width += icon_bar_width * display_scale_factor
 
             # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
-            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
+            glfw.set_window_size(main_window, int(f_width), int(f_height))
 
         general_settings.append(ui.Button("Reset window size", set_window_size))
         general_settings.append(ui.Switch("flip", g_pool, label="Flip image display"))
@@ -519,14 +526,14 @@ def eye(
         g_pool.rec_path = None
 
         # Register callbacks main_window
-        glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
-        glfw.glfwSetWindowIconifyCallback(main_window, on_iconify)
-        glfw.glfwSetKeyCallback(main_window, on_window_key)
-        glfw.glfwSetCharCallback(main_window, on_window_char)
-        glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
-        glfw.glfwSetCursorPosCallback(main_window, on_pos)
-        glfw.glfwSetScrollCallback(main_window, on_scroll)
-        glfw.glfwSetDropCallback(main_window, on_drop)
+        glfw.set_framebuffer_size_callback(main_window, on_resize)
+        glfw.set_window_iconify_callback(main_window, on_iconify)
+        glfw.set_key_callback(main_window, on_window_key)
+        glfw.set_char_callback(main_window, on_window_char)
+        glfw.set_mouse_button_callback(main_window, on_window_mouse_button)
+        glfw.set_cursor_pos_callback(main_window, on_pos)
+        glfw.set_scroll_callback(main_window, on_scroll)
+        glfw.set_drop_callback(main_window, on_drop)
 
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get("ui_config", {})
@@ -554,7 +561,7 @@ def eye(
         g_pool.graphs = [cpu_graph, fps_graph]
 
         # set the last saved window size
-        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+        on_resize(main_window, *glfw.get_framebuffer_size(main_window))
 
         should_publish_frames = False
         frame_publish_format = "jpeg"
@@ -570,8 +577,18 @@ def eye(
 
         frame = None
 
+        if platform.system() == "Darwin":
+            # On macOS, calls to glfw.swap_buffers() deliberately take longer in case of
+            # occluded windows, based on the swap interval value. This causes an FPS drop
+            # and leads to problems when recording. To side-step this behaviour, the swap
+            # interval is set to zero.
+            #
+            # Read more about window occlusion on macOS here:
+            # https://developer.apple.com/library/archive/documentation/Performance/Conceptual/power_efficiency_guidelines_osx/WorkWhenVisible.html
+            glfw.swap_interval(0)
+
         # Event loop
-        while not glfw.glfwWindowShouldClose(main_window):
+        while not glfw.window_should_close(main_window):
 
             if notify_sub.new_data:
                 t, notification = notify_sub.recv()
@@ -711,7 +728,7 @@ def eye(
             if window_should_update():
                 if is_window_visible(main_window):
                     consume_events_and_render_buffer()
-                glfw.glfwPollEvents()
+                glfw.poll_events()
 
         # END while running
 
@@ -729,9 +746,9 @@ def eye(
         session_settings["version"] = str(g_pool.version)
 
         if not hide_ui:
-            glfw.glfwRestoreWindow(main_window)  # need to do this for windows os
-            session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
-            session_window_size = glfw.glfwGetWindowSize(main_window)
+            glfw.restore_window(main_window)  # need to do this for windows os
+            session_settings["window_position"] = glfw.get_window_pos(main_window)
+            session_window_size = glfw.get_window_size(main_window)
             if 0 not in session_window_size:
                 f_width, f_height = session_window_size
                 if platform.system() in ("Windows", "Linux"):
@@ -749,9 +766,9 @@ def eye(
             plugin.alive = False
         g_pool.plugins.clean()
 
-        glfw.glfwDestroyWindow(main_window)
+        glfw.destroy_window(main_window)
         g_pool.gui.terminate()
-        glfw.glfwTerminate()
+        glfw.terminate()
         logger.info("Process shutting down.")
 
 

@@ -15,6 +15,7 @@ import multiprocessing
 import os
 import platform
 import time
+import typing as T
 
 import cv2
 import numpy as np
@@ -51,6 +52,13 @@ else:
     mp_context = multiprocessing.get_context()
 
 
+class _CacheRelevantDetectorParams(T.NamedTuple):
+    mode: MarkerDetectorMode
+    inverted_markers: bool
+    quad_decimate: float
+    sharpening: float
+
+
 class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
     """
     The Surface_Tracker_Offline does marker based AOI tracking in a recording. All
@@ -74,8 +82,6 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
         self._init_marker_cache()
         self.last_cache_update_ts = time.perf_counter()
         self.CACHE_UPDATE_INTERVAL_SEC = 5
-
-        self._init_marker_detection_modes()
 
         self.gaze_on_surf_buffer = None
         self.gaze_on_surf_buffer_filler = None
@@ -115,41 +121,44 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
     def supported_heatmap_modes(self):
         return [Heatmap_Mode.WITHIN_SURFACE, Heatmap_Mode.ACROSS_SURFACES]
 
-    def _init_marker_detection_modes(self):
-        # This method should be called after `_init_marker_cache` to ensure that the cache is filled in.
-        assert self.marker_cache is not None
+    @staticmethod
+    def _marker_detector_mode_from_cache(
+        marker_cache,
+    ) -> T.Optional[MarkerDetectorMode]:
+        assert marker_cache is not None
 
         # Filter out non-filled frames where the cache entry is None.
         # Chain the remaining entries (which are lists) to get a flat sequence.
-        filled_out_marker_cache = filter(lambda x: x is not None, self.marker_cache)
+        filled_out_marker_cache = filter(lambda x: x is not None, marker_cache)
         cached_surface_marker_sequence = itertools.chain.from_iterable(
             filled_out_marker_cache
         )
 
-        # Get the first surface marker from the sequence, and set the detection mode according to it.
-        first_cached_surface_marker = next(cached_surface_marker_sequence, None)
-        if first_cached_surface_marker is not None:
-            marker_detector_mode = MarkerDetectorMode.from_marker(
-                first_cached_surface_marker
-            )
-            self.marker_detector.marker_detector_mode = marker_detector_mode
+        # Get the first surface marker from the sequence, and set the detection mode
+        # according to it.
+        first_cached_surface_marker_args = next(cached_surface_marker_sequence, None)
+        if first_cached_surface_marker_args is not None:
+            marker = Surface_Marker.deserialize(first_cached_surface_marker_args)
+            marker_detector_mode = MarkerDetectorMode.from_marker(marker)
+            return marker_detector_mode
 
     def _init_marker_cache(self):
-        previous_cache = file_methods.Persistent_Dict(
+        previous_cache_config = file_methods.Persistent_Dict(
             os.path.join(self.g_pool.rec_dir, "square_marker_cache")
         )
-        version = previous_cache.get("version", 0)
-        cache = previous_cache.get("marker_cache_unfiltered", None)
-        self._set_detector_params_from_previous_cache(previous_cache)
+        version = previous_cache_config.get("version", 0)
 
-        if cache is None:
-            self._recalculate_marker_cache()
+        previous_params = self._cache_relevant_params_from_cache(previous_cache_config)
+        current_params = self._cache_relevant_params_from_controller()
+
+        if previous_params is None:
+            self._recalculate_marker_cache(parameters=current_params)
         elif version != self.MARKER_CACHE_VERSION:
             logger.debug("Marker cache version missmatch. Rebuilding marker cache.")
-            self._recalculate_marker_cache()
+            self._recalculate_marker_cache(parameters=current_params)
         else:
             marker_cache_unfiltered = []
-            for markers in cache:
+            for markers in previous_cache_config["marker_cache_unfiltered"]:
                 # Loaded markers are either False, [] or a list of dictionaries. We
                 # need to convert the dictionaries into Surface_Marker objects.
                 if markers:
@@ -160,15 +169,52 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
                     ]
                 marker_cache_unfiltered.append(markers)
 
-            self._recalculate_marker_cache(previous_state=marker_cache_unfiltered)
+            self._recalculate_marker_cache(
+                parameters=previous_params, previous_state=marker_cache_unfiltered
+            )
             logger.debug("Restored previous marker cache.")
 
-    def _set_detector_params_from_previous_cache(self, previous_cache):
-        self.inverted_markers = previous_cache.get("inverted_markers", False)
-        self.quad_decimate = previous_cache.get("quad_decimate", APRILTAG_HIGH_RES_ON)
-        self.sharpening = previous_cache.get("sharpening", APRILTAG_SHARPENING_ON)
+    def _set_detector_params(self, params: _CacheRelevantDetectorParams):
+        self.marker_detector._marker_detector_mode = params.mode
+        self.marker_detector._square_marker_inverted_markers = params.inverted_markers
+        self.marker_detector._apriltag_quad_decimate = params.quad_decimate
+        self.marker_detector._apriltag_decode_sharpening = params.sharpening
+        self.marker_detector.init_detector()
 
-    def _recalculate_marker_cache(self, previous_state=None):
+    @staticmethod
+    def _cache_relevant_params_from_cache(
+        previous_cache,
+    ) -> T.Optional[_CacheRelevantDetectorParams]:
+        marker_cache_unfiltered = previous_cache.get("marker_cache_unfiltered", None)
+        if marker_cache_unfiltered is None:
+            return
+
+        mode = Surface_Tracker_Offline._marker_detector_mode_from_cache(
+            marker_cache_unfiltered
+        )
+        if mode is None:
+            return
+
+        return _CacheRelevantDetectorParams(
+            mode=mode,
+            inverted_markers=previous_cache.get("inverted_markers", False),
+            quad_decimate=previous_cache.get("quad_decimate", APRILTAG_HIGH_RES_ON),
+            sharpening=previous_cache.get("sharpening", APRILTAG_SHARPENING_ON),
+        )
+
+    def _cache_relevant_params_from_controller(self) -> _CacheRelevantDetectorParams:
+        return _CacheRelevantDetectorParams(
+            mode=self.marker_detector.marker_detector_mode,
+            inverted_markers=self.marker_detector.inverted_markers,
+            quad_decimate=self.marker_detector.apriltag_quad_decimate,
+            sharpening=self.marker_detector.apriltag_decode_sharpening,
+        )
+
+    def _recalculate_marker_cache(
+        self, parameters: _CacheRelevantDetectorParams, previous_state=None
+    ):
+        # Ensures consistency across foreground and background detectors
+        self._set_detector_params(parameters)
         if previous_state is None:
             previous_state = [None for _ in self.g_pool.timestamps]
 
@@ -184,15 +230,11 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
 
         if self.cache_filler is not None:
             self.cache_filler.cancel()
+
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
-            offline_utils.marker_detection_callable(
-                marker_detector_mode=self.marker_detector.marker_detector_mode,
-                marker_min_perimeter=self.CACHE_MIN_MARKER_PERIMETER,
-                square_marker_inverted_markers=self.inverted_markers,
-                square_marker_use_online_mode=False,
-                apriltag_quad_decimate=self.quad_decimate,
-                apriltag_decode_sharpening=self.sharpening,
+            offline_utils.marker_detection_callable.from_detector(
+                self.marker_detector, self.CACHE_MIN_MARKER_PERIMETER
             ),
             list(self.marker_cache),
             self.cache_seek_idx,
@@ -482,7 +524,8 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
         super().on_notify(notification)
 
         if notification["subject"] == "surface_tracker.marker_detection_params_changed":
-            self._recalculate_marker_cache()
+            current_params = self._cache_relevant_params_from_controller()
+            self._recalculate_marker_cache(parameters=current_params)
 
         elif notification["subject"] == "surface_tracker.marker_min_perimeter_changed":
             marker_type = self.marker_detector.marker_detector_mode.marker_type
@@ -575,7 +618,9 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
             self.marker_cache_unfiltered
         )
         marker_cache_file["version"] = self.MARKER_CACHE_VERSION
-        marker_cache_file["inverted_markers"] = self.inverted_markers
-        marker_cache_file["quad_decimate"] = self.quad_decimate
-        marker_cache_file["sharpening"] = self.sharpening
+
+        current_config = self._cache_relevant_params_from_controller()
+        marker_cache_file["inverted_markers"] = current_config.inverted_markers
+        marker_cache_file["quad_decimate"] = current_config.quad_decimate
+        marker_cache_file["sharpening"] = current_config.sharpening
         marker_cache_file.save()

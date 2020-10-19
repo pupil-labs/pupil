@@ -72,6 +72,8 @@ def player(
         # display
         import glfw
 
+        glfw.ERROR_REPORTING = "raise"
+
         # check versions for our own depedencies as they are fast-changing
         from pyglui import __version__ as pyglui_version
 
@@ -192,19 +194,20 @@ def player(
             gl_utils.glViewport(0, 0, *window_size)
 
             try:
-                clipboard = glfw.glfwGetClipboardString(main_window).decode()
-            except AttributeError:  # clipbaord is None, might happen on startup
+                clipboard = glfw.get_clipboard_string(main_window).decode()
+            except (AttributeError, glfw.GLFWError):
+                # clipbaord is None, might happen on startup
                 clipboard = ""
             g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()
             if user_input.clipboard and user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.glfwSetClipboardString(main_window, user_input.clipboard.encode())
+                glfw.set_clipboard_string(main_window, user_input.clipboard)
 
             for b in user_input.buttons:
                 button, action, mods = b
-                x, y = glfw.glfwGetCursorPos(main_window)
-                pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                x, y = glfw.get_cursor_pos(main_window)
+                pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                     main_window, x, y, cached_scale=None
                 )
                 pos = normalize(pos, g_pool.camera_render_size)
@@ -224,7 +227,7 @@ def player(
                     if plugin.on_char(char_):
                         break
 
-            glfw.glfwSwapBuffers(main_window)
+            glfw.swap_buffers(main_window)
 
         # Callback functions
         def on_resize(window, w, h):
@@ -238,8 +241,8 @@ def player(
             gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
-            content_scale = glfw.get_content_scale(window)
-            framebuffer_scale = glfw.get_framebuffer_scale(window)
+            content_scale = gl_utils.get_content_scale(window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(window)
             g_pool.gui.scale = content_scale
             window_size = w, h
             g_pool.camera_render_size = w - int(icon_bar_width * g_pool.gui.scale), h
@@ -253,8 +256,12 @@ def player(
             # potentially be dynamically modified, so we re-adjust the size limits every
             # time here.
             min_size = int(2 * icon_bar_width * g_pool.gui.scale / framebuffer_scale)
-            glfw.glfwSetWindowSizeLimits(
-                window, min_size, min_size, glfw.GLFW_DONT_CARE, glfw.GLFW_DONT_CARE
+            glfw.set_window_size_limits(
+                window,
+                min_size,
+                min_size,
+                glfw.DONT_CARE,
+                glfw.DONT_CARE,
             )
 
             # Needed, to update the window buffer while resizing
@@ -270,7 +277,7 @@ def player(
             g_pool.gui.update_button(button, action, mods)
 
         def on_pos(window, x, y):
-            x, y = glfw.window_coordinate_to_framebuffer_coordinate(
+            x, y = gl_utils.window_coordinate_to_framebuffer_coordinate(
                 window, x, y, cached_scale=None
             )
             g_pool.gui.update_mouse(x, y)
@@ -284,8 +291,7 @@ def player(
         def on_scroll(window, x, y):
             g_pool.gui.update_scroll(x, y * scroll_factor)
 
-        def on_drop(window, count, paths):
-            paths = [paths[x].decode("utf-8") for x in range(count)]
+        def on_drop(window, paths):
             for path in paths:
                 try:
                     assert_valid_recording_type(path)
@@ -303,7 +309,7 @@ def player(
             ipc_pub.notify(
                 {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
             )
-            glfw.glfwSetWindowShouldClose(g_pool.main_window, True)
+            glfw.set_window_should_close(g_pool.main_window, True)
 
         tick = delta_t()
 
@@ -358,9 +364,9 @@ def player(
 
         window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
-        glfw.glfwInit()
-        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
-        main_window = glfw.glfwCreateWindow(width, height, window_name, None, None)
+        glfw.init()
+        glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
+        main_window = glfw.create_window(width, height, window_name, None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
@@ -368,9 +374,9 @@ def player(
             default_position=window_position_default,
             previous_position=session_settings.get("window_position", None),
         )
-        glfw.glfwSetWindowPos(main_window, window_pos[0], window_pos[1])
+        glfw.set_window_pos(main_window, window_pos[0], window_pos[1])
 
-        glfw.glfwMakeContextCurrent(main_window)
+        glfw.make_context_current(main_window)
         cygl.utils.init()
         g_pool.main_window = main_window
 
@@ -433,7 +439,7 @@ def player(
 
         def reset_restart():
             logger.warning("Resetting all settings and restarting Player.")
-            glfw.glfwSetWindowShouldClose(main_window, True)
+            glfw.set_window_should_close(main_window, True)
             ipc_pub.notify({"subject": "clear_settings_process.should_start"})
             ipc_pub.notify(
                 {
@@ -476,8 +482,8 @@ def player(
             f_width, f_height = g_pool.capture.frame_size
 
             # Get current display scale factor
-            content_scale = glfw.get_content_scale(main_window)
-            framebuffer_scale = glfw.get_framebuffer_scale(main_window)
+            content_scale = gl_utils.get_content_scale(main_window)
+            framebuffer_scale = gl_utils.get_framebuffer_scale(main_window)
             display_scale_factor = content_scale / framebuffer_scale
 
             # Scale the capture frame size by display scale factor
@@ -488,7 +494,7 @@ def player(
             f_width += icon_bar_width * display_scale_factor
 
             # Set the newly calculated size (scaled capture frame size + scaled icon bar width)
-            glfw.glfwSetWindowSize(main_window, int(f_width), int(f_height))
+            glfw.set_window_size(main_window, int(f_width), int(f_height))
 
         general_settings = ui.Growing_Menu("General", header_pos="headline")
         general_settings.append(ui.Button("Reset window size", set_window_size))
@@ -603,13 +609,13 @@ def player(
         )
 
         # Register callbacks main_window
-        glfw.glfwSetFramebufferSizeCallback(main_window, on_resize)
-        glfw.glfwSetKeyCallback(main_window, on_window_key)
-        glfw.glfwSetCharCallback(main_window, on_window_char)
-        glfw.glfwSetMouseButtonCallback(main_window, on_window_mouse_button)
-        glfw.glfwSetCursorPosCallback(main_window, on_pos)
-        glfw.glfwSetScrollCallback(main_window, on_scroll)
-        glfw.glfwSetDropCallback(main_window, on_drop)
+        glfw.set_framebuffer_size_callback(main_window, on_resize)
+        glfw.set_key_callback(main_window, on_window_key)
+        glfw.set_char_callback(main_window, on_window_char)
+        glfw.set_mouse_button_callback(main_window, on_window_mouse_button)
+        glfw.set_cursor_pos_callback(main_window, on_pos)
+        glfw.set_scroll_callback(main_window, on_scroll)
+        glfw.set_drop_callback(main_window, on_drop)
 
         toggle_general_settings(True)
 
@@ -625,7 +631,7 @@ def player(
         g_pool.image_tex = Named_Texture()
 
         # trigger on_resize
-        on_resize(main_window, *glfw.glfwGetFramebufferSize(main_window))
+        on_resize(main_window, *glfw.get_framebuffer_size(main_window))
 
         def handle_notifications(n):
             subject = n["subject"]
@@ -650,9 +656,7 @@ def player(
                             }
                         )
 
-        while (
-            not glfw.glfwWindowShouldClose(main_window) and not process_was_interrupted
-        ):
+        while not glfw.window_should_close(main_window) and not process_was_interrupted:
 
             # fetch newest notifications
             new_notifications = []
@@ -681,8 +685,8 @@ def player(
             # check if a plugin need to be destroyed
             g_pool.plugins.clean()
 
-            glfw.glfwMakeContextCurrent(main_window)
-            glfw.glfwPollEvents()
+            glfw.make_context_current(main_window)
+            glfw.poll_events()
             # render visual feedback from loaded plugins
             if gl_utils.is_window_visible(main_window):
 
@@ -694,21 +698,20 @@ def player(
                 gl_utils.glViewport(0, 0, *window_size)
 
                 try:
-                    clipboard = glfw.glfwGetClipboardString(main_window).decode()
-                except AttributeError:  # clipbaord is None, might happen on startup
+                    clipboard = glfw.get_clipboard_string(main_window).decode()
+                except (AttributeError, glfw.GLFWError):
+                    # clipbaord is None, might happen on startup
                     clipboard = ""
                 g_pool.gui.update_clipboard(clipboard)
                 user_input = g_pool.gui.update()
                 if user_input.clipboard and user_input.clipboard != clipboard:
                     # only write to clipboard if content changed
-                    glfw.glfwSetClipboardString(
-                        main_window, user_input.clipboard.encode()
-                    )
+                    glfw.set_clipboard_string(main_window, user_input.clipboard)
 
                 for b in user_input.buttons:
                     button, action, mods = b
-                    x, y = glfw.glfwGetCursorPos(main_window)
-                    pos = glfw.window_coordinate_to_framebuffer_coordinate(
+                    x, y = glfw.get_cursor_pos(main_window)
+                    pos = gl_utils.window_coordinate_to_framebuffer_coordinate(
                         main_window, x, y, cached_scale=None
                     )
                     pos = normalize(pos, g_pool.camera_render_size)
@@ -730,7 +733,7 @@ def player(
 
                 # present frames at appropriate speed
                 g_pool.seek_control.wait(events["frame"].timestamp)
-                glfw.glfwSwapBuffers(main_window)
+                glfw.swap_buffers(main_window)
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["min_data_confidence"] = g_pool.min_data_confidence
@@ -738,10 +741,10 @@ def player(
             "min_calibration_confidence"
         ] = g_pool.min_calibration_confidence
         session_settings["ui_config"] = g_pool.gui.configuration
-        session_settings["window_position"] = glfw.glfwGetWindowPos(main_window)
+        session_settings["window_position"] = glfw.get_window_pos(main_window)
         session_settings["version"] = str(g_pool.version)
 
-        session_window_size = glfw.glfwGetWindowSize(main_window)
+        session_window_size = glfw.get_window_size(main_window)
         if 0 not in session_window_size:
             f_width, f_height = session_window_size
             if platform.system() in ("Windows", "Linux"):
@@ -759,7 +762,7 @@ def player(
         g_pool.plugins.clean()
 
         g_pool.gui.terminate()
-        glfw.glfwDestroyWindow(main_window)
+        glfw.destroy_window(main_window)
 
     except Exception:
         import traceback
@@ -798,6 +801,9 @@ def player_drop(
 
     try:
         import glfw
+
+        glfw.ERROR_REPORTING = "raise"
+
         import gl_utils
         from OpenGL.GL import glClearColor
         from version_utils import parse_version
@@ -823,9 +829,9 @@ def player_drop(
 
         signal.signal(signal.SIGINT, interrupt_handler)
 
-        def on_drop(window, count, paths):
+        def on_drop(window, paths):
             nonlocal rec_dir
-            rec_dir = paths[0].decode("utf-8")
+            rec_dir = paths[0]
 
         if rec_dir:
             try:
@@ -844,13 +850,13 @@ def player_drop(
             session_settings.clear()
         w, h = session_settings.get("window_size", (1280, 720))
 
-        glfw.glfwInit()
-        glfw.glfwWindowHint(glfw.GLFW_SCALE_TO_MONITOR, glfw.GLFW_TRUE)
-        glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 0)
-        window = glfw.glfwCreateWindow(w, h, "Pupil Player")
-        glfw.glfwWindowHint(glfw.GLFW_RESIZABLE, 1)
+        glfw.init()
+        glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
+        glfw.window_hint(glfw.RESIZABLE, 0)
+        window = glfw.create_window(w, h, "Pupil Player", None, None)
+        glfw.window_hint(glfw.RESIZABLE, 1)
 
-        glfw.glfwMakeContextCurrent(window)
+        glfw.make_context_current(window)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
@@ -858,9 +864,9 @@ def player_drop(
             default_position=window_position_default,
             previous_position=session_settings.get("window_position", None),
         )
-        glfw.glfwSetWindowPos(window, window_pos[0], window_pos[1])
+        glfw.set_window_pos(window, window_pos[0], window_pos[1])
 
-        glfw.glfwSetDropCallback(window, on_drop)
+        glfw.set_drop_callback(window, on_drop)
 
         glfont = fontstash.Context()
         glfont.add_font("roboto", get_roboto_font_path())
@@ -886,10 +892,10 @@ def player_drop(
             glfont.set_color_float((1.0, 1.0, 1.0, 1.0))
             glfont.draw_text(x, y, string)
 
-        while not glfw.glfwWindowShouldClose(window) and not process_was_interrupted:
+        while not glfw.window_should_close(window) and not process_was_interrupted:
 
-            fb_size = glfw.glfwGetFramebufferSize(window)
-            content_scale = glfw.get_content_scale(window)
+            fb_size = glfw.get_framebuffer_size(window)
+            content_scale = gl_utils.get_content_scale(window)
             gl_utils.adjust_gl_view(*fb_size)
 
             if rec_dir:
@@ -916,7 +922,7 @@ def player_drop(
                 center_y = 288 + tip_font_size * idx * 1.2
                 display_string(line, font_size=tip_font_size, center_y=center_y)
 
-            glfw.glfwSwapBuffers(window)
+            glfw.swap_buffers(window)
 
             if rec_dir:
                 try:
@@ -935,13 +941,13 @@ def player_drop(
                         tip = err.reason
                     rec_dir = None
                 else:
-                    glfw.glfwSetWindowShouldClose(window, True)
+                    glfw.set_window_should_close(window, True)
 
-            glfw.glfwPollEvents()
+            glfw.poll_events()
 
-        session_settings["window_position"] = glfw.glfwGetWindowPos(window)
+        session_settings["window_position"] = glfw.get_window_pos(window)
         session_settings.close()
-        glfw.glfwDestroyWindow(window)
+        glfw.destroy_window(window)
         if rec_dir:
             ipc_pub.notify(
                 {"subject": "player_process.should_start", "rec_dir": rec_dir}

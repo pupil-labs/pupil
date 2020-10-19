@@ -263,9 +263,29 @@ class Video:
         # TODO: what if adjacent timestamps are negative/zero as well?
         time_diff = np.diff(timestamps)
         invalid_idc = np.flatnonzero(time_diff < 0)
+
+        has_invalid_idc = invalid_idc.shape[0] > 0
+        if not has_invalid_idc:
+            return timestamps
+
+        # Check edge case where last timestamp causes negative jump
+        last_ts_is_invalid = invalid_idc[-1] == timestamps.shape[0] - 2
+        if last_ts_is_invalid:
+            # We cannot calculate the mean of adjacent timestamps as the last timestamp
+            # only has a single neighbour. Therefore, we will exclude it from the
+            # general time interpolation and handle this special case afterward.
+            invalid_idc = invalid_idc[:-1]
+
         timestamps[invalid_idc + 1] = np.mean(
             (timestamps[invalid_idc + 2], timestamps[invalid_idc]), axis=0
         )
+
+        if last_ts_is_invalid:
+            # After fixing all previous timestamps, we will now fix the last one
+            last_minus_two, last_minus_one = timestamps[[-3, -2]]
+            time_diff = last_minus_one - last_minus_two
+            timestamps[-1] = last_minus_one + time_diff
+
         return timestamps
 
 
