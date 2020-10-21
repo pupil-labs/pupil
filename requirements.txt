@@ -4,7 +4,7 @@
 cython
 msgpack==0.5.6
 numexpr
-packaging
+packaging>=20.0
 psutil
 pyaudio
 pyopengl
