@@ -12,7 +12,7 @@ pyzmq
 scikit-learn
 scipy
 glfw
-git+https://github.com/zeromq/pyre
+pyre @ git+https://github.com/zeromq/pyre
 
 cysignals ; platform_system != "Windows"
 
