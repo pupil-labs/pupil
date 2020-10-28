@@ -67,7 +67,7 @@ We recommend using a [virtual environment](https://docs.python.org/3/tutorial/ve
 
 ```sh
 # Upgrade pip to latest version. This is necessary for some dependencies.
-python -m pip install --upgrade pip
+python -m pip install --upgrade pip wheel
 pip install -r requirements.txt
 ```
 
