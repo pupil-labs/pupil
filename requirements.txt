@@ -22,7 +22,7 @@ opencv-python==3.* ; platform_system == "Windows"
 ###
 ### Pupil-Labs
 ###
-pupil-apriltags==1.0.3
+pupil-apriltags==1.0.4
 pupil-detectors==1.1.1
 
 # pupil-labs/PyAV 0.4.6
