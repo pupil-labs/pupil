@@ -219,7 +219,13 @@ def eye(
 
         default_2d, default_3d, available_detectors = available_detector_plugins()
         runtime_detectors = list(load_runtime_pupil_detection_plugins())
-        plugins = manager_classes + source_classes + available_detectors + runtime_detectors + [Roi]
+        plugins = (
+            manager_classes
+            + source_classes
+            + available_detectors
+            + runtime_detectors
+            + [Roi]
+        )
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
         preferred_names = [
