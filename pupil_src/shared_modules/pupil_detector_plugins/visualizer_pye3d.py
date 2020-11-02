@@ -9,17 +9,31 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import math
+from collections import deque
 
 import numpy as np
-from OpenGL.GL import *
 from gl_utils.trackball import Trackball
+from OpenGL.GL import GL_LINES
+from OpenGL.GL import GL_MODELVIEW
+from OpenGL.GL import GL_PROJECTION
+from OpenGL.GL import GL_QUADS
+from OpenGL.GL import glBegin
+from OpenGL.GL import glColor4f
+from OpenGL.GL import glEnd
+from OpenGL.GL import glLineWidth
+from OpenGL.GL import glLoadIdentity
+from OpenGL.GL import glLoadMatrixf
+from OpenGL.GL import glMatrixMode
+from OpenGL.GL import glOrtho
+from OpenGL.GL import glPopMatrix
+from OpenGL.GL import glPushMatrix
+from OpenGL.GL import glScale
+from OpenGL.GL import glTranslatef
+from OpenGL.GL import glVertex3f
+from pye3d.geometry.eye import LeGrandEye
 from pyglui.cygl import utils as glutils
 from pyglui.cygl.utils import RGBA
 from visualizer import Visualizer
-
-from pye3d.geometry.eye import LeGrandEye
-
-from collections import deque
 
 
 class Eye_Visualizer(Visualizer):
