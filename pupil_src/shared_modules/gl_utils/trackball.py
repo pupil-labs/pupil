@@ -8,14 +8,16 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from OpenGL.GL import GL_MODELVIEW
-from OpenGL.GL import GL_PROJECTION
-from OpenGL.GL import glLoadIdentity
-from OpenGL.GL import glMatrixMode
-from OpenGL.GL import glPopMatrix
-from OpenGL.GL import glPushMatrix
-from OpenGL.GL import glRotatef
-from OpenGL.GL import glTranslatef
+from OpenGL.GL import (
+    GL_MODELVIEW,
+    GL_PROJECTION,
+    glLoadIdentity,
+    glMatrixMode,
+    glPopMatrix,
+    glPushMatrix,
+    glRotatef,
+    glTranslatef,
+)
 from OpenGL.GLU import gluPerspective
 
 

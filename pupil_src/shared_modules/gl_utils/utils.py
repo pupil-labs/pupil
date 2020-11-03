@@ -15,30 +15,31 @@ import typing as T
 import glfw
 import numpy as np
 import OpenGL.error
-from OpenGL.GL import GL_BLEND
-from OpenGL.GL import GL_COLOR_BUFFER_BIT
-from OpenGL.GL import GL_LINE_SMOOTH
-from OpenGL.GL import GL_MODELVIEW
-from OpenGL.GL import GL_NO_ERROR
-from OpenGL.GL import GL_ONE_MINUS_SRC_ALPHA
-from OpenGL.GL import GL_POINT_SPRITE
-from OpenGL.GL import GL_PROJECTION
-from OpenGL.GL import GL_SRC_ALPHA
-from OpenGL.GL import GL_VERTEX_PROGRAM_POINT_SIZE
-from OpenGL.GL import glBlendFunc
-from OpenGL.GL import glClear
-from OpenGL.GL import glClearColor
-from OpenGL.GL import glEnable
-from OpenGL.GL import glFlush
-from OpenGL.GL import glGetError
-from OpenGL.GL import glLoadIdentity
-from OpenGL.GL import glMatrixMode
-from OpenGL.GL import glOrtho
-from OpenGL.GL import glPopMatrix
-from OpenGL.GL import glPushMatrix
-from OpenGL.GL import glViewport
-from OpenGL.GLU import gluErrorString
-from OpenGL.GLU import gluPerspective
+from OpenGL.GL import (
+    GL_BLEND,
+    GL_COLOR_BUFFER_BIT,
+    GL_LINE_SMOOTH,
+    GL_MODELVIEW,
+    GL_NO_ERROR,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_POINT_SPRITE,
+    GL_PROJECTION,
+    GL_SRC_ALPHA,
+    GL_VERTEX_PROGRAM_POINT_SIZE,
+    glBlendFunc,
+    glClear,
+    glClearColor,
+    glEnable,
+    glFlush,
+    glGetError,
+    glLoadIdentity,
+    glMatrixMode,
+    glOrtho,
+    glPopMatrix,
+    glPushMatrix,
+    glViewport,
+)
+from OpenGL.GLU import gluErrorString, gluPerspective
 
 glfw.ERROR_REPORTING = "raise"
 

@@ -12,13 +12,15 @@ import math
 
 import numpy as np
 from gl_utils.trackball import Trackball
-from OpenGL.GL import GL_LINES
-from OpenGL.GL import GL_MODELVIEW
-from OpenGL.GL import GL_TRIANGLE_FAN
-from OpenGL.GL import glLoadMatrixf
-from OpenGL.GL import glMatrixMode
-from OpenGL.GL import glPopMatrix
-from OpenGL.GL import glPushMatrix
+from OpenGL.GL import (
+    GL_LINES,
+    GL_MODELVIEW,
+    GL_TRIANGLE_FAN,
+    glLoadMatrixf,
+    glMatrixMode,
+    glPopMatrix,
+    glPushMatrix,
+)
 from pyglui.cygl import utils as glutils
 from pyglui.cygl.utils import RGBA
 from visualizer import Visualizer
