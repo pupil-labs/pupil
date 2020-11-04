@@ -209,7 +209,7 @@ def eye(
             plugins_path = os.path.join(g_pool.user_dir, "plugins")
 
             for plugin in import_runtime_plugins(plugins_path):
-                if not isinstance(plugin, type(PupilDetectorPlugin)):
+                if not isinstance(plugin, type):
                     continue
                 if not issubclass(plugin, PupilDetectorPlugin):
                     continue
