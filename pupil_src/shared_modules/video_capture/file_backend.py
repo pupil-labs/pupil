@@ -504,7 +504,9 @@ class File_Source(Playback_Source, Base_Source):
             should_send_notification = True
         else:
             should_send_notification = True
-            should_send_notification &= (timestamp_now - timestamp_last) >= min_time_diff_sec
+            should_send_notification &= (
+                timestamp_now - timestamp_last
+            ) >= min_time_diff_sec
             should_send_notification &= current_index != last_index
 
         if should_send_notification:

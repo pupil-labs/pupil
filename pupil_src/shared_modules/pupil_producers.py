@@ -409,7 +409,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             progress = (current_index + 1) / total_frames
             progress = max(0.0, min(progress, 1.0))
             progress_by_eye[eye_id] = progress
-        
+
         return min(progress_by_eye)
 
     def stop_eye_process(self, eye_id):
