@@ -655,6 +655,17 @@ def eye(
                         )
                     except KeyError as err:
                         logger.error(f"Attempt to load unknown plugin: {err}")
+                elif (
+                    subject.startswith("stop_eye_plugin")
+                    and notification["target"] == g_pool.process
+                ):
+                    try:
+                        plugin_to_stop = g_pool.plugin_by_name[notification["name"]]
+                    except KeyError as err:
+                        logger.error(f"Attempt to stop unknown plugin: {err}")
+                    else:
+                        plugin_to_stop.alive = False
+                        g_pool.plugins.clean()
 
                 for plugin in g_pool.plugins:
                     plugin.on_notify(notification)
