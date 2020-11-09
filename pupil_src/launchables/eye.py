@@ -618,7 +618,8 @@ def eye(
             glfw.swap_interval(0)
 
         # Event loop
-        while not glfw.window_should_close(main_window):
+        window_should_close = False
+        while not window_should_close:
 
             if notify_sub.new_data:
                 t, notification = notify_sub.recv()
@@ -763,13 +764,13 @@ def eye(
                 for result in event.get(EVENT_KEY, ()):
                     pupil_socket.send(result)
 
-            cpu_graph.update()
-
             # GL drawing
             if window_should_update():
+                cpu_graph.update()
                 if is_window_visible(main_window):
                     consume_events_and_render_buffer()
                 glfw.poll_events()
+                window_should_close = glfw.window_should_close(main_window)
 
         # END while running
 
