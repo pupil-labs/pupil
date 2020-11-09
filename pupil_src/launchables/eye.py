@@ -733,10 +733,9 @@ def eye(
                 for result in event.get(EVENT_KEY, ()):
                     pupil_socket.send(result)
 
-            cpu_graph.update()
-
             # GL drawing
             if window_should_update():
+                cpu_graph.update()
                 if is_window_visible(main_window):
                     consume_events_and_render_buffer()
                 glfw.poll_events()
