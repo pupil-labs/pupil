@@ -10,7 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
-from pye3d.detector_3d import Detector3D, CameraModel
+from pye3d.detector_3d import Detector3D, CameraModel, DetectorMode
 from pyglui import ui
 
 from .detector_base_plugin import PupilDetectorPlugin
@@ -29,14 +29,32 @@ class Pye3DPlugin(PupilDetectorPlugin):
     identifier = "3d"
     order = 0.101
 
-    def __init__(self, g_pool=None):
+    def __init__(
+        self,
+        g_pool=None,
+        detector_mode_name=DetectorMode.blocking.name,
+    ):
         super().__init__(g_pool=g_pool)
         self.camera = CameraModel(
             focal_length=self.g_pool.capture.intrinsics.focal_length,
             resolution=self.g_pool.capture.intrinsics.resolution,
         )
-        self.detector = Detector3D(camera=self.camera)
+        # TODO: Set mode based on app once async mode is well tested
+        # async_apps = ("capture", "service")
+        # mode = (
+        #     DetectorMode.asynchronous
+        #     if g_pool.app in async_apps
+        #     else DetectorMode.blocking
+        # )
+        # logger.debug(f"Running {mode.name} in {g_pool.app}")
+        mode = DetectorMode.from_name(detector_mode_name)
+        self.detector = Detector3D(camera=self.camera, long_term_mode=mode)
         self.debugVisualizer3D = Eye_Visualizer(self.g_pool, self.camera.focal_length)
+
+    def get_init_dict(self):
+        init_dict = super().get_init_dict()
+        init_dict["detector_mode_name"] = self.detector.long_term_mode.name
+        return init_dict
 
     def _process_camera_changes(self):
         camera = CameraModel(
@@ -109,6 +127,16 @@ class Pye3DPlugin(PupilDetectorPlugin):
         super().init_ui()
         self.menu.label = self.pretty_class_name
 
+        # TODO: Remove selector when async mode is well tested
+        self.menu.append(
+            ui.Selector(
+                "long_term_mode",
+                self.detector,
+                labels=[m.name for m in DetectorMode],
+                selection=list(DetectorMode),
+                label="Long-term mode",
+            )
+        )
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
         self.menu.append(ui.Button("Toggle debug window", self.debug_window_toggle))
 
@@ -145,7 +173,8 @@ class Pye3DPlugin(PupilDetectorPlugin):
                 )
 
     def cleanup(self):
-        self.debug_window_close()  # if we change detectors, be sure debug window is also closed
+        # if we change detectors, be sure debug window is also closed
+        self.debug_window_close()
 
     # Public
 
