@@ -15,6 +15,8 @@ import socket
 
 import numpy as np
 
+from OpenGL.GL import GL_COLOR_BUFFER_BIT
+
 import glfw
 
 glfw.ERROR_REPORTING = "raise"
@@ -79,7 +81,7 @@ class Service_UI(System_Plugin_Base):
         def on_resize(window, w, h):
             # Always clear buffers on resize to make sure that there are no overlapping
             # artifacts from previous frames.
-            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClear(GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
             self.window_size = w, h

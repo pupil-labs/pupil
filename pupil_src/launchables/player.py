@@ -69,6 +69,8 @@ def player(
         # imports
         from file_methods import Persistent_Dict, next_export_sub_dir
 
+        from OpenGL.GL import GL_COLOR_BUFFER_BIT
+
         # display
         import glfw
 
@@ -238,7 +240,7 @@ def player(
 
             # Always clear buffers on resize to make sure that there are no overlapping
             # artifacts from previous frames.
-            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClear(GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
             content_scale = gl_utils.get_content_scale(window)

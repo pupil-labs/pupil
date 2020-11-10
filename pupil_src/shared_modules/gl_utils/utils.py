@@ -12,13 +12,34 @@ import logging
 import math
 import typing as T
 
-import numpy as np
-import OpenGL
-import OpenGL.error
-from OpenGL.GL import *
-from OpenGL.GLU import gluPerspective, gluErrorString
-
 import glfw
+import numpy as np
+import OpenGL.error
+from OpenGL.GL import (
+    GL_BLEND,
+    GL_COLOR_BUFFER_BIT,
+    GL_LINE_SMOOTH,
+    GL_MODELVIEW,
+    GL_NO_ERROR,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_POINT_SPRITE,
+    GL_PROJECTION,
+    GL_SRC_ALPHA,
+    GL_VERTEX_PROGRAM_POINT_SIZE,
+    glBlendFunc,
+    glClear,
+    glClearColor,
+    glEnable,
+    glFlush,
+    glGetError,
+    glLoadIdentity,
+    glMatrixMode,
+    glOrtho,
+    glPopMatrix,
+    glPushMatrix,
+    glViewport,
+)
+from OpenGL.GLU import gluErrorString, gluPerspective
 
 glfw.ERROR_REPORTING = "raise"
 

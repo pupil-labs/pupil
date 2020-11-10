@@ -8,13 +8,48 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
 import glfw
 
 glfw.ERROR_REPORTING = "raise"
 
 import gl_utils
-from OpenGL.GL import *
+from OpenGL.GL import (
+    GL_BLEND,
+    GL_COLOR_BUFFER_BIT,
+    GL_LINES,
+    GL_LINE_LOOP,
+    GL_LINE_SMOOTH,
+    GL_LINE_SMOOTH_HINT,
+    GL_LINE_STRIP,
+    GL_MODELVIEW,
+    GL_NICEST,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_POINT_SPRITE,
+    GL_POLYGON_SMOOTH,
+    GL_POLYGON_SMOOTH_HINT,
+    GL_PROJECTION,
+    GL_SRC_ALPHA,
+    GL_VERTEX_PROGRAM_POINT_SIZE,
+    glBegin,
+    glBlendFunc,
+    glClear,
+    glClearColor,
+    glColor3f,
+    glColor4f,
+    glEnable,
+    glEnd,
+    glHint,
+    glLineWidth,
+    glLoadIdentity,
+    glMatrixMode,
+    glOrtho,
+    glPopMatrix,
+    glPushMatrix,
+    glScale,
+    glTranslatef,
+    glVertex3f,
+    glViewport,
+)
 from platform import system
 
 from pyglui.cygl.utils import RGBA
