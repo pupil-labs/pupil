@@ -17,7 +17,7 @@ from pyglui.cygl import utils as glutils
 from pyglui.cygl.utils import RGBA
 from visualizer import Visualizer
 
-from pye3d.geometry.eye import LeGrandEye
+from .eye import LeGrandEye
 
 from collections import deque
 
