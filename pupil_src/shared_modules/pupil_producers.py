@@ -328,7 +328,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.data_sub = zmq_tools.Msg_Receiver(
             zmq_ctx,
             g_pool.ipc_sub_url,
-            topics=("pupil", "notify.file_source.video_finished"),
+            topics=("pupil", "notify.file_source"),
             hwm=100_000,
         )
 
@@ -354,6 +354,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         # Start offline pupil detection if not complete yet:
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
+        self.eye_frame_idx = [-1, -1]
 
         # start processes
         for eye_id in range(2):
@@ -381,6 +382,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         video_loc = existing_locs[0]
         n_valid_frames = np.count_nonzero(self.videoset.lookup.container_idx > -1)
         self.eye_frame_num[eye_id] = n_valid_frames
+        self.eye_frame_idx = [-1, -1]
 
         capure_settings = "File_Source", {"source_path": video_loc, "timing": None}
         self.notify_all(
@@ -395,16 +397,20 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     @property
     def detection_progress(self) -> float:
-        total = sum(self.eye_frame_num)
-        # TODO: Figure out the number of frames independent of 3d detection
-        detected = self._pupil_data_store.count_collected(detector_tag="3d")
-        if total:
-            return min(
-                detected / total,
-                1.0,
-            )
-        else:
+
+        if not sum(self.eye_frame_num):
             return 0.0
+
+        progress_by_eye = [0.0, 0.0]
+
+        for eye_id in (0, 1):
+            total_frames = self.eye_frame_num[eye_id]
+            current_index = self.eye_frame_idx[eye_id]
+            progress = (current_index + 1) / total_frames
+            progress = max(0.0, min(progress, 1.0))
+            progress_by_eye[eye_id] = progress
+
+        return min(progress_by_eye)
 
     def stop_eye_process(self, eye_id):
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": eye_id})
@@ -425,15 +431,20 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
                 if payload["subject"] == "file_source.video_finished":
-                    for eyeid in (0, 1):
-                        if self.eye_video_loc[eyeid] == payload["source_path"]:
-                            logger.debug("eye {} process complete".format(eyeid))
-                            self.detection_status[eyeid] = "complete"
-                            self.stop_eye_process(eyeid)
+                    for eye_id in (0, 1):
+                        if self.eye_video_loc[eye_id] == payload["source_path"]:
+                            logger.debug("eye {} process complete".format(eye_id))
+                            self.eye_frame_idx[eye_id] = self.eye_frame_num[eye_id]
+                            self.detection_status[eye_id] = "complete"
+                            self.stop_eye_process(eye_id)
                             break
                     if self.eye_video_loc == [None, None]:
                         data = self._pupil_data_store.as_pupil_data_bisector()
                         self.publish_new(pupil_data_bisector=data)
+                if payload["subject"] == "file_source.current_frame_index":
+                    for eye_id in (0, 1):
+                        if self.eye_video_loc[eye_id] == payload["source_path"]:
+                            self.eye_frame_idx[eye_id] = payload["index"]
 
         self.menu_icon.indicator_stop = self.detection_progress
 
