@@ -8,14 +8,22 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import math
 
-from visualizer import Visualizer
-from OpenGL.GL import *
+import numpy as np
+from gl_utils.trackball import Trackball
+from OpenGL.GL import (
+    GL_LINES,
+    GL_MODELVIEW,
+    GL_TRIANGLE_FAN,
+    glLoadMatrixf,
+    glMatrixMode,
+    glPopMatrix,
+    glPushMatrix,
+)
 from pyglui.cygl import utils as glutils
 from pyglui.cygl.utils import RGBA
-from gl_utils.trackball import Trackball
-import numpy as np
-import math
+from visualizer import Visualizer
 
 
 def get_perpendicular_vector(v):
