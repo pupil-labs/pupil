@@ -22,13 +22,11 @@ jobs:
 
     - name: black formatting check
       language: python
+      before_install: pip install -U pip
       # Travis automatically runs `pip install -r requirements.txt` if such a file is present.
       # Source: https://docs.travis-ci.com/user/languages/python/#dependency-management
-      # Since we do not need the requirements to be installed, we overwrite 
-      install: ~
-      before_script:
-        - pip install -U pip
-        - pip install black
+      # Since we only need black to be installed, we overwrite with:
+      install: pip install black
       script:
         - >
           black . --check --exclude pupil_src/tests || (

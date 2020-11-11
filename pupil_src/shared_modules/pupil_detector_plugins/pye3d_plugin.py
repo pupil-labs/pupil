@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
+import pye3d
 from pye3d.detector_3d import Detector3D, CameraModel
 from pyglui import ui
 
@@ -18,6 +19,16 @@ from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline, draw_ellips
 from .visualizer_pye3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
+
+version_installed = getattr(pye3d, "__version__", "0.0.1")
+version_supported = "0.0.1"
+
+if version_installed != version_supported:
+    logger.info(
+        f"Requires pye3d version {version_supported} "
+        f"(Installed: {version_installed})"
+    )
+    raise ImportError
 
 
 class Pye3DPlugin(PupilDetectorPlugin):

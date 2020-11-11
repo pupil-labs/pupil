@@ -117,6 +117,7 @@ def player(
         from gaze_producer.gaze_from_offline_calibration import (
             GazeFromOfflineCalibration,
         )
+        from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
@@ -152,6 +153,9 @@ def player(
         signal.signal(signal.SIGINT, interrupt_handler)
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, "plugins"))
+        runtime_plugins = [
+            p for p in runtime_plugins if not issubclass(p, PupilDetectorPlugin)
+        ]
         system_plugins = [
             Log_Display,
             Seek_Control,

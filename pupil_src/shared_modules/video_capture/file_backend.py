@@ -16,7 +16,7 @@ import os.path
 import typing as T
 from abc import ABC, abstractmethod
 from multiprocessing import cpu_count
-from time import sleep
+from time import sleep, monotonic
 
 import av
 import numpy as np
@@ -489,6 +489,36 @@ class File_Source(Playback_Source, Base_Source):
                 self.wait(frame.timestamp)
             self._recent_frame = frame
             events["frame"] = frame
+
+        if self.timing is None:
+            self._notify_current_index(min_time_diff_sec=1.0)
+
+    def _notify_current_index(self, min_time_diff_sec: float):
+        timestamp_now = monotonic()
+        current_index = self.get_frame_index()
+
+        try:
+            timestamp_last = self.__last_current_index_notification_timestamp
+            last_index = self.__last_current_index_notification_index
+        except AttributeError:
+            should_send_notification = True
+        else:
+            should_send_notification = True
+            should_send_notification &= (
+                timestamp_now - timestamp_last
+            ) >= min_time_diff_sec
+            should_send_notification &= current_index != last_index
+
+        if should_send_notification:
+            self.notify_all(
+                {
+                    "subject": "file_source.current_frame_index",
+                    "index": current_index,
+                    "source_path": self.source_path,
+                }
+            )
+            self.__last_current_index_notification_timestamp = timestamp_now
+            self.__last_current_index_notification_index = current_index
 
     def seek_to_frame(self, seek_pos):
         try:

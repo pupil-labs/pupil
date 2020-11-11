@@ -204,8 +204,30 @@ def eye(
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
+        def load_runtime_pupil_detection_plugins():
+            from plugin import import_runtime_plugins
+            from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
+
+            plugins_path = os.path.join(g_pool.user_dir, "plugins")
+
+            for plugin in import_runtime_plugins(plugins_path):
+                if not isinstance(plugin, type):
+                    continue
+                if not issubclass(plugin, PupilDetectorPlugin):
+                    continue
+                if plugin is PupilDetectorPlugin:
+                    continue
+                yield plugin
+
         default_2d, default_3d, available_detectors = available_detector_plugins()
-        plugins = manager_classes + source_classes + available_detectors + [Roi]
+        runtime_detectors = list(load_runtime_pupil_detection_plugins())
+        plugins = (
+            manager_classes
+            + source_classes
+            + available_detectors
+            + runtime_detectors
+            + [Roi]
+        )
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
         preferred_names = [
@@ -513,6 +535,14 @@ def eye(
             # with incorrect settings that were loaded from session settings.
             plugins_to_load.append(overwrite_cap_settings)
 
+        # Add runtime plugins to the list of plugins to load with default arguments,
+        # if not already restored from session settings
+        plugins_to_load_names = set(name for name, _ in plugins_to_load)
+        for runtime_detector in runtime_detectors:
+            runtime_name = runtime_detector.__name__
+            if runtime_name not in plugins_to_load_names:
+                plugins_to_load.append((runtime_name, {}))
+
         g_pool.plugins = Plugin_List(g_pool, plugins_to_load)
 
         if not g_pool.capture:
@@ -590,7 +620,8 @@ def eye(
             glfw.swap_interval(0)
 
         # Event loop
-        while not glfw.window_should_close(main_window):
+        window_should_close = False
+        while not window_should_close:
 
             if notify_sub.new_data:
                 t, notification = notify_sub.recv()
@@ -657,6 +688,17 @@ def eye(
                         )
                     except KeyError as err:
                         logger.error(f"Attempt to load unknown plugin: {err}")
+                elif (
+                    subject.startswith("stop_eye_plugin")
+                    and notification["target"] == g_pool.process
+                ):
+                    try:
+                        plugin_to_stop = g_pool.plugin_by_name[notification["name"]]
+                    except KeyError as err:
+                        logger.error(f"Attempt to load unknown plugin: {err}")
+                    else:
+                        plugin_to_stop.alive = False
+                        g_pool.plugins.clean()
 
                 for plugin in g_pool.plugins:
                     plugin.on_notify(notification)
@@ -724,13 +766,13 @@ def eye(
                 for result in event.get(EVENT_KEY, ()):
                     pupil_socket.send(result)
 
-            cpu_graph.update()
-
             # GL drawing
             if window_should_update():
+                cpu_graph.update()
                 if is_window_visible(main_window):
                     consume_events_and_render_buffer()
                 glfw.poll_events()
+                window_should_close = glfw.window_should_close(main_window)
 
         # END while running
 

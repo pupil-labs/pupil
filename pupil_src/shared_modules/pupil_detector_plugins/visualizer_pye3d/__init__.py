@@ -37,6 +37,8 @@ from pyglui.cygl import utils as glutils
 from pyglui.cygl.utils import RGBA
 from visualizer import Visualizer
 
+from .eye import LeGrandEye
+
 
 class Eye_Visualizer(Visualizer):
     def __init__(self, g_pool, focal_length):

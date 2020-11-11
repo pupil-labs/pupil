@@ -48,51 +48,17 @@ If you downloaded the linked installer:
 - Check the box `Add Python to PATH`. This will add Python to your System PATH Environment Variable.
 - Check the box `Install for all users`. **Note:** By default this will install Python to `C:\Program Files\Python36`. Some build scripts may fail to start Python due to spaces in the path name. So, you may want to consider installing Python to `C:\Python36` instead.
 
-
 ## Install Python Libraries
 
-We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil.
+We recommend using a [virtual environment](https://docs.python.org/3/tutorial/venv.html) for running Pupil. To install all Python dependencies, you can use the [`requirements.txt`](https://github.com/pupil-labs/pupil/blob/master/requirements.txt) file from the root of the `pupil` repository.
 
 ```sh
 # Upgrade pip to latest version. This is necessary for some dependencies.
-python -m pip install --upgrade pip
-
-pip install cython
-pip install msgpack==0.5.6
-pip install numexpr
-pip install opencv-python==3.*
-pip install packaging
-pip install psutil
-pip install pyaudio
-pip install pyopengl
-pip install pyzmq
-pip install scikit-learn
-pip install scipy
-pip install glfw
-pip install win_inet_pton
-pip install git+https://github.com/zeromq/pyre
-
-pip install pupil-apriltags
-pip install pupil-detectors
+python -m pip install --upgrade pip wheel
+pip install -r requirements.txt
 ```
 
-## Pupil Labs Python Wheels
-
-In addition to these libraries, you will need to install some Pupil-Labs support libraries. Since building them for Windows is also not automated yet, we provide some prebuilt wheels that you can use. If you want to build the support libraries yourself as well, you will have to look for install instructions on the respective GitHub repositories.
-
-Download the following Python wheels from Pupil Labs github repos:
-
-- [pyglui](https://github.com/pupil-labs/pyglui/releases/latest)
-- [pyav](https://github.com/pupil-labs/pyav/releases/latest)
-- [pyndsi](https://github.com/pupil-labs/pyndsi/releases/latest)
-- [pyuvc](https://github.com/pupil-labs/pyuvc/releases/latest)
-
-`pyuvc` requires that you download Microsoft Visual C++ 2010 Redistributable from [microsoft](https://www.microsoft.com/en-us/download/details.aspx?id=14632). The `pthreadVC2` lib, which is used by libuvc, depends on `msvcr100.dll`.
-
-Open your command prompt and `Run as administrator` in the directory where the wheels are downloaded.
-
-- Install all wheels with `pip install X` (where X is the name of the `.whl` file)
-- You can check that libs are installed with `python import X` statements in the command prompt where `X` is the name of the lib.
+**NOTE:** `pyuvc` requires that you download Microsoft Visual C++ 2010 Redistributable from [microsoft](https://www.microsoft.com/en-us/download/details.aspx?id=14632). The `pthreadVC2` lib, which is used by libuvc, depends on `msvcr100.dll`.
 
 ## Modifying Pupil to Work with Windows
 

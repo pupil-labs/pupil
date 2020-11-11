@@ -157,6 +157,10 @@ class Model3D_Monocular(Model3D):
         gaze_3d = self._toWorld(gaze_point)
         normal_3d = np.dot(self.rotation_matrix, pupil_normal)
 
+        # Check if gaze is in front of camera. If it is not, flip direction.
+        if gaze_3d[-1] < 0:
+            gaze_3d *= -1.0
+
         g = {
             "eye_center_3d": eye_center.tolist(),
             "gaze_normal_3d": normal_3d.tolist(),
@@ -283,6 +287,10 @@ class Model3D_Binocular(Model3D):
 
         if nearest_intersection_point is None:
             return None
+
+        # Check if gaze is in front of camera. If it is not, flip direction.
+        if nearest_intersection_point[-1] < 0:
+            nearest_intersection_point *= -1.0
 
         g = {
             "eye_centers_3d": {0: s0_center.tolist(), 1: s1_center.tolist()},

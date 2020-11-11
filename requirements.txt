@@ -1,0 +1,42 @@
+###
+### Third-party
+###
+cython
+msgpack==0.5.6
+numexpr
+packaging>=20.0
+psutil
+pyaudio
+pyopengl
+pyzmq
+scikit-learn
+scipy
+glfw
+pyre @ git+https://github.com/zeromq/pyre
+
+cysignals ; platform_system != "Windows"
+
+win_inet_pton ; platform_system == "Windows"
+opencv-python==3.* ; platform_system == "Windows"
+
+###
+### Pupil-Labs
+###
+pupil-apriltags==1.0.4
+pupil-detectors==1.1.1
+
+# pupil-labs/PyAV 0.4.6
+av @ git+https://github.com/pupil-labs/PyAV@v0.4.6 ; platform_system != "Windows"
+av @ https://github.com/pupil-labs/PyAV/releases/download/v0.4.6/av-0.4.6-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
+
+# pupil-labs/pyuvc 0.14
+uvc @ git+https://github.com/pupil-labs/pyuvc@v0.14.1 ; platform_system != "Windows" # Minor patch fixes build issues in pyproject.toml
+uvc @ https://github.com/pupil-labs/pyuvc/releases/download/v0.14/uvc-0.14-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
+
+# pupil-labs/pyglui 1.28
+pyglui @ git+https://github.com/pupil-labs/pyglui@v1.28 ; platform_system != "Windows"
+pyglui @ https://github.com/pupil-labs/pyglui/releases/download/v1.28/pyglui-1.28-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
+
+# pupil-labs/pyndsi 1.4
+ndsi @ git+https://github.com/pupil-labs/pyndsi@v1.4 ; platform_system != "Windows"
+ndsi @ https://github.com/pupil-labs/pyndsi/releases/download/v1.4/ndsi-1.4-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
