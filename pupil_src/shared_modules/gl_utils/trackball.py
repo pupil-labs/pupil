@@ -62,6 +62,9 @@ class Trackball(object):
         self.distance[2] += dy
 
     def set_window_size(self, w, h):
+        h = max(h, 1)
+        w = max(w, 1)
+
         self.aspect = float(w) / h
         self.window = w, h
 
