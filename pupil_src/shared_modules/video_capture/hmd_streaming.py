@@ -37,7 +37,7 @@ class RGBFrame:
 
     @property
     def gray(self):
-        return np.mean(self.bgr, axis=-1)
+        return np.mean(self.bgr, axis=-1).astype(self.bgr.dtype)
 
 
 FRAME_CLASS_BY_FORMAT = {"rgb": RGBFrame}
