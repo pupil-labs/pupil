@@ -35,6 +35,10 @@ class RGBFrame:
         self.yuv_buffer = None
         self.jpeg_buffer = None
 
+    @property
+    def gray(self):
+        return np.mean(self.bgr, axis=-1)
+
 
 FRAME_CLASS_BY_FORMAT = {"rgb": RGBFrame}
 
