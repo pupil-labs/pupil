@@ -32,7 +32,6 @@ from OpenGL.GL import (
     glTranslatef,
     glVertex3f,
 )
-from pye3d.geometry.eye import LeGrandEye
 from pyglui.cygl import utils as glutils
 from pyglui.cygl.utils import RGBA
 from visualizer import Visualizer
