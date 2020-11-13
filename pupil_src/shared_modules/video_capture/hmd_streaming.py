@@ -78,10 +78,6 @@ class BGRFrame(Uint8BufferFrame):
 
 class RGBFrame(BGRFrame):
     @property
-    def depth(self) -> int:
-        return 3
-
-    @property
     def bgr(self) -> np.ndarray:
         try:
             return self._bgr
@@ -98,7 +94,7 @@ class RGBFrame(BGRFrame):
             return self._gray
 
 
-class GrayFrame(BGRFrame):
+class GrayFrame(Uint8BufferFrame):
     @property
     def depth(self) -> int:
         return 1
