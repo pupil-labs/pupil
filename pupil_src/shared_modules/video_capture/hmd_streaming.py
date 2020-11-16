@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import abc
 import logging
 
 import numpy as np
@@ -21,12 +22,10 @@ from video_capture.base_backend import Base_Source
 logger = logging.getLogger(__name__)
 
 
-class RGBFrame:
+class Uint8BufferFrame(abc.ABC):
     def __init__(self, buffer, timestamp, index, width, height):
-
-        rgb = np.fromstring(buffer, dtype=np.uint8).reshape(height, width, 3)
-        self.bgr = np.ascontiguousarray(np.flip(rgb, (0, 2)))
-        self.img = self.bgr
+        #
+        self._buffer = self.interpret_buffer(buffer, width, height)
         self.timestamp = timestamp
         self.index = index
         self.width = width
@@ -35,22 +34,111 @@ class RGBFrame:
         self.yuv_buffer = None
         self.jpeg_buffer = None
 
+    def interpret_buffer(self, buffer, width, height) -> np.ndarray:
+        return np.fromstring(buffer, dtype=np.uint8).reshape(height, width, self.depth)
 
-FRAME_CLASS_BY_FORMAT = {"rgb": RGBFrame}
+    @property
+    @abc.abstractmethod
+    def depth(self) -> int:
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def gray(self) -> np.ndarray:  # dtype uint8, shape (height, width)
+        raise NotImplementedError
+
+    @property
+    @abc.abstractmethod
+    def bgr(self) -> np.ndarray:
+        # dtype uint8, shape (height, width, 3), memory needs to be allocated contiguous
+        raise NotImplementedError
+
+    @property
+    def img(self) -> np.ndarray:  # equivalent for bgr; kept for legacy reasons
+        return self.bgr
+
+
+class BGRFrame(Uint8BufferFrame):
+    @property
+    def depth(self) -> int:
+        return 3
+
+    @property
+    def bgr(self) -> np.ndarray:
+        return self._buffer
+
+    @property
+    def gray(self):
+        try:
+            return self._gray
+        except AttributeError:
+            self._gray = np.mean(self._buffer, axis=-1).astype(self._buffer.dtype)
+            return self._gray
+
+
+class RGBFrame(BGRFrame):
+    @property
+    def bgr(self) -> np.ndarray:
+        try:
+            return self._bgr
+        except AttributeError:
+            self._bgr = np.ascontiguousarray(np.flip(self._buffer, (0, 2)))
+            return self._bgr
+
+    @property
+    def gray(self):
+        try:
+            return self._gray
+        except AttributeError:
+            self._gray = np.mean(self._buffer, axis=-1).astype(self._buffer.dtype)
+            return self._gray
+
+
+class GrayFrame(Uint8BufferFrame):
+    @property
+    def depth(self) -> int:
+        return 1
+
+    @property
+    def bgr(self) -> np.ndarray:
+        try:
+            return self._bgr
+        except AttributeError:
+            self._bgr = np.ascontiguousarray(np.dstack([self._buffer] * 3))
+            return self._bgr
+
+    @property
+    def gray(self):
+        return self._buffer
+
+    def interpret_buffer(self, buffer, width, height) -> np.ndarray:
+        buffer = super().interpret_buffer(buffer, width, height)
+        # since this will be our gray buffer, we need to get rid of our third dimension
+        buffer.shape = height, width
+        return buffer
+
+
+FRAME_CLASS_BY_FORMAT = {"rgb": RGBFrame, "bgr": BGRFrame, "gray": GrayFrame}
 
 
 class HMD_Streaming_Source(Base_Source):
     name = "HMD Streaming"
 
-    def __init__(self, g_pool, *args, **kwargs):
+    def __init__(self, g_pool, topics=("hmd_streaming.world",), *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
         self.fps = 30
         self.projection_matrix = None
+        self.__topics = topics
         self.frame_sub = zmq_tools.Msg_Receiver(
             self.g_pool.zmq_ctx,
             self.g_pool.ipc_sub_url,
-            topics=("hmd_streaming.world",),
+            topics=self.__topics,
         )
+
+    def get_init_dict(self):
+        init_dict = super().get_init_dict()
+        init_dict["topics"] = self.__topics
+        return init_dict
 
     def cleanup(self):
         self.frame_sub = None

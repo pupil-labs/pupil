@@ -1001,13 +1001,31 @@ class UVC_Manager(Base_Manager):
             logger.warning("Could not find default device.")
             return
 
-        # Sorting cams by bus_number increases chances of selecting only cams from the
-        # same headset when having multiple headsets connected. Note that two headsets
-        # might have the same bus_number when they share an internal USB bus.
-        cam = min(
-            matching_cams, key=lambda device: device.get("bus_number", float("inf"))
-        )
+        # Select device with highest priority (first device when sorting by priority)
+        cam = min(matching_cams, key=self._auto_activate_priority(name_patterns))
         self.activate_source(cam["uid"])
+
+    @staticmethod
+    def _auto_activate_priority(pattern_priority):
+        def __auto_activate_priority(device):
+            least_priority = float("inf")
+            # Sorting cameras primarily by name pattern order avoids selecting the wrong
+            # camera if more than one pattern is matched.
+            matched_pattern_index = next(
+                (
+                    idx
+                    for idx, pat in enumerate(pattern_priority)
+                    if pat in device["name"]
+                ),
+                least_priority,  # default, in case no pattern matched
+            )
+            # Sorting cams secondarily by bus_number increases chances of selecting only cams from the
+            # same headset when having multiple headsets connected. Note that two headsets
+            # might have the same bus_number when they share an internal USB bus.
+            bus_number = device.get("bus_number", least_priority)
+            return matched_pattern_index, bus_number
+
+        return __auto_activate_priority
 
     def cleanup(self):
         self.devices.cleanup()
