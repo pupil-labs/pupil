@@ -219,7 +219,7 @@ def eye(
                     continue
                 yield plugin
 
-        default_2d, default_3d, available_detectors = available_detector_plugins()
+        available_detectors = available_detector_plugins()
         runtime_detectors = list(load_runtime_pupil_detection_plugins())
         plugins = (
             manager_classes
@@ -248,23 +248,14 @@ def eye(
         default_plugins = [
             # TODO: extend with plugins
             (default_capture_name, default_capture_settings),
+            ("UVC_Manager", {}),
+            *[(p.__name__, {}) for p in available_detectors],
+            ("NDSI_Manager", {}),
+            ("HMD_Streaming_Manager", {}),
+            ("File_Manager", {}),
+            ("PupilDetectorManager", {}),
+            ("Roi", {}),
         ]
-
-        # Detectors needs to be loaded first to set `g_pool.pupil_detector`
-        for pupil_detector in [default_2d, default_3d]:
-            if pupil_detector is not None:
-                default_plugins.append((pupil_detector.__name__, {}))
-
-        default_plugins.extend(
-            [
-                ("UVC_Manager", {}),
-                ("NDSI_Manager", {}),
-                ("HMD_Streaming_Manager", {}),
-                ("File_Manager", {}),
-                ("PupilDetectorManager", {}),
-                ("Roi", {}),
-            ]
-        )
 
         def consume_events_and_render_buffer():
             glfw.make_context_current(main_window)

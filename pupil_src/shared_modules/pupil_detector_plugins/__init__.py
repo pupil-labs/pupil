@@ -18,19 +18,13 @@ from .detector_base_plugin import PupilDetectorPlugin, EVENT_KEY
 logger = logging.getLogger(__name__)
 
 
-def available_detector_plugins() -> T.Tuple[
-    T.Optional[PupilDetectorPlugin],
-    T.Optional[PupilDetectorPlugin],
-    T.List[PupilDetectorPlugin],
-]:
-    """Load and list available plugins, including default
+def available_detector_plugins() -> T.List[T.Type[PupilDetectorPlugin]]:
+    """Load and list available plugins
 
-    Returns tuple of default2D, default3D, and list of all detectors.
+    Returns list of all detectors.
     """
 
-    all_plugins = [Detector2DPlugin]
-    default2D = Detector2DPlugin
-    default3D = None
+    all_plugins: T.List[T.Type[PupilDetectorPlugin]] = [Detector2DPlugin]
 
     try:
         from .pye3d_plugin import Pye3DPlugin
@@ -40,9 +34,5 @@ def available_detector_plugins() -> T.Tuple[
     else:
         logger.info("Using refraction corrected 3D pupil detector.")
         all_plugins.append(Pye3DPlugin)
-        default3D = Pye3DPlugin
 
-    if default3D is None:
-        logger.warning("No 3D pupil detector is available!")
-
-    return default2D, default3D, all_plugins
+    return all_plugins
