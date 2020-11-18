@@ -121,6 +121,8 @@ def eye(
         import numpy as np
         import cv2
 
+        from OpenGL.GL import GL_COLOR_BUFFER_BIT
+
         # display
         import glfw
 
@@ -194,7 +196,11 @@ def eye(
         g_pool.timebase = timebase
         g_pool.camera_render_size = None
 
+        g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_socket
+        g_pool.ipc_pub_url = ipc_pub_url
+        g_pool.ipc_sub_url = ipc_sub_url
+        g_pool.ipc_push_url = ipc_push_url
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -323,7 +329,7 @@ def eye(
 
             # Always clear buffers on resize to make sure that there are no overlapping
             # artifacts from previous frames.
-            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClear(GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
             active_window = glfw.get_current_context()

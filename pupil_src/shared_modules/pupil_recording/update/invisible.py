@@ -29,7 +29,7 @@ from version_utils import parse_version
 
 logger = logging.getLogger(__name__)
 
-NEWEST_SUPPORTED_VERSION = parse_version("1.3")
+NEWEST_SUPPORTED_VERSION = parse_version("1.4")
 
 
 def transform_invisible_to_corresponding_new_style(rec_dir: str):
