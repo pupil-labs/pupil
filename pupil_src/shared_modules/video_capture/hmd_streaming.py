@@ -130,8 +130,6 @@ class HMD_Streaming_Source(Base_Source):
         self.projection_matrix = None
         self.__topics = topics
         self.__hwm = hwm
-        if "hwm" in kwargs:
-            self.__hwm = kwargs.get("hwm")
         self.frame_sub = zmq_tools.Msg_Receiver(
             self.g_pool.zmq_ctx,
             self.g_pool.ipc_sub_url,
