@@ -124,7 +124,7 @@ FRAME_CLASS_BY_FORMAT = {"rgb": RGBFrame, "bgr": BGRFrame, "gray": GrayFrame}
 class HMD_Streaming_Source(Base_Source):
     name = "HMD Streaming"
 
-    def __init__(self, g_pool, topics=("hmd_streaming.world",), hwm=None, *args, **kwargs):
+    def __init__(self, g_pool, topics=("hmd_streaming.world",), hwm=1, *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
         self.fps = 30
         self.projection_matrix = None
