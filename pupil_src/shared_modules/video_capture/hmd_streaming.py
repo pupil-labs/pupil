@@ -134,7 +134,7 @@ class HMD_Streaming_Source(Base_Source):
             self.g_pool.zmq_ctx,
             self.g_pool.ipc_sub_url,
             topics=self.__topics,
-            hwm=self.__hwm
+            hwm=self.__hwm,
         )
 
     def get_init_dict(self):
