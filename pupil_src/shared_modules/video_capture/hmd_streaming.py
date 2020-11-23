@@ -124,12 +124,12 @@ FRAME_CLASS_BY_FORMAT = {"rgb": RGBFrame, "bgr": BGRFrame, "gray": GrayFrame}
 class HMD_Streaming_Source(Base_Source):
     name = "HMD Streaming"
 
-    def __init__(self, g_pool, topics=("hmd_streaming.world",), *args, **kwargs):
+    def __init__(self, g_pool, hwm=None, topics=("hmd_streaming.world",), *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
         self.fps = 30
         self.projection_matrix = None
         self.__topics = topics
-        self.__hwm = None
+        self.__hwm = hwm
         if "hwm" in kwargs:
             self.__hwm = kwargs.get("hwm")
         self.frame_sub = zmq_tools.Msg_Receiver(
