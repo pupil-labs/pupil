@@ -150,10 +150,9 @@ class Pye3DPlugin(PupilDetectorPlugin):
         )
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
         self.menu.append(ui.Button("Toggle debug window", self.debug_window_toggle))
-
-        # self.menu.append(
-        #     ui.Switch(TODO, label="Freeze model")
-        # )
+        self.menu.append(
+            ui.Switch("is_long_term_model_frozen", self.detector, label="Freeze model")
+        )
 
     def gl_display(self):
         self.debug_window_update()
