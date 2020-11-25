@@ -21,14 +21,14 @@ from .visualizer_pye3d import Eye_Visualizer
 logger = logging.getLogger(__name__)
 
 version_installed = getattr(pye3d, "__version__", "0.0.1")
-version_supported = "0.0.1"
+version_supported = "0.0.2"
 
 if version_installed != version_supported:
     logger.info(
         f"Requires pye3d version {version_supported} "
         f"(Installed: {version_installed})"
     )
-    raise ImportError
+    raise ImportError("Unsupported version found")
 
 
 class Pye3DPlugin(PupilDetectorPlugin):
