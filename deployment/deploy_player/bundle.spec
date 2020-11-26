@@ -10,7 +10,7 @@ import sys
 
 import numpy
 import pkg_resources
-from PyInstaller.utils.hooks import collect_submodules
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 hidden_imports = []
 hidden_imports += collect_submodules("av")
@@ -40,6 +40,8 @@ if not glfw_path.exists():
     glfw_path = pathlib.Path(pkg_resources.resource_filename("glfw", glfw_name))
 glfw_binaries = [(glfw_path.name, str(glfw_path), "BINARY")]
 
+data_files_pye3d = collect_data_files("pye3d")
+
 if platform.system() == "Darwin":
     sys.path.append(".")
     from version import pupil_version
@@ -53,6 +55,7 @@ if platform.system() == "Darwin":
         hookspath=None,
         runtime_hooks=None,
         excludes=["matplotlib"],
+        datas=data_files_pye3d,
     )
 
     pyz = PYZ(a.pure)
@@ -106,6 +109,7 @@ elif platform.system() == "Linux":
         hookspath=None,
         runtime_hooks=None,
         excludes=["matplotlib"],
+        datas=data_files_pye3d,
     )
 
     pyz = PYZ(a.pure)
@@ -177,6 +181,7 @@ elif platform.system() == "Windows":
         hookspath=None,
         runtime_hooks=None,
         excludes=["matplotlib"],
+        datas=data_files_pye3d,
     )
 
     pyz = PYZ(a.pure)
