@@ -120,7 +120,6 @@ elif platform.system() == "Linux":
         strip=False,
         upx=True,
         console=True,
-        datas=data_files_pye3d,
     )
 
     # libc is also not meant to travel with the bundle. Otherwise pyre.helpers with segfault.
@@ -177,7 +176,7 @@ elif platform.system() == "Windows":
         ["../../pupil_src/main.py"],
         pathex=["../../pupil_src/shared_modules/", str(external_libs_path)],
         binaries=None,
-        datas=None,
+        datas=data_files_pye3d,
         hiddenimports=hidden_imports,
         hookspath=None,
         runtime_hooks=None,

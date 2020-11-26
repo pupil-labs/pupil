@@ -155,14 +155,13 @@ elif platform.system() == "Windows":
         ["../../pupil_src/main.py"],
         pathex=["../../pupil_src/shared_modules/", str(external_libs_path)],
         binaries=None,
-        datas=None,
+        datas=data_files_pye3d,
         hiddenimports=hidden_imports,
         hookspath=None,
         runtime_hooks=None,
         win_no_prefer_redirects=False,
         win_private_assemblies=False,
         excludes=["matplotlib"],
-        datas=data_files_pye3d,
     )
 
     pyz = PYZ(a.pure)
