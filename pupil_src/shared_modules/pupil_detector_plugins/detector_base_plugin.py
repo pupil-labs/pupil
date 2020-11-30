@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import abc
 import logging
+import re
 import traceback
 import typing as T
 
@@ -20,6 +21,8 @@ from plugin import Plugin
 logger = logging.getLogger(__name__)
 
 EVENT_KEY = "pupil_detection_results"
+
+PUPIL_DETECTOR_NOTIFICATION_SUBJECT_PATTERN = "^pupil_detector\.(?P<action>[a-z_]+)$"
 
 
 class DetectorPropertyProxy:
@@ -112,7 +115,7 @@ class PupilDetectorPlugin(Plugin):
             return
 
         # Detect if resolution changed
-        self._update_frame_size_if_changed(new_frame_size=(frame.width, frame.height))
+        self.__update_frame_size_if_changed(new_frame_size=(frame.width, frame.height))
 
         # Get results of previous detectors
         # TODO: This is currently used by Pye3D to get the results of the 2D detection
@@ -131,47 +134,51 @@ class PupilDetectorPlugin(Plugin):
         self._recent_detection_result = detection_result
 
     def on_notify(self, notification):
-        subject_components = notification["subject"].split(".")
 
-        if subject_components[0] == "pupil_detector":
+        subject_match = re.match(
+            PUPIL_DETECTOR_NOTIFICATION_SUBJECT_PATTERN, notification["subject"]
+        )
+
+        if subject_match:
             # {
-            #   "suject": "pupil_detector.<action>",
-            #   "target": <target_process>, # optinal
+            #   "subject": "pupil_detector.<action>",
+            #   "eye_id": <eye_id: int>, # optinal
+            #   "detector_plugin_class_name": <detector_plugin_class_name: str>, # optional
             #   ...
             # }
 
-            action = subject_components[1]
+            action = subject_match["action"]
 
-            # Check if target process matches the current processes (missing value behaves like a match)
-            does_process_match = ("target" not in notification) or (
-                notification["target"] == self.g_pool.process
-            )
+            this_eye_id = self.g_pool.eye_id
+            this_plugin_class_name = type(self).__name__
 
-            # TODO: Get identifier/class_name of the pupil detection plugin, and check if it matches current plugin
+            if "eye_id" in notification and notification["eye_id"] != this_eye_id:
+                # Eye id doesn't match current process eye id - ignoring notification
+                # NOTE: Missing value behaves like a match
+                return
 
-            if not does_process_match:
+            if (
+                "detector_plugin_class_name" in notification
+                and notification["detector_plugin_class_name"] != this_plugin_class_name
+            ):
+                # Detector plugin class name doesn't match current plugin - ignoring notification
+                # NOTE: Missing value behaves like a match
                 return
 
             if action == "set_enabled":
-                value = notification.get("value", None)
-                self.__safely_update_enabled(value)
+                self.__safely_update_enabled(notification)
 
-            # TODO: Change notification to "pupil_detector.set_roi"
-            elif action == "set_property" and notification.get("name", None) == "roi":
-                value = notification.get("value", None)
-                self.__safely_update_roi(value)
+            elif action == "set_roi":
+                self.__safely_update_roi(notification)
 
-            elif action == "set_property":
-                name = notification.get("name", None)
-                value = notification.get("value", None)
-                self.__safely_update_property(name, value)
+            elif action == "set_properties":
+                self.__safely_update_properties(notification)
 
             elif action == "broadcast_properties":
                 self.notify_all(
                     {
-                        # TODO: Include pupil detection plugin identifier in subject or payload
-                        "subject": f"pupil_detector.{self.g_pool.eye_id}.properties",
-                        "value": self.pupil_detector.get_properties(),
+                        "subject": f"pupil_detector.properties.{this_eye_id}.{this_plugin_class_name}",
+                        "values": self.pupil_detector.get_properties(),
                     }
                 )
 
@@ -180,49 +187,94 @@ class PupilDetectorPlugin(Plugin):
 
     ### Private helpers
 
-    def __safely_update_enabled(self, value):
+    def __safely_update_enabled(self, notification: dict):
         try:
-            pass  # FIXME
-        except (ValueError, TypeError):
-            logger.error(f"Invalid enabled value ({value})")
+            value = notification["value"]
+        except KeyError:
+            logger.error(f"Malformed notification: missing 'value' key")
             logger.debug(traceback.format_exc())
-        else:
-            self.enabled = value
-            logger.debug(f"roi set to {value}")
+            return
 
-    def __safely_update_roi(self, value):
+        if not isinstance(value, bool):
+            logger.error("Enabled value must be a bool")
+            logger.error(f"Invalid value: {value}")
+            return
+
+        self.enabled = value
+        logger.debug(f"enabled set to {value}")
+
+    def __safely_update_roi(self, notification):
         try:
-            try:
-                minX, minY, maxX, maxY = value
-            except (ValueError, TypeError) as err:
-                # NOTE: ValueError gets throws when length of the tuple does not
-                # match. TypeError gets thrown when it is not a tuple.
-                raise ValueError(
-                    "ROI needs to be 4 integers: (minX, minY, maxX, maxY)"
-                ) from err
-
-            # Apply very strict error checking here, although roi deal with invalid
-            # values, so the user gets immediate feedback and does not wonder why
-            # something did not work as expected.
-            width, height = self.g_pool.roi.frame_size
-            if not ((0 <= minX < maxX < width) and (0 <= minY < maxY <= height)):
-                raise ValueError(
-                    "Received ROI with invalid dimensions!"
-                    f" (minX={minX}, minY={minY}, maxX={maxX}, maxY={maxY})"
-                    f" for frame size ({width} x {height})"
-                )
-        except (ValueError, TypeError):
-            logger.error(f"Invalid roi value ({value})")
+            value = notification["value"]
+        except KeyError:
+            logger.error(f"Malformed notification: missing 'value' key")
             logger.debug(traceback.format_exc())
-        else:
-            self.g_pool.roi.bounds = (minX, minY, maxX, maxY)
-            logger.debug(f"roi set to {value}")
+            return
 
-    def __safely_update_property(self, name, value):
         try:
-            self.pupil_detector.update_properties({name: value})
+            minX, minY, maxX, maxY = value
+            minX, minY, maxX, maxY = int(minX), int(minY), int(maxX), int(maxY)
+        except (ValueError, TypeError) as err:
+            # NOTE:
+            #   - TypeError gets thrown when 'value' is not a tuple
+            #   - TypeError gets thrown when 'minX', 'minY', 'maxX', or 'maxY' are not 'int's
+            #   - ValueError gets throws when length of the tuple 'value' is not 4
+            logger.error("ROI needs to be 4 integers: (minX, minY, maxX, maxY)")
+            logger.error(f"Invalid value: {value}")
+            logger.debug(traceback.format_exc())
+            return
+
+        # Apply very strict error checking here, although roi deal with invalid
+        # values, so the user gets immediate feedback and does not wonder why
+        # something did not work as expected.
+        width, height = self.g_pool.roi.frame_size
+        if not ((0 <= minX < maxX < width) and (0 <= minY < maxY <= height)):
+            logger.error(
+                "Received ROI with invalid dimensions!"
+                f" (minX={minX}, minY={minY}, maxX={maxX}, maxY={maxY})"
+                f" for frame size ({width} x {height})"
+            )
+            logger.error(f"Invalid value: {value}")
+            return
+
+        self.g_pool.roi.bounds = (minX, minY, maxX, maxY)
+        logger.debug(f"roi set to {value}")
+
+    def __safely_update_properties(self, notification):
+        try:
+            plugin_class_name = notification["detector_plugin_class_name"]
+        except KeyError:
+            logger.error(
+                f"Malformed notification: missing 'detector_plugin_class_name' key"
+            )
+            logger.debug(traceback.format_exc())
+            return
+
+        if not isinstance(plugin_class_name, str):
+            logger.error("Detector plugin class name must be a string")
+            logger.error(f"Invalid value: {plugin_class_name}")
+            return
+
+        if plugin_class_name != type(self).__name__:
+            # Detector plugin class name doesn't match current plugin - ignoring notification
+            return
+
+        try:
+            values = notification["values"]
+        except KeyError:
+            logger.error(f"Malformed notification: missing 'values' key")
+            logger.debug(traceback.format_exc())
+            return
+
+        if not isinstance(values, dict):
+            logger.error(f"Invalid value: {values}")
+            logger.debug(traceback.format_exc())
+            return
+
+        try:
+            self.pupil_detector.update_properties(values)
         except (ValueError, TypeError):
-            logger.error(f"Invalid property name ('{name}') or value ({value})")
+            logger.error(f"Invalid value: {values}")
             logger.debug(traceback.format_exc())
         else:
             logger.debug(f"'{name}' property set to {value}")
@@ -230,7 +282,7 @@ class PupilDetectorPlugin(Plugin):
     def __update_frame_size_if_changed(self, new_frame_size):
         attr_name = "__last_frame_size"
 
-        old_frame_size = getattr(self, attr_name, default=None)
+        old_frame_size = getattr(self, attr_name, None)
 
         if new_frame_size != old_frame_size:
             if old_frame_size is not None:
