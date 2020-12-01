@@ -21,7 +21,7 @@ from .visualizer_pye3d import Eye_Visualizer
 logger = logging.getLogger(__name__)
 
 version_installed = getattr(pye3d, "__version__", "0.0.1")
-version_supported = "0.0.2"
+version_supported = "0.0.4"
 
 if version_installed != version_supported:
     logger.info(
@@ -42,7 +42,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
 
     @property
     def pupil_detector(self):
-        return self.detect
+        return self.detector
 
     def __init__(
         self,
