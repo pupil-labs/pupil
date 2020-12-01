@@ -13,6 +13,7 @@ import logging
 import pye3d
 from pye3d.detector_3d import Detector3D, CameraModel, DetectorMode
 from pyglui import ui
+from methods import normalize
 
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline, draw_ellipse
@@ -119,6 +120,9 @@ class Pye3DPlugin(PupilDetectorPlugin):
         result["topic"] = f"pupil.{eye_id}.{self.identifier}"
         result["id"] = eye_id
         result["method"] = "3d c++"
+        result["norm_pos"] = normalize(
+            result["location"], (frame.width, frame.height), flip_y=True
+        )
 
         return result
 
