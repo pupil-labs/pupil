@@ -296,7 +296,6 @@ class Pupil_Positions_Exporter(_Base_Positions_Exporter):
         try:
             diameter_3d = raw_value["diameter_3d"]
             model_confidence = raw_value["model_confidence"]
-            model_id = raw_value["model_id"]
             sphere_center = raw_value["sphere"]["center"]
             sphere_radius = raw_value["sphere"]["radius"]
             circle_3d_center = raw_value["circle_3d"]["center"]
@@ -310,7 +309,6 @@ class Pupil_Positions_Exporter(_Base_Positions_Exporter):
         except KeyError:
             diameter_3d = None
             model_confidence = None
-            model_id = None
             sphere_center = [None, None, None]
             sphere_radius = None
             circle_3d_center = [None, None, None]
@@ -321,6 +319,9 @@ class Pupil_Positions_Exporter(_Base_Positions_Exporter):
             projected_sphere_center = [None, None]
             projected_sphere_axis = [None, None]
             projected_sphere_angle = None
+
+        # pye3d no longer includes this field. Keeping for backwards-compatibility.
+        model_id = raw_value.get("model_id", None)
 
         return {
             # 2d data
