@@ -48,28 +48,24 @@ class Pye3DPlugin(PupilDetectorPlugin):
     def __init__(
         self,
         g_pool=None,
-        detector_mode_name=DetectorMode.blocking.name,
     ):
         super().__init__(g_pool=g_pool)
         self.camera = CameraModel(
             focal_length=self.g_pool.capture.intrinsics.focal_length,
             resolution=self.g_pool.capture.intrinsics.resolution,
         )
-        # TODO: Set mode based on app once async mode is well tested
-        # async_apps = ("capture", "service")
-        # mode = (
-        #     DetectorMode.asynchronous
-        #     if g_pool.app in async_apps
-        #     else DetectorMode.blocking
-        # )
-        # logger.debug(f"Running {mode.name} in {g_pool.app}")
-        mode = DetectorMode.from_name(detector_mode_name)
+        async_apps = ("capture", "service")
+        mode = (
+            DetectorMode.asynchronous
+            if g_pool.app in async_apps
+            else DetectorMode.blocking
+        )
+        logger.debug(f"Running {mode.name} in {g_pool.app}")
         self.detector = Detector3D(camera=self.camera, long_term_mode=mode)
         self.debugVisualizer3D = Eye_Visualizer(self.g_pool, self.camera.focal_length)
 
     def get_init_dict(self):
         init_dict = super().get_init_dict()
-        init_dict["detector_mode_name"] = self.detector.long_term_mode.name
         return init_dict
 
     def _process_camera_changes(self):
@@ -146,16 +142,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
         super().init_ui()
         self.menu.label = self.pretty_class_name
 
-        # TODO: Remove selector when async mode is well tested
-        self.menu.append(
-            ui.Selector(
-                "long_term_mode",
-                self.detector,
-                labels=[m.name for m in DetectorMode],
-                selection=list(DetectorMode),
-                label="Long-term mode",
-            )
-        )
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
         self.menu.append(ui.Button("Toggle debug window", self.debug_window_toggle))
         self.menu.append(
