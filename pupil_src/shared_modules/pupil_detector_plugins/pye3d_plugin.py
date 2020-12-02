@@ -33,12 +33,12 @@ if version_installed != version_supported:
 
 
 class Pye3DPlugin(PupilDetectorPlugin):
-    uniqueness = "by_class"
-    icon_font = "pupil_icons"
-    icon_chr = chr(0xEC19)
+    pupil_detection_identifier = "3d"
+    # pupil_detection_method implemented as variable
 
     label = "Pye3D"
-    identifier = "3d"
+    icon_font = "pupil_icons"
+    icon_chr = chr(0xEC19)
     order = 0.101
 
     @property
@@ -62,6 +62,13 @@ class Pye3DPlugin(PupilDetectorPlugin):
         )
         logger.debug(f"Running {mode.name} in {g_pool.app}")
         self.detector = Detector3D(camera=self.camera, long_term_mode=mode)
+
+        method_suffix = {
+            DetectorMode.asynchronous: "real-time",
+            DetectorMode.blocking: "post-hoc",
+        }
+        self.pupil_detection_method = f"pye3d {method_suffix[mode]}"
+
         self.debugVisualizer3D = Eye_Visualizer(self.g_pool, self.camera.focal_length)
 
     def get_init_dict(self):
