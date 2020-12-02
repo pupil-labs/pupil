@@ -65,6 +65,7 @@ def eye(
     hide_ui=False,
     debug=False,
     pub_socket_hwm=None,
+    parent_application="capture",
 ):
     """reads eye video and detects the pupil.
 
@@ -190,7 +191,7 @@ def eye(
         g_pool.debug = debug
         g_pool.user_dir = user_dir
         g_pool.version = version
-        g_pool.app = "capture"
+        g_pool.app = parent_application
         g_pool.eye_id = eye_id
         g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
@@ -811,10 +812,10 @@ def eye(
             plugin.alive = False
         g_pool.plugins.clean()
 
-        glfw.destroy_window(main_window)
-        g_pool.gui.terminate()
-        glfw.terminate()
-        logger.info("Process shutting down.")
+    glfw.destroy_window(main_window)
+    g_pool.gui.terminate()
+    glfw.terminate()
+    logger.info("Process shutting down.")
 
 
 def eye_profiled(
@@ -830,6 +831,7 @@ def eye_profiled(
     hide_ui=False,
     debug=False,
     pub_socket_hwm=None,
+    parent_application="capture",
 ):
     import cProfile
     import subprocess
@@ -837,7 +839,23 @@ def eye_profiled(
     from .eye import eye
 
     cProfile.runctx(
-        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings, hide_ui, debug)",
+        (
+            "eye("
+            "timebase, "
+            "is_alive_flag, "
+            "ipc_pub_url, "
+            "ipc_sub_url, "
+            "ipc_push_url, "
+            "user_dir, "
+            "version, "
+            "eye_id, "
+            "overwrite_cap_settings, "
+            "hide_ui, "
+            "debug, "
+            "pub_socket_hwm, "
+            "parent_application, "
+            ")"
+        ),
         {
             "timebase": timebase,
             "is_alive_flag": is_alive_flag,
@@ -851,6 +869,7 @@ def eye_profiled(
             "hide_ui": hide_ui,
             "debug": debug,
             "pub_socket_hwm": pub_socket_hwm,
+            "parent_application": parent_application,
         },
         locals(),
         "eye{}.pstats".format(eye_id),

@@ -310,6 +310,7 @@ def launcher():
                             parsed_args.hide_ui,
                             parsed_args.debug,
                             n.get("pub_socket_hwm"),
+                            parsed_args.app,  # parent_application
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:
