@@ -257,7 +257,6 @@ def eye(
             ("NDSI_Manager", {}),
             ("HMD_Streaming_Manager", {}),
             ("File_Manager", {}),
-            ("PupilDetectorManager", {}),
             ("Roi", {}),
         ]
 
