@@ -103,24 +103,33 @@ class Pye3DPlugin(PupilDetectorPlugin):
                 datum_2d = datum
                 break
         else:
-            # TODO: Should we handle this more gracefully? Can this even happen? What
-            # could we return in that case?
-            raise RuntimeError("No 2D detection result! Needed for pye3D!")
+            logger.warning(
+                "Required 2d pupil detection input not available. "
+                "Returning default pye3d datum."
+            )
+            return self.create_pupil_datum(
+                norm_pos=[0.5, 0.5],
+                diameter=0.0,
+                confidence=0.0,
+                timestamp=frame.timestamp,
+            )
 
         result = self.detector.update_and_detect(
             datum_2d, frame.gray, debug=self.is_debug_window_open
         )
 
-        eye_id = self.g_pool.eye_id
-        result["timestamp"] = frame.timestamp
-        result["topic"] = f"pupil.{eye_id}.{self.identifier}"
-        result["id"] = eye_id
-        result["method"] = "3d c++"
-        result["norm_pos"] = normalize(
+        norm_pos = normalize(
             result["location"], (frame.width, frame.height), flip_y=True
         )
+        template = self.create_pupil_datum(
+            norm_pos=norm_pos,
+            diameter=result["diameter"],
+            confidence=result["confidence"],
+            timestamp=frame.timestamp,
+        )
+        template.update(result)
 
-        return result
+        return template
 
     def on_notify(self, notification):
         super().on_notify(notification)
