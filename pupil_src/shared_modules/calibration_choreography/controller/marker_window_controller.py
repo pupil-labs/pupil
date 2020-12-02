@@ -279,10 +279,11 @@ class MarkerWindowController(observable.Observable):
                 return
 
             with self.__window.drawing_context() as gl_context:
-                self.__draw_circle_marker(
-                    position=marker_position, is_valid=is_valid, alpha=marker_alpha
-                )
-                self.__draw_status_text(clicks_needed=clicks_needed)
+                if gl_context:
+                    self.__draw_circle_marker(
+                        position=marker_position, is_valid=is_valid, alpha=marker_alpha
+                    )
+                    self.__draw_status_text(clicks_needed=clicks_needed)
 
         else:
             raise UnhandledMarkerWindowStateError(self.__state)
