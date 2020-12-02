@@ -405,9 +405,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
         for eye_id in (0, 1):
             total_frames = self.eye_frame_num[eye_id]
-            current_index = self.eye_frame_idx[eye_id]
-            progress = (current_index + 1) / total_frames
-            progress = max(0.0, min(progress, 1.0))
+            if total_frames > 0:
+                current_index = self.eye_frame_idx[eye_id]
+                progress = (current_index + 1) / total_frames
+                progress = max(0.0, min(progress, 1.0))
+            else:
+                progress = 1.0
             progress_by_eye[eye_id] = progress
 
         return min(progress_by_eye)

@@ -196,7 +196,11 @@ def eye(
         g_pool.timebase = timebase
         g_pool.camera_render_size = None
 
+        g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_socket
+        g_pool.ipc_pub_url = ipc_pub_url
+        g_pool.ipc_sub_url = ipc_sub_url
+        g_pool.ipc_push_url = ipc_push_url
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -807,10 +811,10 @@ def eye(
             plugin.alive = False
         g_pool.plugins.clean()
 
-        glfw.destroy_window(main_window)
-        g_pool.gui.terminate()
-        glfw.terminate()
-        logger.info("Process shutting down.")
+    glfw.destroy_window(main_window)
+    g_pool.gui.terminate()
+    glfw.terminate()
+    logger.info("Process shutting down.")
 
 
 def eye_profiled(
