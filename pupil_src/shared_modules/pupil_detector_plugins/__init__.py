@@ -13,7 +13,7 @@ import traceback
 import typing as T
 
 from .detector_2d_plugin import Detector2DPlugin
-from .detector_base_plugin import PupilDetectorPlugin, EVENT_KEY
+from .detector_base_plugin import EVENT_KEY, PupilDetectorPlugin
 
 logger = logging.getLogger(__name__)
 
