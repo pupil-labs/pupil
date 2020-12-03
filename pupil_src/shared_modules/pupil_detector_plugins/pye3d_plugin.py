@@ -67,7 +67,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
             DetectorMode.asynchronous: "real-time",
             DetectorMode.blocking: "post-hoc",
         }
-        self.pupil_detection_method = f"pye3d {method_suffix[mode]}"
+        self.pupil_detection_method = f"pye3d {pye3d.__version__} {method_suffix[mode]}"
 
         self.debugVisualizer3D = Eye_Visualizer(self.g_pool, self.camera.focal_length)
 
