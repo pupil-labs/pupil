@@ -138,7 +138,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
             draw_pupil_outline(self._recent_detection_result, color_rgb=(0, 0.5, 1))
 
     def on_resolution_change(self, old_size, new_size):
-        properties = {}
+        properties = self.pupil_detector.get_properties()
         properties["pupil_size_max"] *= new_size[0] / old_size[0]
         properties["pupil_size_min"] *= new_size[0] / old_size[0]
         self.pupil_detector.update_properties(properties)
