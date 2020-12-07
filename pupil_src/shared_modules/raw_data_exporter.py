@@ -421,14 +421,18 @@ class Gaze_Positions_Exporter(_Base_Positions_Exporter):
             gaze_points_3d = raw_value["gaze_point_3d"]
             # binocular
             if raw_value.get("eye_centers_3d", None) is not None:
-                eye_centers0_3d = raw_value["eye_centers_3d"].get(0, [None, None, None])
-                eye_centers1_3d = raw_value["eye_centers_3d"].get(1, [None, None, None])
+                eye_centers0_3d = raw_value["eye_centers_3d"].get(
+                    "0", [None, None, None]
+                )
+                eye_centers1_3d = raw_value["eye_centers_3d"].get(
+                    "1", [None, None, None]
+                )
                 #
                 gaze_normals0_3d = raw_value["gaze_normals_3d"].get(
-                    0, [None, None, None]
+                    "0", [None, None, None]
                 )
                 gaze_normals1_3d = raw_value["gaze_normals_3d"].get(
-                    1, [None, None, None]
+                    "1", [None, None, None]
                 )
             # monocular
             elif raw_value.get("eye_center_3d", None) is not None:
