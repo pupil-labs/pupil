@@ -23,10 +23,6 @@ from pathlib import Path
 import msgpack
 import numpy as np
 
-assert (
-    msgpack.version[1] == 5
-), "msgpack out of date, please upgrade to version (0, 5, 6 ) or later."
-
 
 logger = logging.getLogger(__name__)
 UnpicklingError = pickle.UnpicklingError
