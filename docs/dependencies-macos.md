@@ -46,8 +46,6 @@ brew install portaudio
 # tbb is included by default with https://github.com/Homebrew/homebrew-core/pull/20101
 brew install opencv
 brew install glew
-# dependencies for 2d_3d c++ detector
-brew install ceres-solver
 ```
 
 ## libuvc
