@@ -1,7 +1,6 @@
 ###
 ### Third-party
 ###
-cython
 msgpack==0.5.6
 numexpr
 packaging>=20.0
