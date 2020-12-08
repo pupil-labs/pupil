@@ -73,7 +73,7 @@ def load_object(file_path, allow_legacy=True):
     with file_path.open("rb") as fh:
         try:
             gc.disable()  # speeds deserialization up.
-            data = msgpack.unpack(fh, raw=False, strict_map_key=False)
+            data = msgpack.unpack(fh, strict_map_key=False)
         except Exception as e:
             if not allow_legacy:
                 raise e
@@ -115,7 +115,7 @@ class Incremental_Legacy_Pupil_Data_Loader(object):
     def __enter__(self):
         self.file_handle = open(self.file_loc, "rb")
         self.unpacker = msgpack.Unpacker(
-            self.file_handle, raw=False, use_list=False, strict_map_key=False
+            self.file_handle, use_list=False, strict_map_key=False
         )
         self.num_key_value_pairs = self.unpacker.read_map_header()
         self._skipped = True
@@ -142,7 +142,7 @@ def load_pldata_file(directory, topic):
         data_ts = np.load(ts_file)
         with open(msgpack_file, "rb") as fh:
             for topic, payload in msgpack.Unpacker(
-                fh, raw=False, use_list=False, strict_map_key=False
+                fh, use_list=False, strict_map_key=False
             ):
                 data.append(Serialized_Dict(msgpack_bytes=payload))
                 topics.append(topic)
@@ -235,7 +235,6 @@ class Serialized_Dict(object):
         if not self._data:
             self._data = msgpack.unpackb(
                 self._ser_data,
-                raw=False,
                 use_list=False,
                 object_hook=self.unpacking_object_hook,
                 ext_hook=self.unpacking_ext_hook,
@@ -361,7 +360,6 @@ class Serialized_Dict(object):
 
         return msgpack.unpackb(
             self._ser_data,
-            raw=False,
             use_list=False,
             ext_hook=unpacking_ext_hook,
         )
