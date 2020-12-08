@@ -10,8 +10,8 @@ pyopengl
 pyzmq
 scikit-learn
 scipy
-glfw
 pyre @ git+https://github.com/zeromq/pyre
+glfw>=2.0.0
 
 cysignals ; platform_system != "Windows"
 
