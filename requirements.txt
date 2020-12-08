@@ -2,7 +2,7 @@
 ### Third-party
 ###
 cython
-msgpack
+msgpack>=1.0.0
 numexpr
 packaging>=20.0
 psutil
