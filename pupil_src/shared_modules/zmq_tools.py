@@ -25,6 +25,9 @@ from zmq.utils.monitor import recv_monitor_message
 # import ujson as serializer # uncomment for json serialization
 
 assert zmq.__version__ > "15.1"
+assert (
+    serializer.version[0] == 1
+), "msgpack out of date, please upgrade to version (1, 0, 0)"
 
 
 class ZMQ_handler(logging.Handler):
