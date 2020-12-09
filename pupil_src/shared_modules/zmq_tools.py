@@ -120,7 +120,7 @@ class Msg_Receiver(ZMQ_Socket):
             yield self.socket.recv()
 
     def deserialize_payload(self, payload_serialized, *extra_frames):
-        payload = serializer.loads(payload_serialized, encoding="utf-8")
+        payload = serializer.loads(payload_serialized)
         if extra_frames:
             payload["__raw_data__"] = extra_frames
         return payload

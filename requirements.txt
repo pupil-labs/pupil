@@ -1,7 +1,7 @@
 ###
 ### Third-party
 ###
-msgpack==0.5.6
+msgpack>=1.0.0
 numexpr
 packaging>=20.0
 psutil
