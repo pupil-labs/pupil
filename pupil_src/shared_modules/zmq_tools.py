@@ -25,6 +25,9 @@ from zmq.utils.monitor import recv_monitor_message
 # import ujson as serializer # uncomment for json serialization
 
 assert zmq.__version__ > "15.1"
+assert (
+    serializer.version[0] == 1
+), "msgpack out of date, please upgrade to version (1, 0, 0)"
 
 
 class ZMQ_handler(logging.Handler):
@@ -120,7 +123,7 @@ class Msg_Receiver(ZMQ_Socket):
             yield self.socket.recv()
 
     def deserialize_payload(self, payload_serialized, *extra_frames):
-        payload = serializer.loads(payload_serialized, encoding="utf-8")
+        payload = serializer.loads(payload_serialized)
         if extra_frames:
             payload["__raw_data__"] = extra_frames
         return payload

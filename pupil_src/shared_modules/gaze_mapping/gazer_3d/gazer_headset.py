@@ -293,8 +293,8 @@ class Model3D_Binocular(Model3D):
             nearest_intersection_point *= -1.0
 
         g = {
-            "eye_centers_3d": {0: s0_center.tolist(), 1: s1_center.tolist()},
-            "gaze_normals_3d": {0: s0_normal.tolist(), 1: s1_normal.tolist()},
+            "eye_centers_3d": {"0": s0_center.tolist(), "1": s1_center.tolist()},
+            "gaze_normals_3d": {"0": s0_normal.tolist(), "1": s1_normal.tolist()},
             "gaze_point_3d": nearest_intersection_point.tolist(),
         }
 
