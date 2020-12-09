@@ -392,7 +392,7 @@ def launcher():
                             "doc": launcher.__doc__,
                         }
                     )
-                elif "notify.launcher_process.should_stop":
+                elif "notify.launcher_process.should_stop" in topic:
                     if parsed_args.app == "capture":
                         cmd_push.notify({"subject": "world_process.should_stop"})
                     elif parsed_args.app == "service":

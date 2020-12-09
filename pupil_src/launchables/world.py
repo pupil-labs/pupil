@@ -36,6 +36,7 @@ def world(
     Reacts to notifications:
         ``eye_process.started``
         ``start_plugin``
+        ``should_stop``
 
     Emits notifications:
         ``eye_process.should_start``
@@ -516,6 +517,8 @@ def world(
                         )
             elif subject == "world_process.adapt_window_size":
                 set_window_size()
+            elif subject == "world_process.should_stop":
+                glfw.set_window_should_close(main_window, True)
 
         width, height = session_settings.get(
             "window_size", (1280 + icon_bar_width, 720)
