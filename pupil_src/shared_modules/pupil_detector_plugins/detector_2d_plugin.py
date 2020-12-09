@@ -28,27 +28,38 @@ from gl_utils import (
 from methods import normalize
 from plugin import Plugin
 
-from .detector_base_plugin import PropertyProxy, PupilDetectorPlugin
+from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_pupil_outline
 
 logger = logging.getLogger(__name__)
 
 
 class Detector2DPlugin(PupilDetectorPlugin):
-    uniqueness = "by_class"
-    icon_font = "pupil_icons"
-    icon_chr = chr(0xEC18)
+
+    pupil_detection_identifier = "2d"
+    pupil_detection_method = "2d c++"
 
     label = "C++ 2d detector"
-    identifier = "2d"
+    icon_font = "pupil_icons"
+    icon_chr = chr(0xEC18)
     order = 0.100
 
+    @property
+    def pretty_class_name(self):
+        return "Pupil Detector 2D"
+
+    @property
+    def pupil_detector(self) -> DetectorBase:
+        return self.detector_2d
+
     def __init__(
-        self, g_pool=None, namespaced_properties=None, detector_2d: Detector2D = None
+        self,
+        g_pool=None,
+        properties=None,
+        detector_2d: Detector2D = None,
     ):
         super().__init__(g_pool=g_pool)
-        self.detector_2d = detector_2d or Detector2D(namespaced_properties or {})
-        self.proxy = PropertyProxy(self.detector_2d)
+        self.detector_2d = detector_2d or Detector2D(properties or {})
 
     def detect(self, frame, **kwargs):
         # convert roi-plugin to detector roi
@@ -60,28 +71,26 @@ class Detector2DPlugin(PupilDetectorPlugin):
             color_img=debug_img,
             roi=roi,
         )
-        eye_id = self.g_pool.eye_id
-        location = result["location"]
-        result["norm_pos"] = normalize(
-            location, (frame.width, frame.height), flip_y=True
+
+        norm_pos = normalize(
+            result["location"], (frame.width, frame.height), flip_y=True
         )
-        result["timestamp"] = frame.timestamp
-        result["topic"] = f"pupil.{eye_id}.{self.identifier}"
-        result["id"] = eye_id
-        result["method"] = "2d c++"
-        return result
 
-    @property
-    def pupil_detector(self) -> DetectorBase:
-        return self.detector_2d
+        # Create basic pupil datum
+        datum = self.create_pupil_datum(
+            norm_pos=norm_pos,
+            diameter=result["diameter"],
+            confidence=result["confidence"],
+            timestamp=frame.timestamp,
+        )
 
-    @property
-    def pretty_class_name(self):
-        return "Pupil Detector 2D"
+        # Fill out 2D model data
+        datum["ellipse"] = {}
+        datum["ellipse"]["axes"] = result["ellipse"]["axes"]
+        datum["ellipse"]["angle"] = result["ellipse"]["angle"]
+        datum["ellipse"]["center"] = result["ellipse"]["center"]
 
-    def gl_display(self):
-        if self._recent_detection_result:
-            draw_pupil_outline(self._recent_detection_result, color_rgb=(0, 0.5, 1))
+        return datum
 
     def init_ui(self):
         super().init_ui()
@@ -95,8 +104,8 @@ class Detector2DPlugin(PupilDetectorPlugin):
         self.menu.append(info)
         self.menu.append(
             ui.Slider(
-                "2d.intensity_range",
-                self.proxy,
+                "intensity_range",
+                self.pupil_detector_properties,
                 label="Pupil intensity range",
                 min=0,
                 max=60,
@@ -105,8 +114,8 @@ class Detector2DPlugin(PupilDetectorPlugin):
         )
         self.menu.append(
             ui.Slider(
-                "2d.pupil_size_min",
-                self.proxy,
+                "pupil_size_min",
+                self.pupil_detector_properties,
                 label="Pupil min",
                 min=1,
                 max=250,
@@ -115,11 +124,21 @@ class Detector2DPlugin(PupilDetectorPlugin):
         )
         self.menu.append(
             ui.Slider(
-                "2d.pupil_size_max",
-                self.proxy,
+                "pupil_size_max",
+                self.pupil_detector_properties,
                 label="Pupil max",
                 min=50,
                 max=400,
                 step=1,
             )
         )
+
+    def gl_display(self):
+        if self._recent_detection_result:
+            draw_pupil_outline(self._recent_detection_result, color_rgb=(0, 0.5, 1))
+
+    def on_resolution_change(self, old_size, new_size):
+        properties = self.pupil_detector.get_properties()
+        properties["pupil_size_max"] *= new_size[0] / old_size[0]
+        properties["pupil_size_min"] *= new_size[0] / old_size[0]
+        self.pupil_detector.update_properties(properties)
