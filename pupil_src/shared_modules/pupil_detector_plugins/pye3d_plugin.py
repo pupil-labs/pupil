@@ -40,6 +40,10 @@ class Pye3DPlugin(PupilDetectorPlugin):
     identifier = "3d"
     order = 0.101
 
+    @property
+    def pupil_detector(self):
+        return self.detect
+
     def __init__(self, g_pool=None):
         super().__init__(g_pool=g_pool)
         self.camera = CameraModel(

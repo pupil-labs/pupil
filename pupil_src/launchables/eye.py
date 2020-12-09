@@ -224,7 +224,7 @@ def eye(
                     continue
                 yield plugin
 
-        default_2d, default_3d, available_detectors = available_detector_plugins()
+        available_detectors = available_detector_plugins()
         runtime_detectors = list(load_runtime_pupil_detection_plugins())
         plugins = (
             manager_classes
@@ -254,13 +254,10 @@ def eye(
             # TODO: extend with plugins
             (default_capture_name, default_capture_settings),
             ("UVC_Manager", {}),
-            # Detectors needs to be loaded first to set `g_pool.pupil_detector`
-            (default_2d.__name__, {}),
-            (default_3d.__name__, {}),
+            *[(p.__name__, {}) for p in available_detectors],
             ("NDSI_Manager", {}),
             ("HMD_Streaming_Manager", {}),
             ("File_Manager", {}),
-            ("PupilDetectorManager", {}),
             ("Roi", {}),
         ]
 
