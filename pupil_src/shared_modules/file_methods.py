@@ -24,6 +24,11 @@ import msgpack
 import numpy as np
 
 
+assert (
+    msgpack.version[0] == 1
+), "msgpack out of date, please upgrade to version (1, 0, 0)"
+
+
 logger = logging.getLogger(__name__)
 UnpicklingError = pickle.UnpicklingError
 
