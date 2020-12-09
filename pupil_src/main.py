@@ -392,6 +392,14 @@ def launcher():
                             "doc": launcher.__doc__,
                         }
                     )
+                elif "notify.launcher_process.should_stop":
+                    if parsed_args.app == "capture":
+                        cmd_push.notify({"subject": "world_process.should_stop"})
+                    elif parsed_args.app == "service":
+                        cmd_push.notify({"subject": "service_process.should_stop"})
+                    elif parsed_args.app == "player":
+                        cmd_push.notify({"subject": "player_process.should_stop"})
+
             else:
                 if not active_children():
                     break
