@@ -56,6 +56,13 @@ def pupil_version_string() -> str:
     if version is None:
         raise ValueError("Version Error")
 
+    try:
+        parts_git_tag = version.split("-")
+        version_parsed = packaging.version.Version(parts_git_tag[0])
+        if version_parsed.is_prerelease:
+            version = version_parsed.base_version
+    except packaging.version.InvalidVersion:
+        pass
     version = version.replace("v", "")  # strip version 'v'
     # print(version)
     if "-" in version:
