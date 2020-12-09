@@ -70,6 +70,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
         self.pupil_detection_method = f"pye3d {pye3d.__version__} {method_suffix[mode]}"
 
         self.debugVisualizer3D = Eye_Visualizer(self.g_pool, self.camera.focal_length)
+        self.__debug_window_button = None
 
     def get_init_dict(self):
         init_dict = super().get_init_dict()
@@ -159,7 +160,10 @@ class Pye3DPlugin(PupilDetectorPlugin):
         self.menu.label = self.pretty_class_name
 
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
-        self.menu.append(ui.Button("Toggle debug window", self.debug_window_toggle))
+        self.__debug_window_button = ui.Button(
+            self.__debug_window_button_label, self.debug_window_toggle
+        )
+        self.menu.append(self.__debug_window_button)
         self.menu.append(
             ui.Switch("is_long_term_model_frozen", self.detector, label="Freeze model")
         )
@@ -191,6 +195,8 @@ class Pye3DPlugin(PupilDetectorPlugin):
                     rgba=(0, 1, 0, 1),
                     thickness=2,
                 )
+        if self.__debug_window_button:
+            self.__debug_window_button.label = self.__debug_window_button_label
 
     def cleanup(self):
         # if we change detectors, be sure debug window is also closed
@@ -202,6 +208,13 @@ class Pye3DPlugin(PupilDetectorPlugin):
         self.detector.reset()
 
     # Debug window management
+
+    @property
+    def __debug_window_button_label(self) -> str:
+        if not self.is_debug_window_open:
+            return "Open debug window"
+        else:
+            return "Close debug window"
 
     @property
     def is_debug_window_open(self) -> bool:
