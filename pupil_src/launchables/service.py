@@ -128,6 +128,7 @@ def service(
         g_pool = SimpleNamespace()
         g_pool.debug = debug
         g_pool.app = "service"
+        g_pool.process = "service"
         g_pool.user_dir = user_dir
         g_pool.version = version
         g_pool.get_now = get_time_monotonic

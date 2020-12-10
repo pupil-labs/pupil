@@ -158,6 +158,7 @@ def _export_world_video(
 
         g_pool = GlobalContainer()
         g_pool.app = "exporter"
+        g_pool.process = "exporter"
         g_pool.min_data_confidence = min_data_confidence
 
         videos = recording.files().core().world().videos()

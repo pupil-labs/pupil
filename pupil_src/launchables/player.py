@@ -337,6 +337,7 @@ def player(
         # create container for globally scoped vars
         g_pool = SimpleNamespace()
         g_pool.app = "player"
+        g_pool.process = "player"
         g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_pub
         g_pool.ipc_pub_url = ipc_pub_url
