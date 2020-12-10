@@ -310,6 +310,7 @@ def launcher():
                             parsed_args.hide_ui,
                             parsed_args.debug,
                             n.get("pub_socket_hwm"),
+                            parsed_args.app,  # parent_application
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:
@@ -392,6 +393,14 @@ def launcher():
                             "doc": launcher.__doc__,
                         }
                     )
+                elif "notify.launcher_process.should_stop" in topic:
+                    if parsed_args.app == "capture":
+                        cmd_push.notify({"subject": "world_process.should_stop"})
+                    elif parsed_args.app == "service":
+                        cmd_push.notify({"subject": "service_process.should_stop"})
+                    elif parsed_args.app == "player":
+                        cmd_push.notify({"subject": "player_process.should_stop"})
+
             else:
                 if not active_children():
                     break

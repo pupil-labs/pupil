@@ -1,8 +1,7 @@
 ###
 ### Third-party
 ###
-cython
-msgpack==0.5.6
+msgpack>=1.0.0
 numexpr
 packaging>=20.0
 psutil
@@ -11,8 +10,8 @@ pyopengl
 pyzmq
 scikit-learn
 scipy
-glfw
-pyre @ git+https://github.com/zeromq/pyre
+glfw>=2.0.0
+pyre @ https://github.com/zeromq/pyre/archive/master.zip
 
 cysignals ; platform_system != "Windows"
 
@@ -23,7 +22,8 @@ opencv-python==3.* ; platform_system == "Windows"
 ### Pupil-Labs
 ###
 pupil-apriltags==1.0.4
-pupil-detectors==1.1.1
+pupil-detectors==2.0.*
+pye3d==0.0.4
 
 # pupil-labs/PyAV 0.4.6
 av @ git+https://github.com/pupil-labs/PyAV@v0.4.6 ; platform_system != "Windows"

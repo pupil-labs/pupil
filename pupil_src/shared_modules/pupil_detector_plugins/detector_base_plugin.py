@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import abc
 import logging
+import re
 import traceback
 import typing as T
 
@@ -21,43 +22,83 @@ logger = logging.getLogger(__name__)
 
 EVENT_KEY = "pupil_detection_results"
 
+PUPIL_DETECTOR_NOTIFICATION_SUBJECT_PATTERN = "^pupil_detector\.(?P<action>[a-z_]+)$"
 
-class PropertyProxy:
+
+class DetectorPropertyProxy:
     """Wrapper around detector properties for easy UI coupling."""
 
     def __init__(self, detector):
         self.__dict__["detector"] = detector
 
-    def __getattr__(self, namespaced_key):
-        namespace, key = namespaced_key.split(".")
-        return self.detector.get_properties()[namespace][key]
+    def __getattr__(self, key):
+        return self.detector.get_properties()[key]
 
-    def __setattr__(self, namespaced_key, value):
-        namespace, key = namespaced_key.split(".")
-        self.detector.update_properties({namespace: {key: value}})
+    def __setattr__(self, key, value):
+        self.detector.update_properties({key: value})
 
 
 class PupilDetectorPlugin(Plugin):
+
     label = "Unnamed"  # Used in eye -> general settings as selector
-    # Used to select correct detector on set_pupil_detection_enabled:
-    identifier = "unnamed"
-    order = 0.1
+
+    pupil_detection_identifier = "unnamed"
+    pupil_detection_method = "undefined"
 
     @property
     @abc.abstractmethod
     def pupil_detector(self) -> DetectorBase:
         pass
 
+    @property
+    def pupil_detector_properties(self) -> DetectorPropertyProxy:
+        attr_name = "__pupil_detector_properties"
+        if not hasattr(self, attr_name):
+            property_proxy = DetectorPropertyProxy(self.pupil_detector)
+            setattr(self, attr_name, property_proxy)
+        return getattr(self, attr_name)
+
+    @abc.abstractmethod
+    def detect(self, frame, **kwargs):
+        pass
+
+    def create_pupil_datum(self, norm_pos, diameter, confidence, timestamp) -> dict:
+        """"""
+        eye_id = self.g_pool.eye_id
+
+        # TODO: Assert arguments are valid
+
+        # Create basic pupil datum with required fields
+        datum = {}
+        datum["id"] = eye_id
+        datum["topic"] = f"pupil.{eye_id}.{self.pupil_detection_identifier}"
+        datum["method"] = f"{self.pupil_detection_method}"
+        datum["norm_pos"] = norm_pos
+        datum["diameter"] = diameter
+        datum["confidence"] = confidence
+        datum["timestamp"] = timestamp
+        return datum
+
+    ### Plugin API
+
+    uniqueness = "by_class"
+    order = 0.1
+
+    @property
+    def enabled(self) -> bool:
+        return self._enabled
+
+    @enabled.setter
+    def enabled(self, is_on: bool):
+        self._enabled = is_on
+        for elem in self.menu:
+            elem.read_only = not self.enabled
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
         g_pool.pupil_detector = self
         self._recent_detection_result = None
-        self._notification_handler = {
-            "pupil_detector.broadcast_properties": self.handle_broadcast_properties_notification,
-            "pupil_detector.set_property": self.handle_set_property_notification,
-            "set_pupil_detection_enabled": self.handle_set_pupil_detection_enabled_notification,
-        }
-        self._last_frame_size = None
+
         self._enabled = True
 
     def init_ui(self):
@@ -66,141 +107,182 @@ class PupilDetectorPlugin(Plugin):
     def deinit_ui(self):
         self.remove_menu()
 
-    @property
-    def enabled(self):
-        return self._enabled
-
-    @enabled.setter
-    def enabled(self, value):
-        self._enabled = value
-        for elem in self.menu:
-            elem.read_only = not self.enabled
-
     def recent_events(self, event):
-        if not self.enabled:
+        frame = event.get("frame", None)
+
+        if not frame or not self.enabled:
             self._recent_detection_result = None
             return
 
-        frame = event.get("frame")
-        if not frame:
-            self._recent_detection_result = None
-            return
+        # Detect if resolution changed
+        self.__update_frame_size_if_changed(new_frame_size=(frame.width, frame.height))
 
-        frame_size = (frame.width, frame.height)
-        if frame_size != self._last_frame_size:
-            if self._last_frame_size is not None:
-                self.on_resolution_change(self._last_frame_size, frame_size)
-            self._last_frame_size = frame_size
+        # Get results of previous detectors
+        # TODO: This is currently used by Pye3D to get the results of the 2D detection
+        previous_detection_results = event.get(EVENT_KEY, [])
 
-        # TODO: The following sections with internal_2d_raw_data are for allowing dual
-        # detectors until pye3d is finished. Then we should cleanup this section!
-
-        # this is only revelant when running the 3D detector, for 2D we just ignore the
-        # additional parameter
         detection_result = self.detect(
             frame=frame,
-            internal_raw_2d_data=event.get("internal_2d_raw_data", None),
             # TODO: workaround to get 2D data into pye3D for now
-            previous_detection_results=event.get(EVENT_KEY, []),
+            previous_detection_results=previous_detection_results,
         )
 
-        # if we are running the 2D detector, we might get internal data that we don't
-        # want published, so we remove it from the dict
-        if "internal_2d_raw_data" in detection_result:
-            event["internal_2d_raw_data"] = detection_result.pop("internal_2d_raw_data")
+        # Append the new detection result to the previous results
+        event[EVENT_KEY] = previous_detection_results + [detection_result]
 
-        if EVENT_KEY in event:
-            event[EVENT_KEY].append(detection_result)
-        else:
-            event[EVENT_KEY] = [detection_result]
-
+        # Save the most recent detection result for visualization
         self._recent_detection_result = detection_result
 
-    @abc.abstractmethod
-    def detect(self, frame, **kwargs):
+    def on_notify(self, notification):
+
+        subject_match = re.match(
+            PUPIL_DETECTOR_NOTIFICATION_SUBJECT_PATTERN, notification["subject"]
+        )
+
+        if subject_match:
+            # {
+            #   "subject": "pupil_detector.<action>",
+            #   "eye_id": <eye_id: int>, # optinal
+            #   "detector_plugin_class_name": <detector_plugin_class_name: str>, # optional
+            #   ...
+            # }
+
+            action = subject_match["action"]
+
+            this_eye_id = self.g_pool.eye_id
+            this_plugin_class_name = type(self).__name__
+
+            if "eye_id" in notification and notification["eye_id"] != this_eye_id:
+                # Eye id doesn't match current process eye id - ignoring notification
+                # NOTE: Missing value behaves like a match
+                return
+
+            if (
+                "detector_plugin_class_name" in notification
+                and notification["detector_plugin_class_name"] != this_plugin_class_name
+            ):
+                # Detector plugin class name doesn't match current plugin - ignoring notification
+                # NOTE: Missing value behaves like a match
+                return
+
+            if action == "set_enabled":
+                self.__safely_update_enabled(notification)
+
+            elif action == "set_roi":
+                self.__safely_update_roi(notification)
+
+            elif action == "set_properties":
+                self.__safely_update_properties(notification)
+
+            elif action == "broadcast_properties":
+                self.notify_all(
+                    {
+                        "subject": f"pupil_detector.properties.{this_eye_id}.{this_plugin_class_name}",
+                        "values": self.pupil_detector.get_properties(),
+                    }
+                )
+
+    def on_resolution_change(self, old_size, new_size):
         pass
 
-    def on_notify(self, notification):
-        subject = notification["subject"]
-        for subject_prefix, handler in self._notification_handler.items():
-            if subject.startswith(subject_prefix):
-                handler(notification)
+    ### Private helpers
 
-    def handle_broadcast_properties_notification(self, notification):
-        target_process = notification.get("target", self.g_pool.process)
-        should_respond = target_process == self.g_pool.process
-        if should_respond:
-            props = self.namespaced_detector_properties()
-            properties_broadcast = {
-                "subject": f"pupil_detector.properties.{self.g_pool.eye_id}",
-                **props,  # add properties to broadcast
-            }
-            self.notify_all(properties_broadcast)
+    def __safely_update_enabled(self, notification: dict):
+        try:
+            value = notification["value"]
+        except KeyError:
+            logger.error(f"Malformed notification: missing 'value' key")
+            logger.debug(traceback.format_exc())
+            return
 
-    def handle_set_property_notification(self, notification):
-        target_process = notification.get("target", self.g_pool.process)
-        if target_process != self.g_pool.process:
+        if not isinstance(value, bool):
+            logger.error("Enabled value must be a bool")
+            logger.error(f"Invalid value: {value}")
+            return
+
+        self.enabled = value
+        logger.debug(f"enabled set to {value}")
+
+    def __safely_update_roi(self, notification):
+        try:
+            value = notification["value"]
+        except KeyError:
+            logger.error(f"Malformed notification: missing 'value' key")
+            logger.debug(traceback.format_exc())
             return
 
         try:
-            property_name = notification["name"]
-            property_value = notification["value"]
-            subject_components = notification["subject"].split(".")
-            # len(pupil_detector.properties) is at least 2 due to the subject prefix
-            # being pupil_detector.set_property. The third component is the optional
-            # namespace of the property.
-            if len(subject_components) > 2:
-                namespace = subject_components[2]
-                self.pupil_detector.update_properties(
-                    {namespace: {property_name: property_value}}
-                )
-            elif property_name == "roi":
-                # Modify the ROI with the values sent over network
+            minX, minY, maxX, maxY = value
+            minX, minY, maxX, maxY = int(minX), int(minY), int(maxX), int(maxY)
+        except (ValueError, TypeError) as err:
+            # NOTE:
+            #   - TypeError gets thrown when 'value' is not a tuple
+            #   - TypeError gets thrown when 'minX', 'minY', 'maxX', or 'maxY' are not 'int's
+            #   - ValueError gets throws when length of the tuple 'value' is not 4
+            logger.error("ROI needs to be 4 integers: (minX, minY, maxX, maxY)")
+            logger.error(f"Invalid value: {value}")
+            logger.debug(traceback.format_exc())
+            return
 
-                try:
-                    minX, minY, maxX, maxY = property_value
-                except (ValueError, TypeError) as err:
-                    # NOTE: ValueError gets throws when length of the tuple does not
-                    # match. TypeError gets thrown when it is not a tuple.
-                    raise ValueError(
-                        "ROI needs to be 4 integers: (minX, minY, maxX, maxY)"
-                    ) from err
+        # Apply very strict error checking here, although roi deal with invalid
+        # values, so the user gets immediate feedback and does not wonder why
+        # something did not work as expected.
+        width, height = self.g_pool.roi.frame_size
+        if not ((0 <= minX < maxX < width) and (0 <= minY < maxY <= height)):
+            logger.error(
+                "Received ROI with invalid dimensions!"
+                f" (minX={minX}, minY={minY}, maxX={maxX}, maxY={maxY})"
+                f" for frame size ({width} x {height})"
+            )
+            logger.error(f"Invalid value: {value}")
+            return
 
-                # Apply very strict error checking here, although roi deal with invalid
-                # values, so the user gets immediate feedback and does not wonder why
-                # something did not work as expected.
-                width, height = self.g_pool.roi.frame_size
-                if not ((0 <= minX < maxX < width) and (0 <= minY < maxY <= height)):
-                    raise ValueError(
-                        "Received ROI with invalid dimensions!"
-                        f" (minX={minX}, minY={minY}, maxX={maxX}, maxY={maxY})"
-                        f" for frame size ({width} x {height})"
-                    )
+        self.g_pool.roi.bounds = (minX, minY, maxX, maxY)
+        logger.debug(f"roi set to {value}")
 
-                self.g_pool.roi.bounds = (minX, minY, maxX, maxY)
-
-            else:
-                raise KeyError(
-                    "Notification subject does not "
-                    "specifiy detector type nor modify ROI."
-                )
-            logger.debug(f"'{property_name}' property set to {property_value}")
+    def __safely_update_properties(self, notification):
+        try:
+            plugin_class_name = notification["detector_plugin_class_name"]
         except KeyError:
-            logger.error("Malformed notification received")
+            logger.error(
+                f"Malformed notification: missing 'detector_plugin_class_name' key"
+            )
             logger.debug(traceback.format_exc())
+            return
+
+        if not isinstance(plugin_class_name, str):
+            logger.error("Detector plugin class name must be a string")
+            logger.error(f"Invalid value: {plugin_class_name}")
+            return
+
+        if plugin_class_name != type(self).__name__:
+            # Detector plugin class name doesn't match current plugin - ignoring notification
+            return
+
+        try:
+            values = notification["values"]
+        except KeyError:
+            logger.error(f"Malformed notification: missing 'values' key")
+            logger.debug(traceback.format_exc())
+            return
+
+        if not isinstance(values, dict):
+            logger.error(f"Invalid value: {values}")
+            logger.debug(traceback.format_exc())
+            return
+
+        try:
+            self.pupil_detector.update_properties(values)
         except (ValueError, TypeError):
-            logger.error("Invalid property or value")
+            logger.error(f"Invalid value: {values}")
             logger.debug(traceback.format_exc())
 
-    def handle_set_pupil_detection_enabled_notification(self, notification):
-        is_on = notification["value"]
-        self.enabled = is_on
+    def __update_frame_size_if_changed(self, new_frame_size):
+        attr_name = "__last_frame_size"
 
-    def namespaced_detector_properties(self) -> dict:
-        return self.pupil_detector.get_properties()
+        old_frame_size = getattr(self, attr_name, None)
 
-    def on_resolution_change(self, old_size, new_size):
-        properties = self.pupil_detector.get_properties()
-        properties["2d"]["pupil_size_max"] *= new_size[0] / old_size[0]
-        properties["2d"]["pupil_size_min"] *= new_size[0] / old_size[0]
-        self.pupil_detector.update_properties(properties)
+        if new_frame_size != old_frame_size:
+            if old_frame_size is not None:
+                self.on_resolution_change(old_frame_size, new_frame_size)
+            setattr(self, attr_name, new_frame_size)

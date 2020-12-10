@@ -160,9 +160,6 @@ class Blink_Detection(Plugin):
             blink_type = "offset"
 
         confidence = min(abs(filter_response), 1.0)  # clamp conf. value at 1.
-        logger.debug(
-            "Blink {} detected with confidence {:0.3f}".format(blink_type, confidence)
-        )
         # Add info to events
         blink_entry = {
             "topic": "blinks",
