@@ -62,17 +62,6 @@ _Note_: If you are using Windows, you will have to complete a few more steps aft
 
 ### Run Pupil
 
-#### Windows
-
-```powershell
-cd pupil_src
-run_capture.bat
-# or run_player.bat
-# or run_service.bat
-```
-
-#### macOS/Linux
-
 ```sh
 cd pupil_src
 python main.py capture # or player/service
