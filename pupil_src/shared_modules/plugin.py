@@ -403,7 +403,7 @@ class Plugin_List(object):
         self._plugins.append(plugin_instance)
         self._plugins.sort(key=lambda p: p.order)
 
-        if self.g_pool.app in ("capture", "player"):
+        if self.g_pool.app in ("capture", "player") or "eye" in self.g_pool.process:
             plugin_instance.init_ui()
 
     def _find_and_remove_duplicates(self, new_plugin_cls):
