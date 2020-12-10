@@ -104,16 +104,9 @@ The following steps require you to store dynamic libraries in the `pupil_externa
 
 ## Start Pupil
 
-To start either of the applications -- Capture, Player, or Service -- you can to execute the respective `run_*.bat` file (e.g. by double clicking), i.e. `run_capture.bat`, `run_player.bat`, or `run_service.bat`.
+To start either of the applications -- Capture, Player, or Service -- you need to run
+the `main.py` file with the respective application name as argument.
 
-```powershell
-cd pupil_src
-run_capture.bat
-# or run_player.bat
-# or run_service.bat
-```
-
-You can also run `main.py` directly from your IDE or command line. Make sure that the `pupil_external` folder is part of your system path.
 ```sh
 cd pupil_src
 python main.py capture # or player/service
