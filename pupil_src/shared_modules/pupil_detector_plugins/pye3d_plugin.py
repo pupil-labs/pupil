@@ -164,11 +164,11 @@ class Pye3DPlugin(PupilDetectorPlugin):
             "refraction correction. Read more about the detector in our docs website."
         )
         self.menu.append(ui.Info_Text(help_text))
-        self.menu.append(ui.Info_Text("Visualizations:"))
-        self.menu.append(ui.Info_Text("    Green circle: eye model outline."))
-        self.menu.append(ui.Info_Text("    Blue ellipse: 2d pupil detection."))
-        self.menu.append(ui.Info_Text("    Red ellipse: 3d pupil detection."))
-        self.menu.append(ui.Separator())
+        help_text = (
+            "Visualizations: Green circle: eye model outline. Blue ellipse: 2d pupil "
+            "detection. Red ellipse: 3d pupil detection."
+        )
+        self.menu.append(ui.Info_Text(help_text))
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
         self.__debug_window_button = ui.Button(
             self.__debug_window_button_label, self.debug_window_toggle
