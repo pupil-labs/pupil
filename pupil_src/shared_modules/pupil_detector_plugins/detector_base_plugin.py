@@ -276,8 +276,6 @@ class PupilDetectorPlugin(Plugin):
         except (ValueError, TypeError):
             logger.error(f"Invalid value: {values}")
             logger.debug(traceback.format_exc())
-        else:
-            logger.debug(f"'{name}' property set to {value}")
 
     def __update_frame_size_if_changed(self, new_frame_size):
         attr_name = "__last_frame_size"
