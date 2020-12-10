@@ -160,58 +160,28 @@ class Pye3DPlugin(PupilDetectorPlugin):
         self.menu.label = self.pretty_class_name
 
         help_text = (
-            f"pye3d {pye3d.__version__} - a model-based 3d pupil detector "
-            "with corneal refraction correction."
+            f"pye3d {pye3d.__version__} - a model-based 3d pupil detector with corneal "
+            "refraction correction. Read more about the detector in our docs website."
         )
         self.menu.append(ui.Info_Text(help_text))
-
-        help_text = (
-            "pye3d uses a series 2d pupil detections to build a 3d model. "
-            "It can be used to predict the three dimensional viewing direction and "
-            "pupil dilation in millimeters. You can read more about it in our "
-            "documentation."
-        )
-        self.menu.append(ui.Info_Text(help_text))
-
-        help_text = (
-            "In order for the 3d pupil detection to work well, it is important that "
-            "the eye model is fit well. The green circle (eye model outline) should "
-            "match the eyeball and the blue and red ellipses (2d and 3d pupil "
-            "detection results) should overlap as much as possible for different "
-            "viewing angles."
-        )
-        self.menu.append(ui.Info_Text(help_text))
-
-        help_text = (
-            "If you have trouble fitting the 3d eye model please start by making sure "
-            "that your 2d pupil detection works well (high confidence). Afterward, "
-            'click "Reset 3d model" below and roll your eyes for a few seconds. This '
-            "allows the detector to gather different viewing angles in a short and "
-            "effective manner."
-        )
-        self.menu.append(ui.Info_Text(help_text))
-
+        self.menu.append(ui.Info_Text("Visualizations:"))
+        self.menu.append(ui.Info_Text("    Green circle: eye model outline."))
+        self.menu.append(ui.Info_Text("    Blue ellipse: 2d pupil detection."))
+        self.menu.append(ui.Info_Text("    Red ellipse: 3d pupil detection."))
+        self.menu.append(ui.Separator())
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
         self.__debug_window_button = ui.Button(
             self.__debug_window_button_label, self.debug_window_toggle
         )
 
         help_text = (
-            "Should you be interested in collecting pupillometry data, we recommend "
-            "freezing the eye model after having it fit well. "
+            "The 3d model automatically updates in the background. Freeze the model to "
+            "turn off automatic model updates. Refer to the docs website for details. "
         )
         self.menu.append(ui.Info_Text(help_text))
         self.menu.append(
             ui.Switch("is_long_term_model_frozen", self.detector, label="Freeze model")
         )
-
-        help_text = (
-            "You can open the debug window will get a visualization of the 3d eye "
-            "model in real time. Additionally, it renders the outlines of the short- "
-            "and ultra-long-term models. You can find more information about these in "
-            "our documentation."
-        )
-        self.menu.append(ui.Info_Text(help_text))
         self.menu.append(self.__debug_window_button)
 
     def gl_display(self):
