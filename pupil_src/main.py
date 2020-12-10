@@ -62,6 +62,17 @@ else:
     # Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir, "{}_settings".format(parsed_args.app))
 
+    # Add pupil_external binaries to PATH
+    if platform.system() == "Windows":
+        import os
+        import pathlib
+
+        path_external = (
+            pathlib.Path(__file__) / ".." / ".." / "pupil_external"
+        ).resolve()
+        print(f"Adding {path_external} to PATH")
+        os.environ["PATH"] += f"{os.pathsep}{path_external}"
+
 # create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
     os.mkdir(user_dir)
