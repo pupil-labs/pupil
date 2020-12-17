@@ -136,6 +136,16 @@ def _rewrite_timestamps(recording: PupilRecording):
 
     update_utils._rewrite_times(recording, dtype="<u8", conversion=conversion)
 
+    # Check if the first timestamp is greater than the second timestamp from world timestamps+;
+    # this is a symptom of Pupil Invisible recording with broken first frame.
+    # If the first timestamp is greater, remove it from the timestamps and overwrite the file.
+    for path in recording.files().world().timestamps():
+        world_timestamps = np.load(str(path))
+        if len(world_timestamps) < 2:
+            continue
+        if world_timestamps[1] < world_timestamps[0]:
+            np.save(str(path), world_timestamps[1:])
+
 
 def _convert_gaze(recording: PupilRecording):
     width, height = 1088, 1080
