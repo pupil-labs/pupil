@@ -12,7 +12,9 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import re
 from pathlib import Path
+import tempfile
 
+import av
 import numpy as np
 
 import file_methods as fm
@@ -22,7 +24,7 @@ from video_capture.utils import pi_gaze_items
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as utils
 from ..recording import PupilRecording
-from ..recording_utils import InvalidRecordingException
+from ..recording_utils import InvalidRecordingException, VALID_VIDEO_EXTENSIONS
 from . import update_utils
 
 from version_utils import parse_version
@@ -60,6 +62,11 @@ def _transform_invisible_v1_0_to_pprf_2_1(rec_dir: str):
     info_json.replace(new_path)
 
     recording = PupilRecording(rec_dir)
+
+    # Fix broken first frame issue, if affected.
+    # This needs to happend before anything else
+    # to make sure the rest of the pipeline is processed correctly.
+    BrokenFirstFrameRecordingIssue.patch_recording_if_affected(recording)
 
     # patch world.intrinsics
     # NOTE: could still be worldless at this point
@@ -101,11 +108,16 @@ def _generate_pprf_2_1_info_file(rec_dir: str) -> RecordingInfoFile:
 
 
 def _rename_pi_files(recording: PupilRecording):
-    for path in recording.files():
+    for pi_path, core_path in _pi_path_core_path_pairs(recording):
+        pi_path.replace(core_path)  # rename with overwrite
+
+
+def _pi_path_core_path_pairs(recording: PupilRecording):
+    for pi_path in recording.files():
         # replace prefix based on cam_type, need to reformat part number
         match = re.match(
             r"^(?P<prefix>PI (?P<cam_type>left|right|world) v\d+ ps(?P<part>\d+))",
-            path.name,
+            pi_path.name,
         )
         if match:
             replacement_for_cam_type = {
@@ -120,8 +132,9 @@ def _rename_pi_files(recording: PupilRecording):
                 # NOTE: recordings for PI start at part 1, mobile start at part 0
                 replacement += f"_{part_number - 1:03}"
 
-            new_name = path.name.replace(match.group("prefix"), replacement)
-            path.replace(path.with_name(new_name))  # rename with overwrite
+            core_name = pi_path.name.replace(match.group("prefix"), replacement)
+            core_path = pi_path.with_name(core_name)
+            yield pi_path, core_path
 
 
 def _rewrite_timestamps(recording: PupilRecording):
@@ -135,16 +148,6 @@ def _rewrite_timestamps(recording: PupilRecording):
         return (timestamps - start_time) * SECONDS_PER_NANOSECOND
 
     update_utils._rewrite_times(recording, dtype="<u8", conversion=conversion)
-
-    # Check if the first timestamp is greater than the second timestamp from world timestamps+;
-    # this is a symptom of Pupil Invisible recording with broken first frame.
-    # If the first timestamp is greater, remove it from the timestamps and overwrite the file.
-    for path in recording.files().world().timestamps():
-        world_timestamps = np.load(str(path))
-        if len(world_timestamps) < 2:
-            continue
-        if world_timestamps[1] < world_timestamps[0]:
-            np.save(str(path), world_timestamps[1:])
 
 
 def _convert_gaze(recording: PupilRecording):
@@ -177,3 +180,123 @@ def android_system_info(info_json: dict) -> str:
         f"Android device name: {android_device_name}; "
         f"Android device model: {android_device_model}"
     )
+
+
+class BrokenFirstFrameRecordingIssue:
+    @classmethod
+    def is_recording_affected(cls, recording: PupilRecording) -> bool:
+        # If there are any world video and timestamps pairs affected - return True
+        # Otherwise - False
+        for _ in cls._pi_world_video_and_raw_time_affected_paths(recording):
+            return True
+        return False
+
+    @classmethod
+    def patch_recording_if_affected(cls, recording: PupilRecording):
+        if not cls.is_recording_affected(recording=recording):
+            return
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            for v_path, t_path in cls._pi_world_video_and_raw_time_affected_paths(
+                recording
+            ):
+                temp_t_path = Path(temp_dir) / t_path.name
+                temp_v_path = Path(temp_dir) / v_path.name
+
+                # Save video, dropping first frame, to temp file
+                in_container = av.open(str(v_path))
+                in_video_stream = in_container.streams.video[0]
+                out_container = av.open(str(temp_v_path), "w")
+                out_container.add_stream(template=in_video_stream)
+                out_video_stream = out_container.streams.video[0]
+                packets = in_container.demux(video=0)
+                _ = next(packets)  # Drop first
+                for packet in packets:
+                    packet.stream = out_video_stream
+                    out_container.mux(packet)
+
+                # Save raw time file, dropping first timestamp, to temp file
+                ts = cls._pi_raw_time_load(t_path)
+                cls._pi_raw_time_save(temp_t_path, ts[1:])
+
+                # Overwrite old files with new ones
+                v_path = v_path.with_name(v_path.stem + "__FOOBAR").with_suffix(
+                    v_path.suffix
+                )
+                temp_v_path.replace(v_path)
+                temp_t_path.replace(t_path)
+
+    @classmethod
+    def _pi_world_video_and_raw_time_affected_paths(cls, recording: PupilRecording):
+        # Check if the first timestamp is greater than the second timestamp from world timestamps;
+        # this is a symptom of Pupil Invisible recording with broken first frame.
+        # If the first timestamp is greater, remove it from the timestamps and overwrite the file.
+        for v_path, ts_path in cls._pi_world_video_and_raw_time_paths(recording):
+
+            in_container = av.open(str(v_path))
+            packets = in_container.demux(video=0)
+
+            # Try to demux the first frame.
+            # This is expected to raise an error.
+            # If no error is raised, ignore this video.
+            try:
+                _ = next(packets).decode()
+            except av.AVError:
+                pass  # Expected
+            except StopIteration:
+                continue  # Not expected
+            else:
+                continue  # Not expected
+
+            # Try to demux the second frame.
+            # This is not expected to raise an error.
+            # If an error is raised, ignore this video.
+            try:
+                _ = next(packets).decode()
+            except av.AVError:
+                continue  # Not expected
+            except StopIteration:
+                continue  # Not expected
+            else:
+                pass  # Expected
+
+            # Check there are 2 or more raw timestamps.
+            raw_time = cls._pi_raw_time_load(ts_path)
+            if len(raw_time) < 2:
+                continue
+
+            yield v_path, ts_path
+
+    @classmethod
+    def _pi_world_video_and_raw_time_paths(cls, recording: PupilRecording):
+        for pi_path, core_path in _pi_path_core_path_pairs(recording):
+            if not cls._is_pi_world_video_path(pi_path):
+                continue
+
+            video_path = pi_path
+            raw_time_path = video_path.with_suffix(".time")
+
+            assert raw_time_path.is_file(), f"Expected file at path: {raw_time_path}"
+
+            yield video_path, raw_time_path
+
+    @staticmethod
+    def _is_pi_world_video_path(path):
+        def match_any(target, *patterns):
+            return any([re.search(pattern, str(target)) for pattern in patterns])
+
+        is_pi_world = match_any(path.name, r"^PI world v(\d+) ps(\d+)")
+
+        is_video = match_any(
+            path.name, *[rf"\.{ext}$" for ext in VALID_VIDEO_EXTENSIONS]
+        )
+
+        return is_pi_world and is_video
+
+    @staticmethod
+    def _pi_raw_time_load(path):
+        return np.fromfile(str(path), dtype="<u8")
+
+    @staticmethod
+    def _pi_raw_time_save(path, arr):
+        arr.tofile(str(path))
