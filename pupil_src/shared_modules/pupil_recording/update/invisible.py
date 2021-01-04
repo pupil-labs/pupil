@@ -212,6 +212,7 @@ class BrokenFirstFrameRecordingIssue:
                 for packet in packets:
                     packet.stream = out_video_stream
                     out_container.mux(packet)
+                out_container.close()
 
                 # Save raw time file, dropping first timestamp, to temp file
                 ts = cls._pi_raw_time_load(t_path)
