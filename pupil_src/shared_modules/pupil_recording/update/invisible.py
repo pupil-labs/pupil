@@ -11,23 +11,21 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import re
-from pathlib import Path
 import tempfile
+from pathlib import Path
 
 import av
-import numpy as np
-
 import file_methods as fm
 import methods as m
+import numpy as np
+from version_utils import parse_version
 from video_capture.utils import pi_gaze_items
 
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as utils
 from ..recording import PupilRecording
-from ..recording_utils import InvalidRecordingException, VALID_VIDEO_EXTENSIONS
+from ..recording_utils import VALID_VIDEO_EXTENSIONS, InvalidRecordingException
 from . import update_utils
-
-from version_utils import parse_version
 
 logger = logging.getLogger(__name__)
 
