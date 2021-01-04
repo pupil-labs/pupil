@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import re
+import shutil
 import tempfile
 from pathlib import Path
 
@@ -222,8 +223,11 @@ class BrokenFirstFrameRecordingIssue:
                 v_path = v_path.with_name(v_path.stem + "__FOOBAR").with_suffix(
                     v_path.suffix
                 )
-                temp_v_path.replace(v_path)
-                temp_t_path.replace(t_path)
+                # if the temp file is on a different device than the original. This
+                # https://stackoverflow.com/a/43967659/5859392 recommends using
+                # shutil.move instead (only supports pathlike in python>=3.9).
+                shutil.move(str(temp_v_path), str(v_path))
+                shutil.move(str(temp_t_path), str(t_path))
 
     @classmethod
     def _pi_world_video_and_raw_time_affected_paths(cls, recording: PupilRecording):
