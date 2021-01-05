@@ -204,14 +204,26 @@ class BrokenFirstFrameRecordingIssue:
 
                 # Save video, dropping first frame, to temp file
                 in_container = av.open(str(v_path))
-                in_video_stream = in_container.streams.video[0]
                 out_container = av.open(str(temp_v_path), "w")
-                out_container.add_stream(template=in_video_stream)
-                out_video_stream = out_container.streams.video[0]
-                packets = in_container.demux(video=0)
-                _ = next(packets)  # Drop first
-                for packet in packets:
-                    packet.stream = out_video_stream
+
+                # input -> output stream mapping
+                stream_mapping = {
+                    in_stream: out_container.add_stream(template=in_stream)
+                    for in_stream in in_container.streams
+                }
+
+                # Keep track of streams that should skip frame
+                stream_should_skip_frame = {
+                    in_stream: in_stream.codec_context.type == "video"
+                    for in_stream in stream_mapping.keys()
+                }
+
+                for packet in in_container.demux():
+                    if stream_should_skip_frame[packet.stream]:
+                        # Once the stream skipped the first frame, don't skip anymore
+                        stream_should_skip_frame[packet.stream] = False
+                        continue
+                    packet.stream = stream_mapping[packet.stream]
                     out_container.mux(packet)
                 out_container.close()
 
