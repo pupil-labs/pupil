@@ -81,7 +81,11 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
             ),
             dtype=float,
         )
-        container.seek(0)
+        try:
+            container.seek(0)
+        except av.AVError as err:
+            logger.debug(f"{err}")
+            return None
 
     return LoadedAudio(container, stream, timestamps)
 
