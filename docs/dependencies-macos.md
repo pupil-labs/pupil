@@ -38,6 +38,7 @@ export PYTHONPATH=/usr/local/lib/python3.6/site-packages:$PYTHONPATH
 Let's get started! Its time to put **brew** to work! Just copy paste commands into your terminal and listen to your machine purr.
 
 ```sh
+brew install cmake
 brew install pkg-config
 brew install libjpeg-turbo
 brew install libusb
