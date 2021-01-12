@@ -599,10 +599,6 @@ def pi_gaze_items(root_dir):
             conf_data = load_worn_data(find_worn_path(timestamps_path))
         # Otherwise, don't load confidence data
         else:
-            # TODO: Should we handle the case were:
-            #       - not is_200hz_data_available
-            #       - find_worn_200hz_path(timestamps_path) is not None
-            # meaning: there is no 200hz data, but there is (only) 200hz confidence?
             conf_data = None
 
         if len(raw_data) != len(timestamps):
