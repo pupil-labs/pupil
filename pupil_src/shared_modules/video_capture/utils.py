@@ -488,8 +488,7 @@ class VideoSet:
 
 def pi_gaze_items(root_dir):
     def find_timestamps_200hz_path(timestamps_path):
-        name = "gaze_200hz_timestamps"
-        path = timestamps_path.with_name(name).with_suffix(".npy")
+        path = timestamps_path.with_name("gaze_200hz_timestamps.npy")
         if path.is_file():
             return path
         else:
@@ -502,8 +501,7 @@ def pi_gaze_items(root_dir):
         return path
 
     def find_raw_200hz_path(timestamps_path):
-        name = "gaze_200hz"
-        path = timestamps_path.with_name(name).with_suffix(".raw")
+        path = timestamps_path.with_name("gaze_200hz.raw")
         if path.is_file():
             return path
         else:
@@ -520,8 +518,7 @@ def pi_gaze_items(root_dir):
             return None
 
     def find_worn_200hz_path(timestamps_path):
-        name = "worn_200hz"
-        path = timestamps_path.with_name(name).with_suffix(".raw")
+        path = timestamps_path.with_name("worn_200hz.raw")
         if path.is_file():
             return path
         else:
