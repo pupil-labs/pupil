@@ -33,9 +33,9 @@ av @ https://github.com/pupil-labs/PyAV/releases/download/v0.4.6/av-0.4.6-cp36-c
 uvc @ git+https://github.com/pupil-labs/pyuvc@v0.14.1 ; platform_system != "Windows" # Minor patch fixes build issues in pyproject.toml
 uvc @ https://github.com/pupil-labs/pyuvc/releases/download/v0.14/uvc-0.14-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
 
-# pupil-labs/pyglui 1.28
-pyglui @ git+https://github.com/pupil-labs/pyglui@v1.28 ; platform_system != "Windows"
-pyglui @ https://github.com/pupil-labs/pyglui/releases/download/v1.28/pyglui-1.28-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
+# pupil-labs/pyglui 1.29
+pyglui @ git+https://github.com/pupil-labs/pyglui@v1.29 ; platform_system != "Windows"
+pyglui @ https://github.com/pupil-labs/pyglui/releases/download/v1.29/pyglui-1.29-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
 
 # pupil-labs/pyndsi 1.4
 ndsi @ git+https://github.com/pupil-labs/pyndsi@v1.4 ; platform_system != "Windows"
