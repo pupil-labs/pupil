@@ -16,8 +16,9 @@ import cv2
 import numpy as np
 
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 from methods import normalize
 from pyglui import ui

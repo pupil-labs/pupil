@@ -5,10 +5,10 @@ import contextlib
 
 import OpenGL.GL as gl
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from gl_utils import GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
 
 from pyglui.cygl.utils import draw_polyline
 

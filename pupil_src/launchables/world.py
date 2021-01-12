@@ -121,8 +121,9 @@ def world(
 
         # display
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         from version_utils import parse_version
         from pyglui import ui, cygl, __version__ as pyglui_version

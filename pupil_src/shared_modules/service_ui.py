@@ -18,10 +18,11 @@ import numpy as np
 from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from gl_utils import GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
+
 from pyglui import ui, cygl
 from plugin import System_Plugin_Base
 

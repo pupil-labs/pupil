@@ -13,10 +13,10 @@ import platform
 import typing as T
 
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from .utils import GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
 
 
 class WindowPositionManager:
