@@ -374,7 +374,8 @@ def player(
 
         glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
-        main_window = glfw.create_window(width, height, window_name, None, None)
+        with GLFWErrorReporting.glfw_create_window():
+            main_window = glfw.create_window(width, height, window_name, None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
@@ -862,7 +863,8 @@ def player_drop(
         glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         glfw.window_hint(glfw.RESIZABLE, 0)
-        window = glfw.create_window(w, h, "Pupil Player", None, None)
+        with GLFWErrorReporting.glfw_create_window():
+            window = glfw.create_window(w, h, "Pupil Player", None, None)
         glfw.window_hint(glfw.RESIZABLE, 1)
 
         glfw.make_context_current(window)

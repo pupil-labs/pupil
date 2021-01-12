@@ -67,13 +67,14 @@ class GLWindow(Observable, abc.ABC):
     def _glfw_init(self):
         glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
-        window = glfw.create_window(
-            640,
-            480,
-            "Head Pose Tracker Visualizer",
-            None,
-            glfw.get_current_context(),
-        )
+        with GLFWErrorReporting.glfw_create_window():
+            window = glfw.create_window(
+                640,
+                480,
+                "Head Pose Tracker Visualizer",
+                None,
+                glfw.get_current_context(),
+            )
         return window
 
     @staticmethod

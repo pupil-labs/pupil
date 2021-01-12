@@ -206,17 +206,19 @@ class Visualizer(object):
             if self.run_independently:
                 glfw.init()
                 glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
-                self.window = glfw.create_window(
-                    self.window_size[0], self.window_size[1], self.name, None, None
-                )
+                with GLFWErrorReporting.glfw_create_window():
+                    self.window = glfw.create_window(
+                        self.window_size[0], self.window_size[1], self.name, None, None
+                    )
             else:
-                self.window = glfw.create_window(
-                    self.window_size[0],
-                    self.window_size[1],
-                    self.name,
-                    None,
-                    glfw.get_current_context(),
-                )
+                with GLFWErrorReporting.glfw_create_window():
+                    self.window = glfw.create_window(
+                        self.window_size[0],
+                        self.window_size[1],
+                        self.name,
+                        None,
+                        glfw.get_current_context(),
+                    )
 
             self.other_window = glfw.get_current_context()
 

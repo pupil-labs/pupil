@@ -58,7 +58,9 @@ class Service_UI(System_Plugin_Base):
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if g_pool.hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
-        main_window = glfw.create_window(*window_size, "Pupil Service", None, None)
+
+        with GLFWErrorReporting.glfw_create_window():
+            main_window = glfw.create_window(*window_size, "Pupil Service", None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_position = window_position_manager.new_window_position(

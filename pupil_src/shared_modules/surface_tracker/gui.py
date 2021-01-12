@@ -561,13 +561,14 @@ class Surface_Window:
             win_h = 640
             win_w = int(win_h / surface_aspect_ratio)
 
-            self._window = glfw.create_window(
-                win_h,
-                win_w,
-                "Reference Surface: " + self.surface.name,
-                monitor,
-                glfw.get_current_context(),
-            )
+            with GLFWErrorReporting.glfw_create_window():
+                self._window = glfw.create_window(
+                    win_h,
+                    win_w,
+                    "Reference Surface: " + self.surface.name,
+                    monitor,
+                    glfw.get_current_context(),
+                )
 
             glfw.set_window_pos(
                 self._window,

@@ -446,7 +446,8 @@ def eye(
         default_window_size = 500 + icon_bar_width, 500
         width, height = session_settings.get("window_size", default_window_size)
 
-        main_window = glfw.create_window(width, height, title, None, None)
+        with GLFWErrorReporting.glfw_create_window():
+            main_window = glfw.create_window(width, height, title, None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
