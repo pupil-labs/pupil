@@ -137,7 +137,7 @@ def player(
         )
 
         assert parse_version(pyglui_version) >= parse_version(
-            "1.28"
+            "1.29"
         ), "pyglui out of date, please upgrade to newest version"
 
         process_was_interrupted = False
