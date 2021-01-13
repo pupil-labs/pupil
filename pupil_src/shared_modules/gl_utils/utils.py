@@ -359,7 +359,7 @@ class GLFWErrorReporting:
         old_reporting = glfw.ERROR_REPORTING
 
         if isinstance(old_reporting, dict):
-            new_reporting: _GLFWErrorReportingDict = dict(**old_reporting)
+            new_reporting: _GLFWErrorReportingDict = dict(old_reporting)
         else:
             new_reporting = cls.__default_error_reporting()
 
@@ -367,6 +367,8 @@ class GLFWErrorReporting:
         new_reporting.update({err_code: "log" for err_code in debug or ()})
         new_reporting.update({err_code: "warn" for err_code in warn or ()})
         new_reporting.update({err_code: "raise" for err_code in raise_ or ()})
+
+        glfw.ERROR_REPORTING = new_reporting
 
         try:
             yield
