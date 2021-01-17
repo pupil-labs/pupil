@@ -526,14 +526,14 @@ def world(
         )
 
         # window and gl setup
-        glfw.init()
+        with GLFWErrorReporting.glfw_init():
+            glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
-        with GLFWErrorReporting.glfw_create_window():
-            main_window = glfw.create_window(
-                width, height, "Pupil Capture - World", None, None
-            )
+        main_window = glfw.create_window(
+            width, height, "Pupil Capture - World", None, None
+        )
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(

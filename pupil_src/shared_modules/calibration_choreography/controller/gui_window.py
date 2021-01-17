@@ -84,14 +84,13 @@ class GUIWindow(Observable):
         if is_fullscreen:
             size = gui_monitor.size
 
-        with GLFWErrorReporting.glfw_create_window():
-            # NOTE: Always creating windowed window here, even if in fullscreen mode. On
-            # windows you might experience a black screen for up to 1 sec when creating
-            # a blank window directly in fullscreen mode. By creating it windowed and
-            # then switching to fullscreen it will stay white the entire time.
-            self.__gl_handle = glfw.create_window(
-                *size, title, None, glfw.get_current_context()
-            )
+        # NOTE: Always creating windowed window here, even if in fullscreen mode. On
+        # windows you might experience a black screen for up to 1 sec when creating
+        # a blank window directly in fullscreen mode. By creating it windowed and
+        # then switching to fullscreen it will stay white the entire time.
+        self.__gl_handle = glfw.create_window(
+            *size, title, None, glfw.get_current_context()
+        )
 
         if not is_fullscreen:
             glfw.set_window_pos(self.__gl_handle, *position)

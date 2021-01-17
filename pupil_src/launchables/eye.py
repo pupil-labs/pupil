@@ -433,7 +433,8 @@ def eye(
             general_settings.collapsed = collapsed
 
         # Initialize glfw
-        glfw.init()
+        with GLFWErrorReporting.glfw_init():
+            glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
@@ -446,8 +447,7 @@ def eye(
         default_window_size = 500 + icon_bar_width, 500
         width, height = session_settings.get("window_size", default_window_size)
 
-        with GLFWErrorReporting.glfw_create_window():
-            main_window = glfw.create_window(width, height, title, None, None)
+        main_window = glfw.create_window(width, height, title, None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(

@@ -337,7 +337,7 @@ _GLFWErrorReportingDict = T.Dict[T.Union[None, int], str]
 class GLFWErrorReporting:
     @classmethod
     @contextlib.contextmanager
-    def glfw_create_window(cls):
+    def glfw_init(cls):
         ignore = [
             # GLFWError: (65544) b'Cocoa: Failed to find service port for display'
             # This happens on macOS Big Sur running on Apple Silicone hardware

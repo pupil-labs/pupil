@@ -198,14 +198,13 @@ class Camera_Intrinsics_Estimation(Plugin):
                 monitor = None
                 height, width = 640, 480
 
-            with GLFWErrorReporting.glfw_create_window():
-                self._window = glfw.create_window(
-                    height,
-                    width,
-                    "Calibration",
-                    monitor,
-                    glfw.get_current_context(),
-                )
+            self._window = glfw.create_window(
+                height,
+                width,
+                "Calibration",
+                monitor,
+                glfw.get_current_context(),
+            )
             if not self.fullscreen:
                 # move to y = 31 for windows os
                 glfw.set_window_pos(self._window, 200, 31)
