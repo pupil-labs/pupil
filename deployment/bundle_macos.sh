@@ -3,6 +3,9 @@
 pl_codesign () {
     sign="Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
     codesign \
+        --all-architectures \
+        --force \
+        --strict=all \
         --options runtime \
         --entitlements entitlements.plist \
         --continue \
