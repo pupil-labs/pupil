@@ -121,8 +121,9 @@ def world(
 
         # display
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         from version_utils import parse_version
         from pyglui import ui, cygl, __version__ as pyglui_version
@@ -525,7 +526,8 @@ def world(
         )
 
         # window and gl setup
-        glfw.init()
+        with GLFWErrorReporting.glfw_init():
+            glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window

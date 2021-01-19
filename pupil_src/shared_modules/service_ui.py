@@ -18,10 +18,11 @@ import numpy as np
 from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from gl_utils import GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
+
 from pyglui import ui, cygl
 from plugin import System_Plugin_Base
 
@@ -53,10 +54,12 @@ class Service_UI(System_Plugin_Base):
 
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
 
-        glfw.init()
+        with GLFWErrorReporting.glfw_init():
+            glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if g_pool.hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
+
         main_window = glfw.create_window(*window_size, "Pupil Service", None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()

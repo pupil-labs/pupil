@@ -73,8 +73,9 @@ def player(
 
         # display
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         # check versions for our own depedencies as they are fast-changing
         from pyglui import __version__ as pyglui_version
@@ -371,10 +372,10 @@ def player(
 
         window_name = f"Pupil Player: {meta_info.recording_name} - {rec_dir}"
 
-        glfw.init()
+        with GLFWErrorReporting.glfw_init():
+            glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         main_window = glfw.create_window(width, height, window_name, None, None)
-
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
             window=main_window,
@@ -808,8 +809,9 @@ def player_drop(
 
     try:
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         import gl_utils
         from OpenGL.GL import glClearColor
@@ -857,7 +859,8 @@ def player_drop(
             session_settings.clear()
         w, h = session_settings.get("window_size", (1280, 720))
 
-        glfw.init()
+        with GLFWErrorReporting.glfw_init():
+            glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         glfw.window_hint(glfw.RESIZABLE, 0)
         window = glfw.create_window(w, h, "Pupil Player", None, None)

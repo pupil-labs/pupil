@@ -126,8 +126,9 @@ def eye(
 
         # display
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         from pyglui import ui, graph, cygl
         from pyglui.cygl.utils import draw_points, RGBA, draw_polyline
@@ -432,7 +433,8 @@ def eye(
             general_settings.collapsed = collapsed
 
         # Initialize glfw
-        glfw.init()
+        with GLFWErrorReporting.glfw_init():
+            glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window

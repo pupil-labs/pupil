@@ -28,5 +28,6 @@ from .utils import (
     make_coord_system_norm_based,
     make_coord_system_pixel_based,
     window_coordinate_to_framebuffer_coordinate,
+    GLFWErrorReporting,
 )
 from .window_position_manager import WindowPositionManager

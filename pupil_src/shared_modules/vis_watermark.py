@@ -18,8 +18,9 @@ import os
 from pyglui import ui
 
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 from methods import normalize, denormalize
 import logging
