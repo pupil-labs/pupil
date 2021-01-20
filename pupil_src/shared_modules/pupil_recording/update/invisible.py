@@ -215,6 +215,7 @@ class BrokenFirstFrameRecordingIssue:
                 # Keep track of streams that should skip frame
                 stream_should_skip_frame = {
                     in_stream: in_stream.codec_context.type == "video"
+                    or in_stream.codec_context.type == "audio"
                     for in_stream in stream_mapping.keys()
                 }
 
