@@ -14,8 +14,9 @@ import logging
 import numpy as np
 
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 import tasklib
 from gaze_producer import model, worker
