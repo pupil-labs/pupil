@@ -379,7 +379,7 @@ class GLFWErrorReporting:
         ]
         return {
             None: "raise",
-            **{code: "ignore" for code in ignore},
+            **{code: "log" for code in ignore},
         }
 
 
