@@ -383,7 +383,15 @@ class GLFWErrorReporting:
 
     @staticmethod
     def __default_error_reporting() -> _GLFWErrorReportingDict:
-        return {None: "raise"}
+        ignore = [
+            # GLFWError: (65544) b'Cocoa: Failed to find service port for display'
+            # This happens on macOS Big Sur running on Apple Silicone hardware
+            65544,
+        ]
+        return {
+            None: "raise",
+            **{code: "ignore" for code in ignore},
+        }
 
 
 GLFWErrorReporting.set_default()
