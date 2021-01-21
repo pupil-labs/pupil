@@ -49,6 +49,8 @@ from .base_plugin import (
     ChoreographyAction,
 )
 
+from stdlib_utils import is_apple_silicone_platform
+
 
 logger = logging.getLogger(__name__)
 
