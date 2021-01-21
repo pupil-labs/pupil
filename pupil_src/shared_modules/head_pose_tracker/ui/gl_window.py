@@ -65,8 +65,7 @@ class GLWindow(Observable, abc.ABC):
         return trackball
 
     def _glfw_init(self):
-        with GLFWErrorReporting.glfw_init():
-            glfw.init()
+        glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         window = glfw.create_window(
             640,

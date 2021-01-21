@@ -526,8 +526,7 @@ def world(
         )
 
         # window and gl setup
-        with GLFWErrorReporting.glfw_init():
-            glfw.init()
+        glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window

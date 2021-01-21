@@ -337,17 +337,6 @@ _GLFWErrorReportingDict = T.Dict[T.Union[None, int], str]
 class GLFWErrorReporting:
     @classmethod
     @contextlib.contextmanager
-    def glfw_init(cls):
-        ignore = [
-            # GLFWError: (65544) b'Cocoa: Failed to find service port for display'
-            # This happens on macOS Big Sur running on Apple Silicone hardware
-            65544,
-        ]
-        with cls.error_code_handling(ignore=tuple(ignore)):
-            yield
-
-    @classmethod
-    @contextlib.contextmanager
     def error_code_handling(
         cls,
         *_,
@@ -383,7 +372,15 @@ class GLFWErrorReporting:
 
     @staticmethod
     def __default_error_reporting() -> _GLFWErrorReportingDict:
-        return {None: "raise"}
+        ignore = [
+            # GLFWError: (65544) b'Cocoa: Failed to find service port for display'
+            # This happens on macOS Big Sur running on Apple Silicone hardware
+            65544,
+        ]
+        return {
+            None: "raise",
+            **{code: "log" for code in ignore},
+        }
 
 
 GLFWErrorReporting.set_default()

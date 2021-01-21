@@ -204,8 +204,7 @@ class Visualizer(object):
 
             # get glfw started
             if self.run_independently:
-                with GLFWErrorReporting.glfw_init():
-                    glfw.init()
+                glfw.init()
                 glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
                 self.window = glfw.create_window(
                     self.window_size[0], self.window_size[1], self.name, None, None

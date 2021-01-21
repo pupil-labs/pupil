@@ -433,8 +433,7 @@ def eye(
             general_settings.collapsed = collapsed
 
         # Initialize glfw
-        with GLFWErrorReporting.glfw_init():
-            glfw.init()
+        glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
