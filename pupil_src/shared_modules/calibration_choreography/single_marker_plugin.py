@@ -375,6 +375,12 @@ class SingleMarkerChoreographyPlugin(
             )
             return
 
+        if is_apple_silicone_platform() and self.marker_mode != SingleMarkerMode.MANUAL:
+            logger.error(
+                f"{self.label} in {self.marker_mode.label} currently not supported on Apple Silicone platforms."
+            )
+            return
+
         self.__auto_stop_tracker.reset()
 
         super()._perform_start()

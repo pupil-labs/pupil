@@ -50,6 +50,8 @@ from .base_plugin import (
     ChoreographyNotification,
 )
 
+from stdlib_utils import is_apple_silicone_platform
+
 
 logger = logging.getLogger(__name__)
 
@@ -279,6 +281,12 @@ class ScreenMarkerChoreographyPlugin(
         if not self.g_pool.capture.online:
             logger.error(
                 f"{self.current_mode.label} requiers world capture video input."
+            )
+            return
+
+        if is_apple_silicone_platform():
+            logger.error(
+                f"{self.label} currently not supported on Apple Silicone platforms."
             )
             return
 
