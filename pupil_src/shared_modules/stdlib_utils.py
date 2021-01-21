@@ -14,6 +14,13 @@ import functools
 import itertools
 import operator
 import collections
+import platform
+
+
+def is_apple_silicone_platform() -> bool:
+    # Ex: 'macOS-11.1-arm64-arm-64bit'
+    p = platform.platform()
+    return "macOS" in p and "arm64" in p
 
 
 is_none = functools.partial(operator.is_, None)
