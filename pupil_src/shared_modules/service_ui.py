@@ -54,8 +54,7 @@ class Service_UI(System_Plugin_Base):
 
         self.texture = np.zeros((1, 1, 3), dtype=np.uint8) + 128
 
-        with GLFWErrorReporting.glfw_init():
-            glfw.init()
+        glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if g_pool.hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
