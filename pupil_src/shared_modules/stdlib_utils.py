@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
+import os
 import typing
 import functools
 import itertools
@@ -18,9 +18,13 @@ import platform
 
 
 def is_apple_silicone_platform() -> bool:
-    # Ex: 'macOS-11.1-arm64-arm-64bit'
-    p = platform.platform()
-    return "macOS" in p and "arm64" in p
+    if "Darwin" != platform.system():
+        return False
+
+    # Ex: Darwin Kernel Version 20.2.0: Wed Dec  2 20:40:21 PST 2020; root:xnu-7195.60.75~1/RELEASE_ARM64_T810
+    # Ex: Darwin Kernel Version 19.6.0: Tue Nov 10 00:10:30 PST 2020; root:xnu-6153.141.10~1/RELEASE_X86_64
+    os_version = os.uname().version
+    return "ARM64" in os_version
 
 
 is_none = functools.partial(operator.is_, None)
