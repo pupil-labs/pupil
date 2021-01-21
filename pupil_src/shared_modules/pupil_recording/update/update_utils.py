@@ -41,6 +41,9 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
         except av.AVError:
             continue
 
+        if container.streams.video[0].format is None:
+            continue
+
         for camera in cm.default_intrinsics:
             if camera in video.name:
                 camera_hint = camera

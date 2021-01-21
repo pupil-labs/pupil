@@ -19,8 +19,9 @@ from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
 
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 from methods import denormalize, normalize
 from observable import Observable

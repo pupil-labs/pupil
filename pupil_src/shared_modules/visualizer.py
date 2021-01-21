@@ -9,10 +9,11 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from gl_utils import GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
+
 from OpenGL.GL import (
     GL_BLEND,
     GL_COLOR_BUFFER_BIT,

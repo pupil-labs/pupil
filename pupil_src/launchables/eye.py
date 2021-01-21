@@ -126,8 +126,9 @@ def eye(
 
         # display
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         from pyglui import ui, graph, cygl
         from pyglui.cygl.utils import draw_points, RGBA, draw_polyline

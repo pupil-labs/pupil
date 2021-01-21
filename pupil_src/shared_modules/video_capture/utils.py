@@ -20,6 +20,10 @@ import av
 import cv2
 import numpy as np
 
+
+import player_methods as pm
+
+
 logger = logging.getLogger(__name__)
 
 VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "fake")
@@ -483,21 +487,45 @@ class VideoSet:
 
 
 def pi_gaze_items(root_dir):
-    def find_raw_path(timestamps_path):
-        raw_name = timestamps_path.name.replace("_timestamps", "")
-        raw_path = timestamps_path.with_name(raw_name).with_suffix(".raw")
-        assert raw_path.exists(), f"The file does not exist at path: {raw_path}"
-        return raw_path
-
-    def find_worn_path(timestamps_path):
-        worn_name = timestamps_path.name
-        worn_name = worn_name.replace("gaze", "worn")
-        worn_name = worn_name.replace("_timestamps", "")
-        worn_path = timestamps_path.with_name(worn_name).with_suffix(".raw")
-        if worn_path.exists():
-            return worn_path
+    def find_timestamps_200hz_path(timestamps_path):
+        path = timestamps_path.with_name("gaze_200hz_timestamps.npy")
+        if path.is_file():
+            return path
         else:
             return None
+
+    def find_raw_path(timestamps_path):
+        name = timestamps_path.name.replace("_timestamps", "")
+        path = timestamps_path.with_name(name).with_suffix(".raw")
+        assert path.is_file(), f"The file does not exist at path: {path}"
+        return path
+
+    def find_raw_200hz_path(timestamps_path):
+        path = timestamps_path.with_name("gaze_200hz.raw")
+        if path.is_file():
+            return path
+        else:
+            return None
+
+    def find_worn_path(timestamps_path):
+        name = timestamps_path.name
+        name = name.replace("gaze", "worn")
+        name = name.replace("_timestamps", "")
+        path = timestamps_path.with_name(name).with_suffix(".raw")
+        if path.is_file():
+            return path
+        else:
+            return None
+
+    def find_worn_200hz_path(timestamps_path):
+        path = timestamps_path.with_name("worn_200hz.raw")
+        if path.is_file():
+            return path
+        else:
+            return None
+
+    def is_200hz(path: Path) -> bool:
+        return "200hz" in path.name
 
     def load_timestamps_data(path):
         timestamps = np.load(str(path))
@@ -525,9 +553,51 @@ def pi_gaze_items(root_dir):
     )
 
     for timestamps_path in gaze_timestamp_paths:
-        raw_path = find_raw_path(timestamps_path)
-        timestamps = load_timestamps_data(timestamps_path)
-        raw_data = load_raw_data(raw_path)
+        # Use 200hz data only if both gaze data and timestamps are available at 200hz
+        is_200hz_data_available = (find_raw_200hz_path(timestamps_path)) and (
+            find_timestamps_200hz_path(timestamps_path) is not None
+        )
+
+        if is_200hz_data_available:
+            raw_data = load_raw_data(find_raw_200hz_path(timestamps_path))
+        else:
+            raw_data = load_raw_data(find_raw_path(timestamps_path))
+
+        if is_200hz_data_available:
+            timestamps = load_timestamps_data(
+                find_timestamps_200hz_path(timestamps_path)
+            )
+        else:
+            timestamps = load_timestamps_data(timestamps_path)
+
+        if is_200hz_data_available:
+            ts_ = load_timestamps_data(timestamps_path)
+            ts_200hz_ = load_timestamps_data(
+                find_timestamps_200hz_path(timestamps_path)
+            )
+            densification_idc = pm.find_closest(ts_, ts_200hz_)
+        else:
+            densification_idc = np.asarray(range(len(raw_data)))
+
+        # Load confidence data when both 200hz gaze and 200hz confidence data is available
+        if (
+            is_200hz_data_available
+            and find_worn_200hz_path(timestamps_path) is not None
+        ):
+            conf_data = load_worn_data(find_worn_200hz_path(timestamps_path))
+        # Load and densify confidence data when 200hz gaze is available, but only non-200hz confidence is available
+        elif is_200hz_data_available and find_worn_path(timestamps_path) is not None:
+            conf_data = load_worn_data(find_worn_path(timestamps_path))
+            conf_data = conf_data[densification_idc]
+        # Load confidence data when both non-200hz gaze and non-200hz confidence is available
+        elif (
+            not is_200hz_data_available and find_worn_path(timestamps_path) is not None
+        ):
+            conf_data = load_worn_data(find_worn_path(timestamps_path))
+        # Otherwise, don't load confidence data
+        else:
+            conf_data = None
+
         if len(raw_data) != len(timestamps):
             logger.warning(
                 f"There is a mismatch between the number of raw data ({len(raw_data)}) "
@@ -537,16 +607,16 @@ def pi_gaze_items(root_dir):
             raw_data = raw_data[:size]
             timestamps = timestamps[:size]
 
-        conf_data = load_worn_data(find_worn_path(timestamps_path))
         if conf_data is not None and len(conf_data) != len(timestamps):
             logger.warning(
                 f"There is a mismatch between the number of confidence data ({len(conf_data)}) "
                 f"and the number of timestamps ({len(timestamps)})! Not using confidence data."
             )
+
             conf_data = None
 
         if conf_data is None:
-            conf_data = (1.0 for _ in range(len(timestamps)))
+            conf_data = (1.0 for _ in range(len(raw_data)))
 
         yield from zip(raw_data, timestamps, conf_data)
 

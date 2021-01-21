@@ -2,8 +2,9 @@ import collections
 import typing as T
 
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 try:
     from typing import OrderedDict as T_OrderedDict  # Python 3.7.2

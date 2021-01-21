@@ -43,7 +43,7 @@ if platform.system() == "Darwin":
         pathex=["../../pupil_src/shared_modules/"],
         hiddenimports=hidden_imports,
         hookspath=None,
-        runtime_hooks=None,
+        runtime_hooks=["../find_opengl_bigsur.py"],
         excludes=["matplotlib"],
         datas=data_files_pye3d,
     )

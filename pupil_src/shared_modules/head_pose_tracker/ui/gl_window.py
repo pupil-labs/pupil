@@ -16,8 +16,9 @@ import OpenGL.GL as gl
 
 import gl_utils
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 from observable import Observable
 

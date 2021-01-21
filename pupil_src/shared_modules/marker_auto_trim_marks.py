@@ -32,8 +32,9 @@ from OpenGL.GL import (
 )
 
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 import numpy as np
 from itertools import groupby

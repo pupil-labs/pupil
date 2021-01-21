@@ -27,8 +27,9 @@ from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
 import OpenGL.GL as gl
 
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 from .mixin import MonitorSelectionMixin
 from .controller import (
