@@ -25,7 +25,7 @@ rel="noopener"
 target="_blank">
 	<p align="center">
 		<img 
-		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_app_download_banner.jpg" 
+		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_app_download_banner.png" 
 		alt="Download the latest Pupil Core Apps: Pupil Capture, Pupil Player, Pupil Service"/>
 	</p>
 </a>
