@@ -21,7 +21,7 @@ class _SerializedNamedTupleMixin:
 
     @classmethod
     def from_dict(cls, dict_: dict) -> T.NamedTuple:
-        dict_ = {**cls._field_defaults(), **dict_}
+        dict_ = {**cls._field_defaults, **dict_}
         try:
             dict_ = cls.sanitize_serialized_dict(dict_)
             return cls(**dict_)
@@ -30,8 +30,8 @@ class _SerializedNamedTupleMixin:
 
     @classmethod
     def sanitize_serialized_dict(cls, dict_: dict) -> dict:
-        field_classes = cls.__annotations__()
-        for field_name in cls._fields():
+        field_classes = cls.__annotations__
+        for field_name in cls._fields:
             field_cls = field_classes[field_name]
             dict_[field_name] = field_cls(dict_[field_name])
         return dict_
@@ -45,7 +45,7 @@ class _SerializedNamedTupleMixin:
         field_name: str = None,
     ):
         field_name = field_name if field_name is not None else key_name
-        defaults = cls._field_defaults()
+        defaults = cls._field_defaults
 
         # Assert values present in dict_ and cls
         assert key_name in dict_, f'Serialized dict must contain "{key_name}" key'
@@ -145,7 +145,7 @@ class CalibrationSetupNotification(
 ):
     @classmethod
     def calibration_format_version(cls) -> int:
-        return cls._field_defaults()["version"]
+        return cls._field_defaults["version"]
 
     @staticmethod
     def file_name() -> str:
@@ -157,7 +157,7 @@ class CalibrationResultNotification(
 ):
     @classmethod
     def calibration_format_version(cls) -> int:
-        return cls._field_defaults()["version"]
+        return cls._field_defaults["version"]
 
     @staticmethod
     def file_name() -> str:
