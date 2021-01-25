@@ -76,10 +76,10 @@ class _SerializedNamedTupleMixin:
     @classmethod
     def _named_tuple_field_types(cls) -> T.Mapping[str, T.Any]:
         """Consistent way to get the types of the fields across Python versions"""
-        # try:
-        return cls._field_types
-        # except AttributeError:
-        #     return cls.__annotations__
+        try:
+            return cls._field_types
+        except AttributeError:
+            return cls.__annotations__
 
     @classmethod
     def _named_tuple_field_defaults(cls) -> T.Mapping[str, T.Any]:
