@@ -286,7 +286,8 @@ class ScreenMarkerChoreographyPlugin(
 
         if is_apple_silicone_platform():
             logger.error(
-                f"{self.label} currently not supported on Apple Silicone platforms."
+                f"{self.label} currently not supported on Apple Silicone platforms. "
+                "Please use Single Marker Calibration in Physical mode instead."
             )
             return
 
