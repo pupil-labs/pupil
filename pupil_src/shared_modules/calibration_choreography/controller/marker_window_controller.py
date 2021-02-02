@@ -86,11 +86,6 @@ class MarkerWindowController(observable.Observable):
     _MARKER_CIRCLE_SIZE_INNER = 19
     _MARKER_CIRCLE_SIZE_FEEDBACK = 3
 
-    _MARKER_CIRCLE_SHARPNESS_OUTER = 0.9
-    _MARKER_CIRCLE_SHARPNESS_MIDDLE = 0.8
-    _MARKER_CIRCLE_SHARPNESS_INNER = 0.55
-    _MARKER_CIRCLE_SHARPNESS_FEEDBACK = 0.5
-
     def __init__(self, marker_scale: float):
         # Public properties
         self.marker_scale = marker_scale
@@ -323,29 +318,25 @@ class MarkerWindowController(observable.Observable):
         else:
             marker_circle_rgb_feedback = self._MARKER_CIRCLE_RGB_FEEDBACK_INVALID
 
-        draw_points(
-            [screen_point],
+        _draw_circle_filled(
+            screen_point,
             size=self._MARKER_CIRCLE_SIZE_OUTER * r2,
             color=RGBA(*self._MARKER_CIRCLE_RGB_OUTER, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_OUTER,
         )
-        draw_points(
-            [screen_point],
+        _draw_circle_filled(
+            screen_point,
             size=self._MARKER_CIRCLE_SIZE_MIDDLE * r2,
             color=RGBA(*self._MARKER_CIRCLE_RGB_MIDDLE, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_MIDDLE,
         )
-        draw_points(
-            [screen_point],
+        _draw_circle_filled(
+            screen_point,
             size=self._MARKER_CIRCLE_SIZE_INNER * r2,
             color=RGBA(*self._MARKER_CIRCLE_RGB_INNER, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_INNER,
         )
-        draw_points(
-            [screen_point],
+        _draw_circle_filled(
+            screen_point,
             size=self._MARKER_CIRCLE_SIZE_FEEDBACK * r2,
             color=RGBA(*marker_circle_rgb_feedback, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_FEEDBACK,
         )
 
     def __draw_status_text(self, clicks_needed: int):
