@@ -318,6 +318,10 @@ class MarkerWindowController(observable.Observable):
         else:
             marker_circle_rgb_feedback = self._MARKER_CIRCLE_RGB_FEEDBACK_INVALID
 
+        # TODO: adjust size such that they correspond to old marker sizes
+        # TODO: adjust num_points such that circles look smooth; smaller circles need less points
+        # TODO: compare runtimes with `draw_points`
+
         _draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_OUTER * r2,
