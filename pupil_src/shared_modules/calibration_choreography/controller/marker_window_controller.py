@@ -310,7 +310,7 @@ class MarkerWindowController(observable.Observable):
         if position is None:
             return
 
-        r2 = 2 * self.__marker_radius
+        radius = self.__marker_radius
         screen_point = self.__marker_position_on_screen(position)
 
         if is_valid:
@@ -324,22 +324,22 @@ class MarkerWindowController(observable.Observable):
 
         _draw_circle_filled(
             screen_point,
-            size=self._MARKER_CIRCLE_SIZE_OUTER * r2,
+            size=self._MARKER_CIRCLE_SIZE_OUTER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_OUTER, alpha),
         )
         _draw_circle_filled(
             screen_point,
-            size=self._MARKER_CIRCLE_SIZE_MIDDLE * r2,
+            size=self._MARKER_CIRCLE_SIZE_MIDDLE * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_MIDDLE, alpha),
         )
         _draw_circle_filled(
             screen_point,
-            size=self._MARKER_CIRCLE_SIZE_INNER * r2,
+            size=self._MARKER_CIRCLE_SIZE_INNER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_INNER, alpha),
         )
         _draw_circle_filled(
             screen_point,
-            size=self._MARKER_CIRCLE_SIZE_FEEDBACK * r2,
+            size=self._MARKER_CIRCLE_SIZE_FEEDBACK * radius,
             color=RGBA(*marker_circle_rgb_feedback, alpha),
         )
 
