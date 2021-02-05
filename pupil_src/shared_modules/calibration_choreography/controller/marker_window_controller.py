@@ -193,13 +193,7 @@ class MarkerWindowController(observable.Observable):
                 is_fullscreen=is_fullscreen,
                 size=window_size,
             )
-            # This makes it harder to accidentally tab out of fullscreen by clicking on
-            # some other window (e.g. when having two monitors). On the other hand you
-            # want a cursor to adjust the window size when not in fullscreen mode.
-            if is_fullscreen:
-                self.__window.cursor_disable()
-            else:
-                self.__window.cursor_hide()
+            self.__window.cursor_hide()
             self.__state = MarkerWindowStateIdle(
                 clicks_needed=self._CLICKS_NEEDED_TO_CLOSE
             )
