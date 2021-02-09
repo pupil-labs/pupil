@@ -703,7 +703,8 @@ def world(
             return next(window_update_timer)
 
         # trigger setup of window and gl sizes
-        on_resize(main_window, *glfw.get_framebuffer_size(main_window))
+        g_pool.trigger_main_window_redraw = lambda: on_resize(main_window, *glfw.get_framebuffer_size(main_window))
+        g_pool.trigger_main_window_redraw()
 
         if session_settings.get("eye1_process_alive", True):
             launch_eye_process(1, delay=0.6)

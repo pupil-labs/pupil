@@ -9,11 +9,14 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import abc
+import functools
 import logging
 import typing as T
 
 import observable
 
+import numpy as np
+import OpenGL.GL as gl
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from pyglui.cygl.utils import draw_points
@@ -82,11 +85,6 @@ class MarkerWindowController(observable.Observable):
     _MARKER_CIRCLE_SIZE_MIDDLE = 38
     _MARKER_CIRCLE_SIZE_INNER = 19
     _MARKER_CIRCLE_SIZE_FEEDBACK = 3
-
-    _MARKER_CIRCLE_SHARPNESS_OUTER = 0.9
-    _MARKER_CIRCLE_SHARPNESS_MIDDLE = 0.8
-    _MARKER_CIRCLE_SHARPNESS_INNER = 0.55
-    _MARKER_CIRCLE_SHARPNESS_FEEDBACK = 0.5
 
     def __init__(self, marker_scale: float):
         # Public properties
@@ -195,13 +193,7 @@ class MarkerWindowController(observable.Observable):
                 is_fullscreen=is_fullscreen,
                 size=window_size,
             )
-            # This makes it harder to accidentally tab out of fullscreen by clicking on
-            # some other window (e.g. when having two monitors). On the other hand you
-            # want a cursor to adjust the window size when not in fullscreen mode.
-            if is_fullscreen:
-                self.__window.cursor_disable()
-            else:
-                self.__window.cursor_hide()
+            self.__window.cursor_hide()
             self.__state = MarkerWindowStateIdle(
                 clicks_needed=self._CLICKS_NEEDED_TO_CLOSE
             )
@@ -312,7 +304,7 @@ class MarkerWindowController(observable.Observable):
         if position is None:
             return
 
-        r2 = 2 * self.__marker_radius
+        radius = self.__marker_radius
         screen_point = self.__marker_position_on_screen(position)
 
         if is_valid:
@@ -320,29 +312,29 @@ class MarkerWindowController(observable.Observable):
         else:
             marker_circle_rgb_feedback = self._MARKER_CIRCLE_RGB_FEEDBACK_INVALID
 
-        draw_points(
-            [screen_point],
-            size=self._MARKER_CIRCLE_SIZE_OUTER * r2,
+        # TODO: adjust size such that they correspond to old marker sizes
+        # TODO: adjust num_points such that circles look smooth; smaller circles need less points
+        # TODO: compare runtimes with `draw_points`
+
+        _draw_circle_filled(
+            screen_point,
+            size=self._MARKER_CIRCLE_SIZE_OUTER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_OUTER, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_OUTER,
         )
-        draw_points(
-            [screen_point],
-            size=self._MARKER_CIRCLE_SIZE_MIDDLE * r2,
+        _draw_circle_filled(
+            screen_point,
+            size=self._MARKER_CIRCLE_SIZE_MIDDLE * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_MIDDLE, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_MIDDLE,
         )
-        draw_points(
-            [screen_point],
-            size=self._MARKER_CIRCLE_SIZE_INNER * r2,
+        _draw_circle_filled(
+            screen_point,
+            size=self._MARKER_CIRCLE_SIZE_INNER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_INNER, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_INNER,
         )
-        draw_points(
-            [screen_point],
-            size=self._MARKER_CIRCLE_SIZE_FEEDBACK * r2,
+        _draw_circle_filled(
+            screen_point,
+            size=self._MARKER_CIRCLE_SIZE_FEEDBACK * radius,
             color=RGBA(*marker_circle_rgb_feedback, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_FEEDBACK,
         )
 
     def __draw_status_text(self, clicks_needed: int):
@@ -536,3 +528,37 @@ def _interp_fn(t, b, c, d, start_sample=15.0, stop_sample=55.0):
         return 1 - _easeInOutQuad(t - stop_sample, b, c, d - stop_sample)
     else:
         return 1.0
+
+
+@functools.lru_cache(4)  # 4 circles needed to draw calibration marker
+def _circle_points_around_zero(radius: float, num_points: int) -> np.ndarray:
+    t = np.linspace(0, 2 * np.pi, num_points, dtype=np.float64)
+    t.shape = -1, 1
+    points = np.hstack([np.cos(t), np.sin(t)])
+    points *= radius
+    return points
+
+
+@functools.lru_cache(4)  # 4 circles needed to draw calibration marker
+def _circle_points_offset(
+    offset: T.Tuple[float, float], radius: float, num_points: int, flat: bool = True
+) -> np.ndarray:
+    # NOTE: .copy() to avoid modifying the cached result
+    points = _circle_points_around_zero(radius, num_points).copy()
+    points[:, 0] += offset[0]
+    points[:, 1] += offset[1]
+    if flat:
+        points.shape = -1
+    return points
+
+
+def _draw_circle_filled(
+    screen_point: T.Tuple[float, float], size: float, color: RGBA, num_points: int = 50
+):
+    points = _circle_points_offset(
+        screen_point, radius=size, num_points=num_points, flat=False
+    )
+    gl.glColor4f(color.r, color.g, color.b, color.a)
+    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
+    gl.glVertexPointer(2, gl.GL_DOUBLE, 0, points)
+    gl.glDrawArrays(gl.GL_POLYGON, 0, points.shape[0])
