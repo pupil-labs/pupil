@@ -565,6 +565,9 @@ class CalibrationChoreographyPlugin(Plugin):
             )
             return
 
+        # Reset the main window size to trigger a redraw with correct size and scale
+        self.g_pool.trigger_main_window_redraw()
+
         current_mode = self.__current_mode
         pupil_list = self.__pupil_list
         ref_list = self.__ref_list
