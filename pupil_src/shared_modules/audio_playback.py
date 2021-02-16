@@ -15,6 +15,7 @@ import logging
 from bisect import bisect_left as bisect
 from threading import Timer
 from time import monotonic
+import traceback
 
 import av
 import av.filter
@@ -249,9 +250,12 @@ class Audio_Playback(System_Plugin_Base):
 
     def get_audio_frame_iterator(self):
         for packet in self.audio.container.demux(self.audio.stream):
-            for frame in packet.decode():
-                if frame:
-                    yield frame
+            try:
+                for frame in packet.decode():
+                    if frame:
+                        yield frame
+            except av.AVError:
+                logger.debug(traceback.format_exc())
 
     def audio_idx_to_pts(self, idx):
         return idx * self.audio_pts_rate
