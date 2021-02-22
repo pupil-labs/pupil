@@ -253,6 +253,13 @@ class Plugin(object):
     def parse_pretty_class_name(cls) -> str:
         return cls.__name__.replace("_", " ")
 
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        """
+        Returns `True` if the plugin class is available within the `g_pool` context.
+        """
+        return True
+
     def add_menu(self):
         """
         This fn is called when the plugin ui is initialized. Do not change!
