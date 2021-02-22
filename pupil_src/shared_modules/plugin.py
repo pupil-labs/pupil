@@ -400,6 +400,12 @@ class Plugin_List(object):
         """
         add a plugin instance to the list.
         """
+
+        # Check if the plugin class is supported within the current g_pool context
+        if not new_plugin_cls.is_available_within_context(self.g_pool):
+            logger.error(f"Plugin {new_plugin_cls.__name__} not available; skip adding it to plugin list.")
+            return
+
         self._find_and_remove_duplicates(new_plugin_cls)
 
         plugin_instance = new_plugin_cls(self.g_pool, **args)
