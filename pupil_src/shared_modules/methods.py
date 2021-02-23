@@ -9,16 +9,20 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os, sys, platform, getpass
+import getpass
+import logging
+import os
+import platform
+import sys
 from time import time
+
+import cv2
 import numpy as np
 
 try:
     import numexpr as ne
 except Exception:
     ne = None
-import cv2
-import logging
 
 logger = logging.getLogger(__name__)
 
