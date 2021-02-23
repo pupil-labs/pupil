@@ -397,9 +397,7 @@ class File_Source(Playback_Source, Base_Source):
                 raise EndofVideoError
             if av_frame.pts == target_entry.pts:
                 break
-            elif av_frame.pts < target_entry.pts:
-                pass
-            else:
+            elif av_frame.pts > target_entry.pts:
                 # This should never happen, but just in case we should make sure
                 # that our current_frame_idx is actually correct afterwards!
                 logger.warn("Advancing frame iterator went past the target frame!")
