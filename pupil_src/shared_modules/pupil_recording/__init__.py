@@ -8,6 +8,6 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from .info import RecordingInfoFile
+from .info import RecordingInfoFile, RecordingInfo
 from .recording import PupilRecording
 from .recording_utils import InvalidRecordingException, assert_valid_recording_type
