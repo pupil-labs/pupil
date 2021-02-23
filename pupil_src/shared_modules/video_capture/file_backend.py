@@ -24,6 +24,7 @@ from pyglui import ui
 
 from camera_models import Camera_Model
 from pupil_recording import PupilRecording
+from player_methods import iter_catch
 
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
 from .utils import VideoSet, InvalidContainerError
@@ -185,10 +186,11 @@ class OnDemandDecoder(Decoder):
         self.video_stream.seek(pts_position)
 
     def get_frame_iterator(self):
-        for packet in self.container.demux(self.video_stream):
-            for frame in packet.decode():
-                if frame:
-                    yield frame
+        frames = self.container.decode(self.video_stream)
+        frames = iter_catch(frames, av.AVError)
+        for frame in frames:
+            if frame:
+                yield frame
 
 
 # NOTE:Base_Source is included as base class for uniqueness:by_base_class to work
