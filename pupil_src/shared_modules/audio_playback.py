@@ -26,6 +26,7 @@ from pyglui import ui
 
 import gl_utils
 from audio_utils import Audio_Viz_Transform, NoAudioLoadedError, load_audio
+from methods import make_change_loglevel_fn
 from plugin import System_Plugin_Base
 from version_utils import parse_version
 
@@ -35,6 +36,9 @@ assert parse_version(av.__version__) >= parse_version("0.4.4")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logger.DEBUG)
+
+av_logger = logging.getLogger("libav.aac")
+av_logger.addFilter(make_change_loglevel_fn(logging.DEBUG))
 
 # av.logging.set_level(av.logging.DEBUG)
 # logging.getLogger('libav').setLevel(logging.DEBUG)
