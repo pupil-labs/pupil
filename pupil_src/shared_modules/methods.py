@@ -14,6 +14,8 @@ import logging
 import os
 import platform
 import sys
+import traceback
+import typing as T
 from time import time
 
 import cv2
@@ -778,3 +780,23 @@ def timeit(method):
         return result
 
     return timed
+
+
+X = T.TypeVar("X")
+
+
+def iter_catch(
+    iterator: T.Iterator[X],
+    errors_to_catch: T.Union[Exception, T.Tuple[Exception]],
+    log_on_catch: bool = True,
+) -> T.Iterator[T.Optional[X]]:
+    iterator = iter(iterator)
+    while True:
+        try:
+            yield next(iterator)
+        except errors_to_catch:
+            if log_on_catch:
+                logger.debug(traceback.format_exc())
+            yield None
+        except StopIteration:
+            return
