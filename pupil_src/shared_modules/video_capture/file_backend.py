@@ -23,7 +23,7 @@ import numpy as np
 from pyglui import ui
 
 from camera_models import Camera_Model
-from methods import iter_catch
+from methods import make_change_loglevel_fn, iter_catch
 from pupil_recording import PupilRecording
 
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
@@ -33,6 +33,10 @@ logger = logging.getLogger(__name__)
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
 logging.getLogger("av.buffered_decoder").setLevel(logging.WARNING)
+
+# convert 2h64 decoding errors to debug messages
+av_logger = logging.getLogger("libav.h264")
+av_logger.addFilter(make_change_loglevel_fn(logging.DEBUG))
 
 assert av.__version__ >= "0.4.5", "pyav is out-of-date, please update"
 
