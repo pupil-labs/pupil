@@ -28,6 +28,7 @@ import gl_utils
 import player_methods as pm
 from observable import Observable
 from plugin import Plugin
+from pupil_recording import PupilRecording, RecordingInfo
 
 logger = logging.getLogger(__name__)
 
@@ -185,6 +186,17 @@ class Blink_Detection(Plugin):
 
 
 class Offline_Blink_Detection(Observable, Blink_Detection):
+
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if meta_info.recording_software_name == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE:
+                # Disable blink detector in Player if Pupil Invisible recording
+                return False
+        return super().is_available_within_context(g_pool)
+
     def __init__(
         self,
         g_pool,
