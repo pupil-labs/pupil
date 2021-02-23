@@ -391,6 +391,7 @@ class File_Source(Playback_Source, Base_Source):
             self._setup_video(target_entry.container_idx)
 
         # advance frame iterator until we hit the target frame
+        av_frame = None
         for av_frame in self.frame_iterator:
             if not av_frame:
                 raise EndofVideoError
@@ -414,6 +415,8 @@ class File_Source(Playback_Source, Base_Source):
                     raise EndofVideoError
                 self.target_frame_idx = pts_indices[0]
                 break
+        if av_frame is None:
+            return self._get_fake_frame_and_advance(target_entry)
 
         # update indices, we know that we advanced until target_frame_index!
         self.current_frame_idx = self.target_frame_idx
