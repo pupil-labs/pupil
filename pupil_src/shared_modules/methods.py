@@ -800,3 +800,12 @@ def iter_catch(
             yield None
         except StopIteration:
             return
+
+
+def make_change_loglevel_fn(level):
+    def _change_level(record):
+        record.levelno = level
+        record.levelname = logging.getLevelName(record.levelno)
+        return record
+
+    return _change_level
