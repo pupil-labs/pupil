@@ -23,8 +23,8 @@ import numpy as np
 from pyglui import ui
 
 from camera_models import Camera_Model
+from methods import iter_catch
 from pupil_recording import PupilRecording
-from player_methods import iter_catch
 
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
 from .utils import VideoSet, InvalidContainerError
