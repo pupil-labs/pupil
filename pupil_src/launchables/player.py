@@ -598,10 +598,21 @@ def player(
             *_gaze_producer_plugins,
             ("Audio_Playback", {}),
         ]
+        _plugins_to_load = session_settings.get("loaded_plugins", None)
+        if _plugins_to_load is None:
+            # If no plugins are available from a previous session,
+            # then use the default plugin list
+            _plugins_to_load = default_plugins
+        else:
+            # If there are plugins available from a previous session,
+            # then prepend plugins that are required, but might have not been available before
+            _plugins_to_load = [
+                *_pupil_producer_plugins,
+                *_gaze_producer_plugins,
+                *_plugins_to_load,
+            ]
 
-        g_pool.plugins = Plugin_List(
-            g_pool, session_settings.get("loaded_plugins", default_plugins)
-        )
+        g_pool.plugins = Plugin_List(g_pool, _plugins_to_load)
 
         # Manually add g_pool.capture to the plugin list
         g_pool.plugins._plugins.append(g_pool.capture)
