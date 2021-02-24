@@ -572,6 +572,16 @@ def player(
         g_pool.gui.append(g_pool.quickbar)
 
         # we always load these plugins
+        _pupil_producer_plugins = [
+            # In priority order (first is default)
+            ("Pupil_From_Recording", {}),
+            ("Offline_Pupil_Detection", {}),
+        ]
+        _gaze_producer_plugins = [
+            # In priority order (first is default)
+            ("GazeFromRecording", {}),
+            ("GazeFromOfflineCalibration", {}),
+        ]
         default_plugins = [
             ("Plugin_Manager", {}),
             ("Seek_Control", {}),
@@ -582,8 +592,8 @@ def player(
             ("System_Graphs", {}),
             ("System_Timelines", {}),
             ("World_Video_Exporter", {}),
-            ("Pupil_From_Recording", {}),
-            ("GazeFromRecording", {}),
+            *reversed(_pupil_producer_plugins),
+            *reversed(_gaze_producer_plugins),
             ("Audio_Playback", {}),
         ]
 
