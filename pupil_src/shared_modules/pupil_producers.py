@@ -27,6 +27,7 @@ import pyglui.cygl.utils as cygl_utils
 import zmq_tools
 from observable import Observable
 from plugin import System_Plugin_Base
+from pupil_recording import PupilRecording, RecordingInfo
 from pyglui import ui
 from pyglui.pyfontstash import fontstash as fs
 from video_capture.utils import VideoSet
@@ -311,6 +312,16 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     session_data_version = 4
     session_data_name = "offline_pupil"
+
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if meta_info.recording_software_name == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE:
+                # Disable post-hoc pupil detector in Player if Pupil Invisible recording
+                return False
+        return super().is_available_within_context(g_pool)
 
     @classmethod
     def plugin_menu_label(cls) -> str:
