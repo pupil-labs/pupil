@@ -28,7 +28,10 @@ class GazeFromOfflineCalibration(GazeProducerBase):
         if g_pool.app == "player":
             recording = PupilRecording(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
-            if meta_info.recording_software_name == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE:
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
                 # Disable post-hoc gaze calibration in Player if Pupil Invisible recording
                 return False
         return super().is_available_within_context(g_pool)

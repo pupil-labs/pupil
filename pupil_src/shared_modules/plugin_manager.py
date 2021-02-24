@@ -43,7 +43,9 @@ class Plugin_Manager(System_Plugin_Base):
             if issubclass(plugin, non_user_plugins):
                 continue
             if not plugin.is_available_within_context(g_pool):
-                logger.debug(f"Plugin {plugin.__name__} not available; skip adding it to plugin list.")
+                logger.debug(
+                    f"Plugin {plugin.__name__} not available; skip adding it to plugin list."
+                )
                 continue
             available_and_supported_user_plugins.append(plugin)
 

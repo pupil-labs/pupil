@@ -83,7 +83,8 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
         ]
         # Skip pupil producers that are not available within g_pool context
         pupil_producer_plugins = [
-            p for p in pupil_producer_plugins
+            p
+            for p in pupil_producer_plugins
             if p.is_available_within_context(self.g_pool)
         ]
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
@@ -291,13 +292,15 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
 
 
 class Pupil_From_Recording(Pupil_Producer_Base):
-
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
             recording = PupilRecording(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
-            if meta_info.recording_software_name == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE:
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE
+            ):
                 # Disable pupil from recording in Player if Pupil Mobile recording
                 return False
         return super().is_available_within_context(g_pool)
@@ -334,7 +337,10 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         if g_pool.app == "player":
             recording = PupilRecording(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
-            if meta_info.recording_software_name == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE:
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
                 # Disable post-hoc pupil detector in Player if Pupil Invisible recording
                 return False
         return super().is_available_within_context(g_pool)

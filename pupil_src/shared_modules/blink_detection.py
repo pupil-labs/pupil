@@ -186,13 +186,15 @@ class Blink_Detection(Plugin):
 
 
 class Offline_Blink_Detection(Observable, Blink_Detection):
-
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
             recording = PupilRecording(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
-            if meta_info.recording_software_name == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE:
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
                 # Disable blink detector in Player if Pupil Invisible recording
                 return False
         return super().is_available_within_context(g_pool)

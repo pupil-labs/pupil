@@ -17,13 +17,15 @@ from pupil_recording import PupilRecording, RecordingInfo
 
 
 class GazeFromRecording(GazeProducerBase):
-
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
             recording = PupilRecording(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
-            if meta_info.recording_software_name == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE:
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE
+            ):
                 # Disable gaze from recording in Player if Pupil Mobile recording
                 return False
         return super().is_available_within_context(g_pool)

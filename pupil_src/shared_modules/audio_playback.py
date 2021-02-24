@@ -60,7 +60,10 @@ class Audio_Playback(System_Plugin_Base):
         if g_pool.app == "player":
             recording = PupilRecording(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
-            if meta_info.recording_software_name == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE:
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE
+            ):
                 # Disable audio playback in Player if Pupil Mobile recording
                 return False
         return super().is_available_within_context(g_pool)
