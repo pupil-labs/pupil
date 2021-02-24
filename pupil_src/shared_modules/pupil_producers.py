@@ -81,6 +81,11 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
             for p in self.g_pool.plugin_by_name.values()
             if issubclass(p, Pupil_Producer_Base)
         ]
+        # Skip pupil producers that are not available within g_pool context
+        pupil_producer_plugins = [
+            p for p in pupil_producer_plugins
+            if p.is_available_within_context(self.g_pool)
+        ]
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_order())
         pupil_producer_labels = [
