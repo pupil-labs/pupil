@@ -371,6 +371,14 @@ class Plugin_List(object):
 
         expanded_initializers.sort(key=lambda data: data[0].order)
 
+        # skip plugins that are not available within g_pool context
+        # not removing them here will break the uniqueness logic bellow
+        expanded_initializers = [
+            (plugin, name, args)
+            for (plugin, name, args) in expanded_initializers
+            if plugin.is_available_within_context(self.g_pool)
+        ]
+
         # only add plugins that won't be replaced by newer plugins
         for i, (plugin, name, args) in enumerate(expanded_initializers):
             for new_plugin, new_name, _ in expanded_initializers[i + 1 :]:
