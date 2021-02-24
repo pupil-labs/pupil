@@ -411,7 +411,7 @@ class Plugin_List(object):
 
         # Check if the plugin class is supported within the current g_pool context
         if not new_plugin_cls.is_available_within_context(self.g_pool):
-            logger.error(f"Plugin {new_plugin_cls.__name__} not available; skip adding it to plugin list.")
+            logger.debug(f"Plugin {new_plugin_cls.__name__} not available; skip adding it to plugin list.")
             return
 
         self._find_and_remove_duplicates(new_plugin_cls)
