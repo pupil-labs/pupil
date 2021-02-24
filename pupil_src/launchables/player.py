@@ -577,11 +577,13 @@ def player(
             ("Pupil_From_Recording", {}),
             ("Offline_Pupil_Detection", {}),
         ]
+        _pupil_producer_plugins = list(reversed(_pupil_producer_plugins))
         _gaze_producer_plugins = [
             # In priority order (first is default)
             ("GazeFromRecording", {}),
             ("GazeFromOfflineCalibration", {}),
         ]
+        _gaze_producer_plugins = list(reversed(_gaze_producer_plugins))
         default_plugins = [
             ("Plugin_Manager", {}),
             ("Seek_Control", {}),
@@ -592,8 +594,8 @@ def player(
             ("System_Graphs", {}),
             ("System_Timelines", {}),
             ("World_Video_Exporter", {}),
-            *reversed(_pupil_producer_plugins),
-            *reversed(_gaze_producer_plugins),
+            *_pupil_producer_plugins,
+            *_gaze_producer_plugins,
             ("Audio_Playback", {}),
         ]
 
