@@ -26,7 +26,6 @@ from pyglui import ui
 import gl_utils
 from audio_utils import Audio_Viz_Transform, NoAudioLoadedError, load_audio
 from plugin import System_Plugin_Base
-from pupil_recording import PupilRecording, RecordingInfo
 from version_utils import parse_version
 
 
@@ -54,19 +53,6 @@ class Audio_Playback(System_Plugin_Base):
 
     icon_chr = chr(0xE050)
     icon_font = "pupil_icons"
-
-    @classmethod
-    def is_available_within_context(cls, g_pool) -> bool:
-        if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
-            meta_info = recording.meta_info
-            if (
-                meta_info.recording_software_name
-                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE
-            ):
-                # Disable audio playback in Player if Pupil Mobile recording
-                return False
-        return super().is_available_within_context(g_pool)
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
