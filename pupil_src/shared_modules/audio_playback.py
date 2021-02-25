@@ -164,7 +164,7 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_sync = self.pa_stream.get_output_latency()
             self.audio_reported_latency = self.pa_stream.get_output_latency()
 
-        except ValueError:
+        except (ValueError, OSError):
             self.pa_stream = None
 
     def _setup_audio_vis(self):
