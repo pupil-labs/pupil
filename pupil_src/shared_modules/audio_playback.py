@@ -321,7 +321,7 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_viz_data, finished = self.audio_viz_trans.get_data(
                 log_scale=self.log_scale
             )
-            if not finished:
+            if not finished and self.audio_timeline:
                 self.audio_timeline.refresh()
 
     def setup_pyaudio_output_if_necessary(self):
