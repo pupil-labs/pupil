@@ -24,7 +24,7 @@ from av.packet import Packet
 
 import audio_utils
 from video_capture.utils import Video, InvalidContainerError
-from player_methods import iter_catch
+from methods import iter_catch
 
 logger = logging.getLogger(__name__)
 
