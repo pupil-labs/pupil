@@ -164,8 +164,14 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_sync = self.pa_stream.get_output_latency()
             self.audio_reported_latency = self.pa_stream.get_output_latency()
 
-        except (ValueError, OSError):
+        except ValueError:
             self.pa_stream = None
+        except OSError:
+            self.pa_stream = None
+            import traceback
+
+            logger.warning("Audio found, but playback failed (#2103)")
+            logger.debug(traceback.format_exc())
 
     def _setup_audio_vis(self):
         self.audio_timeline = None
