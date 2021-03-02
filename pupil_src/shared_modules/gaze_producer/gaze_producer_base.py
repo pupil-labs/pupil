@@ -56,6 +56,12 @@ class GazeProducerBase(Observable, System_Plugin_Base):
             for p in self.g_pool.plugin_by_name.values()
             if issubclass(p, GazeProducerBase)
         ]
+        # Skip gaze producers that are not available within g_pool context
+        gaze_producer_plugins = [
+            p
+            for p in gaze_producer_plugins
+            if p.is_available_within_context(self.g_pool)
+        ]
         gaze_producer_plugins.sort(key=lambda p: p.gaze_data_source_selection_label())
         gaze_producer_plugins.sort(key=lambda p: p.gaze_data_source_selection_order())
         gaze_producer_labels = [
