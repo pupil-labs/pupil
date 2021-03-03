@@ -166,6 +166,12 @@ class Audio_Playback(System_Plugin_Base):
 
         except ValueError:
             self.pa_stream = None
+        except OSError:
+            self.pa_stream = None
+            import traceback
+
+            logger.warning("Audio found, but playback failed (#2103)")
+            logger.debug(traceback.format_exc())
 
     def _setup_audio_vis(self):
         self.audio_timeline = None
@@ -321,7 +327,7 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_viz_data, finished = self.audio_viz_trans.get_data(
                 log_scale=self.log_scale
             )
-            if not finished:
+            if not finished and self.audio_timeline:
                 self.audio_timeline.refresh()
 
     def setup_pyaudio_output_if_necessary(self):
