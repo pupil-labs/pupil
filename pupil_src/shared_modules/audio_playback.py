@@ -406,7 +406,7 @@ class Audio_Playback(System_Plugin_Base):
             audio_buffer = bytes(audio_frame.planes[0])
 
             audio_part_start_ts = self.audio.timestamps[0]
-            audio_part_progress = audio_frame.pts * self.audio.stream.time_base
+            audio_part_progress = audio_frame.pts * audio_frame_p.time_base
             audio_playback_time = audio_part_start_ts + audio_part_progress
             self.audio_bytes_fifo.append((audio_buffer, audio_playback_time))
 
@@ -472,12 +472,11 @@ class Audio_Playback(System_Plugin_Base):
                     )
                 if (
                     self.audio.timestamps[fnum]
-                    != self.audio.timestamps[0] + af.pts * self.audio.stream.time_base
+                    != self.audio.timestamps[0] + af.pts * af.time_base
                 ):
                     print(
                         "ts[0] + af.pts = {} fnum = {} timestamp = {}".format(
-                            self.audio.timestamps[0]
-                            + af.pts * self.audio.stream.time_base,
+                            self.audio.timestamps[0] + af.pts * af.time_base,
                             fnum,
                             self.audio.timestamps[fnum],
                         )
