@@ -25,7 +25,7 @@ class NoAudioLoadedError(Exception):
 
 
 LoadedAudio = collections.namedtuple(
-    "LoadedAudio", ["container", "stream", "timestamps"]
+    "LoadedAudio", ["container", "stream", "timestamps", "pts"]
 )
 
 
@@ -71,23 +71,25 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
     except IOError:
         return None
 
-    if return_pts_based_timestamps:
-        start = timestamps[0]
-        timestamps = np.fromiter(
-            (
-                float(start + p.pts * p.time_base)
-                for p in container.demux(audio=0)
-                if p is not None and p.pts is not None and p.time_base is not None
-            ),
-            dtype=float,
-        )
-        try:
-            container.seek(0)
-        except av.AVError as err:
-            logger.debug(f"{err}")
-            return None
+    start = timestamps[0]
+    packet_pts = np.array(
+        [p.pts for p in container.demux(stream) if p is not None and p.pts is not None],
+    )
 
-    return LoadedAudio(container, stream, timestamps)
+    if return_pts_based_timestamps:
+        timestamps = start + packet_pts * stream.time_base
+
+    # pts seeking requires Python ints; convert after `packet_pts * stream.time_base`
+    # to leverage numpy element-wise function application
+    packet_pts = packet_pts.tolist()
+
+    try:
+        container.seek(0)
+    except av.AVError as err:
+        logger.debug(f"{err}")
+        return None
+
+    return LoadedAudio(container, stream, timestamps, packet_pts)
 
 
 class Audio_Viz_Transform:
