@@ -79,8 +79,9 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
     if return_pts_based_timestamps:
         timestamps = start + packet_pts * stream.time_base
 
-    # pts seeking requires Python ints; convert after `packet_pts * stream.time_base`
-    # to leverage numpy element-wise function application
+    # pts seeking requires primitive Python integers and does not accept numpy int types;
+    # `.tolist()` converts numpy integers to primitive Python integers; do conversion after
+    # `packet_pts * stream.time_base` to leverage numpy element-wise function application
     packet_pts = packet_pts.tolist()
 
     try:
