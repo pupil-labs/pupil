@@ -64,6 +64,23 @@ class CorrelatedAndCoordinateTransformedResult(T.NamedTuple):
 class CorrelationError(ValueError):
     pass
 
+
+class AccuracyPrecisionResult(T.NamedTuple):
+    accuracy: CalculationResult
+    precision: CalculationResult
+    error_lines: np.ndarray
+    correlation: CorrelatedAndCoordinateTransformedResult
+
+    @staticmethod
+    def failed() -> "AccuracyPrecisionResult":
+        return AccuracyPrecisionResult(
+            accuracy=CalculationResult(0.0, 0, 0),
+            precision=CalculationResult(0.0, 0, 0),
+            error_lines=np.array([]),
+            correlation=CorrelatedAndCoordinateTransformedResult.empty(),
+        )
+
+
 class ValidationInput:
     def __init__(self):
         self.clear()
@@ -360,7 +377,7 @@ class Accuracy_Visualizer(Plugin):
             succession_threshold=self.succession_threshold,
         )
 
-        accuracy = results[0].result
+        accuracy = results.accuracy.result
         if np.isnan(accuracy):
             self.accuracy = None
             logger.warning(
@@ -372,7 +389,7 @@ class Accuracy_Visualizer(Plugin):
                 "Angular accuracy: {}. Used {} of {} samples.".format(*results[0])
             )
 
-        precision = results[1].result
+        precision = results.precision.result
         if np.isnan(precision):
             self.precision = None
             logger.warning(
@@ -384,9 +401,8 @@ class Accuracy_Visualizer(Plugin):
                 "Angular precision: {}. Used {} of {} samples.".format(*results[1])
             )
 
-        self.error_lines = results[2]
-
-        ref_locations = [loc["norm_pos"] for loc in self.recent_input.ref_list]
+        self.error_lines = results.error_lines
+        ref_locations = results.correlation.norm_space[1::2, :]
         if len(ref_locations) >= 3:
             hull = ConvexHull(ref_locations)  # requires at least 3 points
             self.calibration_area = hull.points[hull.vertices, :]
@@ -401,36 +417,25 @@ class Accuracy_Visualizer(Plugin):
         intrinsics,
         outlier_threshold,
         succession_threshold=np.cos(np.deg2rad(0.5)),
-    ):
+    ) -> AccuracyPrecisionResult:
         gazer = gazer_class(g_pool, params=gazer_params)
 
         gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
         ref_pos = ref_list
 
-        width, height = intrinsics.resolution
-
-        # reuse closest_matches_monocular to correlate one label to each prediction
-        # correlated['ref']: prediction, correlated['pupil']: label location
-        correlated = closest_matches_monocular(gaze_pos, ref_pos)
-        # [[pred.x, pred.y, label.x, label.y], ...], shape: n x 4
-        locations = np.array(
-            [(*e["ref"]["norm_pos"], *e["pupil"]["norm_pos"]) for e in correlated]
-        )
-        if locations.size == 0:
-            accuracy_result = CalculationResult(0.0, 0, 0)
-            precision_result = CalculationResult(0.0, 0, 0)
-            error_lines = np.array([])
-            return accuracy_result, precision_result, error_lines
-        error_lines = locations.copy()  # n x 4
-        locations[:, ::2] *= width
-        locations[:, 1::2] = (1.0 - locations[:, 1::2]) * height
-        locations.shape = -1, 2
+        try:
+            correlation_result = Accuracy_Visualizer.correlate_and_coordinate_transform(
+                gaze_pos, ref_pos, intrinsics
+            )
+            error_lines = correlation_result.norm_space.reshape(-1, 4)
+            undistorted_3d = correlation_result.camera_space
+        except CorrelationError:
+            return AccuracyPrecisionResult.failed()
 
         # Accuracy is calculated as the average angular
         # offset (distance) (in degrees of visual angle)
         # between fixations locations and the corresponding
         # locations of the fixation targets.
-        undistorted_3d = intrinsics.unprojectPoints(locations, normalize=True)
 
         # Cosine distance of A and B: (A @ B) / (||A|| * ||B||)
         # No need to calculate norms, since A and B are normalized in our case.
@@ -482,7 +487,10 @@ class Accuracy_Visualizer(Plugin):
         )
         precision_result = CalculationResult(precision, num_used, num_total)
 
-        return accuracy_result, precision_result, error_lines
+        return AccuracyPrecisionResult(
+            accuracy_result, precision_result, error_lines, correlation_result
+        )
+
     @staticmethod
     def correlate_and_coordinate_transform(
         gaze_pos, ref_pos, intrinsics
