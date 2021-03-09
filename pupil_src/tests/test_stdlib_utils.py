@@ -21,7 +21,15 @@ def test_unique():
 
     assert list(unique(arr, key=lambda _: 0)) == [1]
     assert list(unique(arr, key=lambda _: 0, select=lambda old, new: new)) == [0]
-    assert list(unique(arr, select=lambda old, new: old*10 + new)) == [11, 222, 3, 44, 5, 6, 0]
+    assert list(unique(arr, select=lambda old, new: old * 10 + new)) == [
+        11,
+        222,
+        3,
+        44,
+        5,
+        6,
+        0,
+    ]
 
 
 def test_operators():
@@ -29,7 +37,7 @@ def test_operators():
     assert is_none(None) == True
     assert is_not_none(None) == False
 
-    things = [0, 5, [], [1,2,3], "", "abc"]
+    things = [0, 5, [], [1, 2, 3], "", "abc"]
 
     for thing in things:
         assert is_none(thing) == False

@@ -36,7 +36,10 @@ def test_success_notification_serialization():
 
     _test_notification_serialization(
         cls=cls,
-        valid_samples=[serialized_sample_1, serialized_sample_2,],
+        valid_samples=[
+            serialized_sample_1,
+            serialized_sample_2,
+        ],
         invalid_samples=[
             {
                 "subject": "calibration.successful.xyz",
