@@ -36,11 +36,33 @@ from gaze_mapping.utils import closest_matches_monocular
 
 logger = logging.getLogger(__name__)
 
+
 class CalculationResult(T.NamedTuple):
     result: float
     num_used: int
     num_total: int
 
+
+class CorrelatedAndCoordinateTransformedResult(T.NamedTuple):
+    """Holds result from correlating reference and gaze data and their respective
+    transformations into norm, image, and camera coordinate systems.
+    """
+
+    norm_space: np.ndarray  # shape: 2*n, 2
+    image_space: np.ndarray  # shape: 2*n, 2
+    camera_space: np.ndarray  # shape: 2*n, 3
+
+    @staticmethod
+    def empty() -> "CorrelatedAndCoordinateTransformedResult":
+        return CorrelatedAndCoordinateTransformedResult(
+            norm_space=np.ndarray([]),
+            image_space=np.ndarray([]),
+            camera_space=np.ndarray([]),
+        )
+
+
+class CorrelationError(ValueError):
+    pass
 
 class ValidationInput:
     def __init__(self):
@@ -461,6 +483,83 @@ class Accuracy_Visualizer(Plugin):
         precision_result = CalculationResult(precision, num_used, num_total)
 
         return accuracy_result, precision_result, error_lines
+    @staticmethod
+    def correlate_and_coordinate_transform(
+        gaze_pos, ref_pos, intrinsics
+    ) -> CorrelatedAndCoordinateTransformedResult:
+        # reuse closest_matches_monocular to correlate one label to each prediction
+        # correlated['ref']: prediction, correlated['pupil']: label location
+        # NOTE the switch of the ref and pupil keys! This effects mostly hmd data.
+        correlated = closest_matches_monocular(gaze_pos, ref_pos)
+        # [[pred.x, pred.y, label.x, label.y], ...], shape: n x 4
+        if not correlated:
+            raise CorrelationError("No correlation possible")
+
+        try:
+            return Accuracy_Visualizer._coordinate_transform_ref_in_norm_space(
+                correlated, intrinsics
+            )
+        except KeyError as err:
+            if "norm_pos" in err.args:
+                return Accuracy_Visualizer._coordinate_transform_ref_in_camera_space(
+                    correlated, intrinsics
+                )
+            else:
+                raise
+
+    @staticmethod
+    def _coordinate_transform_ref_in_norm_space(
+        correlated, intrinsics
+    ) -> CorrelatedAndCoordinateTransformedResult:
+        width, height = intrinsics.resolution
+        locations_norm = np.array(
+            [(*e["ref"]["norm_pos"], *e["pupil"]["norm_pos"]) for e in correlated]
+        )
+        locations_image = locations_norm.copy()  # n x 4
+        locations_image[:, ::2] *= width
+        locations_image[:, 1::2] = (1.0 - locations_image[:, 1::2]) * height
+        locations_image.shape = -1, 2
+        locations_norm.shape = -1, 2
+        locations_camera = intrinsics.unprojectPoints(locations_image, normalize=True)
+        return CorrelatedAndCoordinateTransformedResult(
+            locations_norm, locations_image, locations_camera
+        )
+
+    @staticmethod
+    def _coordinate_transform_ref_in_camera_space(
+        correlated, intrinsics
+    ) -> CorrelatedAndCoordinateTransformedResult:
+        width, height = intrinsics.resolution
+        locations_mixed = np.array(
+            # NOTE: This looks incorrect, but is actually correct. The switch comes from
+            # using closest_matches_monocular() above with switched arguments.
+            [(*e["ref"]["norm_pos"], *e["pupil"]["mm_pos"]) for e in correlated]
+        )  # n x 5
+        pupil_norm = locations_mixed[:, 0:2]  # n x 2
+        pupil_image = pupil_norm.copy()
+        pupil_image[:, 0] *= width
+        pupil_image[:, 1] = (1.0 - pupil_image[:, 1]) * height
+        pupil_camera = intrinsics.unprojectPoints(pupil_image, normalize=True)  # n x 3
+
+        ref_camera = locations_mixed[:, 2:5]  # n x 3
+        ref_camera /= np.linalg.norm(ref_camera, axis=1, keepdims=True)
+        ref_image = intrinsics.projectPoints(ref_camera)  # n x 2
+        ref_norm = ref_image.copy()
+        ref_norm[:, 0] /= width
+        ref_norm[:, 1] = 1.0 - (ref_norm[:, 1] / height)
+
+        locations_norm = np.hstack([pupil_norm, ref_norm])  # n x 4
+        locations_norm.shape = -1, 2
+
+        locations_image = np.hstack([pupil_image, ref_image])  # n x 4
+        locations_image.shape = -1, 2
+
+        locations_camera = np.hstack([pupil_camera, ref_camera])  # n x 6
+        locations_camera.shape = -1, 3
+
+        return CorrelatedAndCoordinateTransformedResult(
+            locations_norm, locations_image, locations_camera
+        )
 
     def gl_display(self):
         if self.vis_mapping_error and self.error_lines is not None:
