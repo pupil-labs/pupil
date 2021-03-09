@@ -36,9 +36,10 @@ from gaze_mapping.utils import closest_matches_monocular
 
 logger = logging.getLogger(__name__)
 
-Calculation_Result = namedtuple(
-    "Calculation_Result", ["result", "num_used", "num_total"]
-)
+class CalculationResult(T.NamedTuple):
+    result: float
+    num_used: int
+    num_total: int
 
 
 class ValidationInput:
@@ -394,8 +395,8 @@ class Accuracy_Visualizer(Plugin):
             [(*e["ref"]["norm_pos"], *e["pupil"]["norm_pos"]) for e in correlated]
         )
         if locations.size == 0:
-            accuracy_result = Calculation_Result(0.0, 0, 0)
-            precision_result = Calculation_Result(0.0, 0, 0)
+            accuracy_result = CalculationResult(0.0, 0, 0)
+            precision_result = CalculationResult(0.0, 0, 0)
             error_lines = np.array([])
             return accuracy_result, precision_result, error_lines
         error_lines = locations.copy()  # n x 4
@@ -426,7 +427,7 @@ class Accuracy_Visualizer(Plugin):
             -1, 2
         )  # shape: num_used x 2
         accuracy = np.rad2deg(np.arccos(selected_samples.clip(-1.0, 1.0).mean()))
-        accuracy_result = Calculation_Result(accuracy, num_used, num_total)
+        accuracy_result = CalculationResult(accuracy, num_used, num_total)
 
         # lets calculate precision:  (RMS of distance of succesive samples.)
         # This is a little rough as we do not compensate headmovements in this test.
@@ -457,7 +458,7 @@ class Accuracy_Visualizer(Plugin):
         precision = np.sqrt(
             np.mean(np.rad2deg(np.arccos(succesive_distances.clip(-1.0, 1.0))) ** 2)
         )
-        precision_result = Calculation_Result(precision, num_used, num_total)
+        precision_result = CalculationResult(precision, num_used, num_total)
 
         return accuracy_result, precision_result, error_lines
 
