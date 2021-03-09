@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 import collections
 import logging
-import traceback
 
 import av
 import numpy as np
@@ -115,12 +114,9 @@ class Audio_Viz_Transform:
 
     def _next_audio_frame(self):
         for packet in self.audio.container.demux(self.audio.stream):
-            try:
-                for frame in packet.decode():
-                    if frame:
-                        yield frame
-            except av.AVError:
-                logger.debug(traceback.format_exc())
+            for frame in packet.decode():
+                if frame:
+                    yield frame
 
     def sec_to_frames(self, sec):
         return int(np.ceil(sec * self.audio.stream.rate / self.audio.stream.frame_size))
