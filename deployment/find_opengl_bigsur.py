@@ -15,12 +15,14 @@ import functools
 print("Attempting to import OpenGL using patched `ctypes.util.find_library`...")
 _find_library_original = ctypes.util.find_library
 
+
 @functools.wraps(_find_library_original)
 def _find_library_patched(name):
     if name == "OpenGL":
         return "/System/Library/Frameworks/OpenGL.framework/OpenGL"
     else:
         return _find_library_original(name)
+
 
 ctypes.util.find_library = _find_library_patched
 
