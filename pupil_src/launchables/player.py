@@ -572,6 +572,18 @@ def player(
         g_pool.gui.append(g_pool.quickbar)
 
         # we always load these plugins
+        _pupil_producer_plugins = [
+            # In priority order (first is default)
+            ("Pupil_From_Recording", {}),
+            ("Offline_Pupil_Detection", {}),
+        ]
+        _pupil_producer_plugins = list(reversed(_pupil_producer_plugins))
+        _gaze_producer_plugins = [
+            # In priority order (first is default)
+            ("GazeFromRecording", {}),
+            ("GazeFromOfflineCalibration", {}),
+        ]
+        _gaze_producer_plugins = list(reversed(_gaze_producer_plugins))
         default_plugins = [
             ("Plugin_Manager", {}),
             ("Seek_Control", {}),
@@ -582,14 +594,25 @@ def player(
             ("System_Graphs", {}),
             ("System_Timelines", {}),
             ("World_Video_Exporter", {}),
-            ("Pupil_From_Recording", {}),
-            ("GazeFromRecording", {}),
+            *_pupil_producer_plugins,
+            *_gaze_producer_plugins,
             ("Audio_Playback", {}),
         ]
+        _plugins_to_load = session_settings.get("loaded_plugins", None)
+        if _plugins_to_load is None:
+            # If no plugins are available from a previous session,
+            # then use the default plugin list
+            _plugins_to_load = default_plugins
+        else:
+            # If there are plugins available from a previous session,
+            # then prepend plugins that are required, but might have not been available before
+            _plugins_to_load = [
+                *_pupil_producer_plugins,
+                *_gaze_producer_plugins,
+                *_plugins_to_load,
+            ]
 
-        g_pool.plugins = Plugin_List(
-            g_pool, session_settings.get("loaded_plugins", default_plugins)
-        )
+        g_pool.plugins = Plugin_List(g_pool, _plugins_to_load)
 
         # Manually add g_pool.capture to the plugin list
         g_pool.plugins._plugins.append(g_pool.capture)

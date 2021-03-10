@@ -253,6 +253,13 @@ class Plugin(object):
     def parse_pretty_class_name(cls) -> str:
         return cls.__name__.replace("_", " ")
 
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        """
+        Returns `True` if the plugin class is available within the `g_pool` context.
+        """
+        return True
+
     def add_menu(self):
         """
         This fn is called when the plugin ui is initialized. Do not change!
@@ -364,6 +371,14 @@ class Plugin_List(object):
 
         expanded_initializers.sort(key=lambda data: data[0].order)
 
+        # skip plugins that are not available within g_pool context
+        # not removing them here will break the uniqueness logic bellow
+        expanded_initializers = [
+            (plugin, name, args)
+            for (plugin, name, args) in expanded_initializers
+            if plugin.is_available_within_context(self.g_pool)
+        ]
+
         # only add plugins that won't be replaced by newer plugins
         for i, (plugin, name, args) in enumerate(expanded_initializers):
             for new_plugin, new_name, _ in expanded_initializers[i + 1 :]:
@@ -393,6 +408,14 @@ class Plugin_List(object):
         """
         add a plugin instance to the list.
         """
+
+        # Check if the plugin class is supported within the current g_pool context
+        if not new_plugin_cls.is_available_within_context(self.g_pool):
+            logger.debug(
+                f"Plugin {new_plugin_cls.__name__} not available; skip adding it to plugin list."
+            )
+            return
+
         self._find_and_remove_duplicates(new_plugin_cls)
 
         plugin_instance = new_plugin_cls(self.g_pool, **args)
