@@ -123,17 +123,10 @@ class Audio_Playback(System_Plugin_Base):
         self.audio_paused = False
 
         self.audio.stream.seek(0)
-        first_frame = next(self.audio_frame_iterator)
-        self.audio_pts_rate = first_frame.samples
-        self.audio_start_pts = first_frame.pts
-
-        logger.debug(
-            "audio_pts_rate = {} start_pts = {}".format(
-                self.audio_pts_rate, self.audio_start_pts
-            )
-        )
-        self.check_ts_consistency(reference_frame=first_frame)
-        self.seek_to_audio_frame(0)
+        if self.should_check_ts_consistency:
+            first_frame = next(self.audio_frame_iterator)
+            self.check_ts_consistency(reference_frame=first_frame)
+            self.seek_to_audio_frame(0)
 
         logger.debug(
             "Audio file format {} chans {} rate {} framesize {}".format(
@@ -260,13 +253,11 @@ class Audio_Playback(System_Plugin_Base):
                     yield frame
 
     def audio_idx_to_pts(self, idx):
-        return idx * self.audio_pts_rate
+        return self.audio.pts[idx]
 
     def seek_to_audio_frame(self, seek_pos):
         try:
-            self.audio.stream.seek(
-                self.audio_start_pts + self.audio_idx_to_pts(seek_pos)
-            )
+            self.audio.stream.seek(self.audio_idx_to_pts(seek_pos))
         except av.AVError:
             raise FileSeekError()
         else:
