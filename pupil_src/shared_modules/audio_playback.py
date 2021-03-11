@@ -15,6 +15,7 @@ import logging
 from bisect import bisect_left as bisect
 from threading import Timer
 from time import monotonic
+import traceback
 
 import av
 import av.filter
@@ -25,6 +26,7 @@ from pyglui import ui
 
 import gl_utils
 from audio_utils import Audio_Viz_Transform, NoAudioLoadedError, load_audio
+from methods import make_change_loglevel_fn
 from plugin import System_Plugin_Base
 from version_utils import parse_version
 
@@ -34,6 +36,9 @@ assert parse_version(av.__version__) >= parse_version("0.4.4")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logger.DEBUG)
+
+av_logger = logging.getLogger("libav.aac")
+av_logger.addFilter(make_change_loglevel_fn(logging.DEBUG))
 
 # av.logging.set_level(av.logging.DEBUG)
 # logging.getLogger('libav').setLevel(logging.DEBUG)
@@ -248,9 +253,12 @@ class Audio_Playback(System_Plugin_Base):
 
     def get_audio_frame_iterator(self):
         for packet in self.audio.container.demux(self.audio.stream):
-            for frame in packet.decode():
-                if frame:
-                    yield frame
+            try:
+                for frame in packet.decode():
+                    if frame:
+                        yield frame
+            except av.AVError:
+                logger.debug(traceback.format_exc())
 
     def audio_idx_to_pts(self, idx):
         return self.audio.pts[idx]
@@ -270,10 +278,13 @@ class Audio_Playback(System_Plugin_Base):
             self.seek_to_audio_frame(audio_idx)
 
     def on_notify(self, notification):
-        if notification["subject"] == "seek_control.was_seeking":
-            if self.pa_stream is not None and not self.pa_stream.is_stopped():
-                self.pa_stream.stop_stream()
-                self.play = False
+        if (
+            notification["subject"] == "seek_control.was_seeking"
+            and self.pa_stream is not None
+            and not self.pa_stream.is_stopped()
+        ):
+            self.pa_stream.stop_stream()
+            self.play = False
 
     def recent_events(self, events):
         self.update_audio_viz()
