@@ -22,6 +22,7 @@ import numpy as np
 
 
 import player_methods as pm
+from methods import container_decode
 
 
 logger = logging.getLogger(__name__)
@@ -202,7 +203,7 @@ class Video:
             # 1. Broken video -> AVError
             # 2. decode() does not yield anything
             # 3. decode() yields None
-            first_frame = next(cont.decode(video=0), None)
+            first_frame = next(container_decode(cont, video=0), None)
             if first_frame is None:
                 raise InvalidContainerError("Container does not contain frames")
         except av.AVError as averr:
