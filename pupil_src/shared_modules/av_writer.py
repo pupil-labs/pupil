@@ -24,7 +24,7 @@ from av.packet import Packet
 
 import audio_utils
 from video_capture.utils import Video, InvalidContainerError
-from methods import iter_catch
+from methods import iter_catch, container_decode
 
 logger = logging.getLogger(__name__)
 
@@ -501,7 +501,7 @@ class _AudioPacketIterator:
 
         for part_idx, audio_part in enumerate(audio_parts):
 
-            frames = audio_part.container.decode(audio=0)
+            frames = container_decode(audio_part.container, audio=0)
             frames = iter_catch(frames, av.AVError)
             for frame, timestamp in zip(frames, audio_part.timestamps):
                 if frame is None:

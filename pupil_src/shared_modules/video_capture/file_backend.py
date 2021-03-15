@@ -23,7 +23,7 @@ import numpy as np
 from pyglui import ui
 
 from camera_models import Camera_Model
-from methods import make_change_loglevel_fn, iter_catch
+from methods import make_change_loglevel_fn, iter_catch, container_decode
 from pupil_recording import PupilRecording
 
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
@@ -190,7 +190,7 @@ class OnDemandDecoder(Decoder):
         self.video_stream.seek(pts_position)
 
     def get_frame_iterator(self):
-        frames = self.container.decode(self.video_stream)
+        frames = container_decode(self.container, self.video_stream)
         frames = iter_catch(frames, av.AVError)
         for frame in frames:
             if frame:
