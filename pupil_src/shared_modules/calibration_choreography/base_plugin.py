@@ -565,8 +565,10 @@ class CalibrationChoreographyPlugin(Plugin):
             )
             return
 
-        # Reset the main window size to trigger a redraw with correct size and scale
-        self.g_pool.trigger_main_window_redraw()
+        if self.g_pool.app == "capture":
+            # Reset the main window size to trigger a redraw with correct size and scale
+            # Only run in Capture to fix https://github.com/pupil-labs/pupil/issues/2119
+            self.g_pool.trigger_main_window_redraw()
 
         current_mode = self.__current_mode
         pupil_list = self.__pupil_list
