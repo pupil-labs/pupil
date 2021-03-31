@@ -63,6 +63,9 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
             # Skip plugins that are not pupil producers
             if not issubclass(p, Pupil_Producer_Base):
                 return False
+            # Skip pupil producer stub
+            if p is DisabledPupilProducer:
+                return False
             # Skip pupil producers that are not available within g_pool context
             if not p.is_available_within_context(g_pool):
                 return False
