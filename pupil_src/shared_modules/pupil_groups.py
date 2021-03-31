@@ -14,7 +14,7 @@ import time
 import traceback
 import uuid
 
-import msgpack as serializer
+import msgpack
 import zmq
 from pyglui import ui
 from pyre import Pyre, PyreEvent, zhelper
@@ -233,12 +233,12 @@ class Pupil_Groups(Plugin):
                 remote_key = "remote_notify"
                 if notification[remote_key] == "all":
                     del notification[remote_key]
-                    serialized = serializer.dumps(notification)
+                    serialized = msgpack.packb(notification)
                     group_member.shout(self.active_group, serialized)
                 else:
                     peer_uuid_bytes = notification[remote_key]
                     del notification[remote_key]
-                    serialized = serializer.dumps(notification)
+                    serialized = msgpack.packb(notification)
                     peer_uuid = uuid.UUID(bytes=peer_uuid_bytes)
                     group_member.whisper(peer_uuid, serialized)
 
@@ -248,7 +248,7 @@ class Pupil_Groups(Plugin):
                     for msg in event.msg:
                         try:
                             # try to unpack data
-                            notification = serializer.loads(msg)
+                            notification = msgpack.unpackb(msg)
                             # test if dictionary and if `subject` key is present
                             notification["subject"]
                             # add peer information
