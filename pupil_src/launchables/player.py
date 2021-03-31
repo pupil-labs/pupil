@@ -113,7 +113,11 @@ def player(
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
         from log_history import Log_History
-        from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
+        from pupil_producers import (
+            DisabledPupilProducer,
+            Pupil_From_Recording,
+            Offline_Pupil_Detection,
+        )
         from gaze_producer.gaze_from_recording import GazeFromRecording
         from gaze_producer.gaze_from_offline_calibration import (
             GazeFromOfflineCalibration,
@@ -180,6 +184,7 @@ def player(
             Raw_Data_Exporter,
             Annotation_Player,
             Log_History,
+            DisabledPupilProducer,
             Pupil_From_Recording,
             Offline_Pupil_Detection,
             GazeFromRecording,
@@ -576,6 +581,7 @@ def player(
             # In priority order (first is default)
             ("Pupil_From_Recording", {}),
             ("Offline_Pupil_Detection", {}),
+            ("DisabledPupilProducer", {}),
         ]
         _pupil_producer_plugins = list(reversed(_pupil_producer_plugins))
         _gaze_producer_plugins = [
