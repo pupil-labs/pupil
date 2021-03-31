@@ -355,6 +355,12 @@ class Pupil_From_Recording(Pupil_Producer_Base):
             ):
                 # Disable pupil from recording in Player if Pupil Mobile recording
                 return False
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Disable pupil from recording in Player if Pupil Invisible recording
+                return False
         return super().is_available_within_context(g_pool)
 
     @classmethod
