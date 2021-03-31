@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import time
+import traceback
 import uuid
 
 import msgpack as serializer
@@ -264,6 +265,8 @@ class Pupil_Groups(Plugin):
                                     event.peer_name, event.peer_uuid
                                 )
                             )
+                            logger.debug(traceback.format_exc())
+
                 elif event.type == "JOIN" and event.group == self.active_group:
                     local_out.notify(
                         {
