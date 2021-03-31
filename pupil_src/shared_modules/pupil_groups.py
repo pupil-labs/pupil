@@ -9,15 +9,18 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import zmq, time, uuid
-from pyre import Pyre, PyreEvent, zhelper
+import logging
+import time
+import uuid
+
+import msgpack as serializer
+import zmq
 from pyglui import ui
+from pyre import Pyre, PyreEvent, zhelper
+
+import os_utils
 from plugin import Plugin
 from zmq_tools import Msg_Dispatcher, Msg_Receiver
-import msgpack as serializer
-
-import logging
-import os_utils
 
 os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
