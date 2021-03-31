@@ -57,6 +57,21 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
     def pupil_data_source_selection_label(cls) -> str:
         return cls.plugin_menu_label()
 
+    @staticmethod
+    def available_pupil_producer_plugins(g_pool) -> list:
+        def is_plugin_included(p, g_pool) -> bool:
+            # Skip plugins that are not pupil producers
+            if not issubclass(p, Pupil_Producer_Base):
+                return False
+            # Skip pupil producers that are not available within g_pool context
+            if not p.is_available_within_context(g_pool):
+                return False
+            return True
+
+        return [
+            p for p in g_pool.plugin_by_name.values() if is_plugin_included(p, g_pool)
+        ]
+
     @classmethod
     def pupil_data_source_selection_order(cls) -> float:
         return float("inf")
@@ -76,17 +91,7 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
     def init_ui(self):
         self.add_menu()
 
-        pupil_producer_plugins = [
-            p
-            for p in self.g_pool.plugin_by_name.values()
-            if issubclass(p, Pupil_Producer_Base)
-        ]
-        # Skip pupil producers that are not available within g_pool context
-        pupil_producer_plugins = [
-            p
-            for p in pupil_producer_plugins
-            if p.is_available_within_context(self.g_pool)
-        ]
+        pupil_producer_plugins = self.available_pupil_producer_plugins(self.g_pool)
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_order())
         pupil_producer_labels = [
