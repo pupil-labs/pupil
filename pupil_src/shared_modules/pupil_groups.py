@@ -248,7 +248,7 @@ class Pupil_Groups(Plugin):
                     for msg in event.msg:
                         try:
                             # try to unpack data
-                            notification = serializer.loads(msg, encoding="utf-8")
+                            notification = serializer.loads(msg)
                             # test if dictionary and if `subject` key is present
                             notification["subject"]
                             # add peer information
