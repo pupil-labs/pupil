@@ -100,10 +100,11 @@ def world(
         else:
             stop_eye_process(eye_id)
 
-    def detection_enabled_getter() -> bool:
-        return g_pool.pupil_detection_enabled
+    def detection_enabled_getter() -> int:
+        return int(g_pool.pupil_detection_enabled)
 
-    def detection_enabled_setter(is_on: bool):
+    def detection_enabled_setter(value: int):
+        is_on = bool(value)
         g_pool.pupil_detection_enabled = is_on
         n = {"subject": "pupil_detector.set_enabled", "value": is_on}
         ipc_pub.notify(n)
@@ -466,8 +467,8 @@ def world(
         g_pool.min_calibration_confidence = session_settings.get(
             "min_calibration_confidence", 0.8
         )
-        g_pool.pupil_detection_enabled = session_settings.get(
-            "pupil_detection_enabled", True
+        g_pool.pupil_detection_enabled = bool(
+            session_settings.get("pupil_detection_enabled", True)
         )
         g_pool.active_gaze_mapping_plugin = None
         g_pool.capture = None
