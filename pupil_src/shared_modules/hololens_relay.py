@@ -393,7 +393,7 @@ class Hololens_Relay(Plugin):
                 calib_method = "HMD_Calibration_3D"
 
             ipc_pub.notify({"subject": "start_plugin", "name": calib_method})
-            ipc_pub.notify({"subject": "set_pupil_detection_enabled", "value": True})
+            ipc_pub.notify({"subject": "pupil_detector.set_enabled", "value": True})
             ipc_pub.notify(
                 {
                     "subject": "eye_process.should_start.{}".format(0),

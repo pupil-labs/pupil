@@ -105,7 +105,7 @@ def world(
 
     def detection_enabled_setter(is_on: bool):
         g_pool.pupil_detection_enabled = is_on
-        n = {"subject": "set_pupil_detection_enabled", "value": is_on}
+        n = {"subject": "pupil_detector.set_enabled", "value": is_on}
         ipc_pub.notify(n)
 
     try:
@@ -478,7 +478,7 @@ def world(
 
         def handle_notifications(noti):
             subject = noti["subject"]
-            if subject == "set_pupil_detection_enabled":
+            if subject == "pupil_detector.set_enabled":
                 g_pool.pupil_detection_enabled = noti["value"]
             elif subject == "start_plugin":
                 try:
@@ -494,7 +494,7 @@ def world(
                         g_pool.plugins.clean()
             elif subject == "eye_process.started":
                 noti = {
-                    "subject": "set_pupil_detection_enabled",
+                    "subject": "pupil_detector.set_enabled",
                     "value": g_pool.pupil_detection_enabled,
                 }
                 ipc_pub.notify(noti)
