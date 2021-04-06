@@ -57,6 +57,24 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
     def pupil_data_source_selection_label(cls) -> str:
         return cls.plugin_menu_label()
 
+    @staticmethod
+    def available_pupil_producer_plugins(g_pool) -> list:
+        def is_plugin_included(p, g_pool) -> bool:
+            # Skip plugins that are not pupil producers
+            if not issubclass(p, Pupil_Producer_Base):
+                return False
+            # Skip pupil producer stub
+            if p is DisabledPupilProducer:
+                return False
+            # Skip pupil producers that are not available within g_pool context
+            if not p.is_available_within_context(g_pool):
+                return False
+            return True
+
+        return [
+            p for p in g_pool.plugin_by_name.values() if is_plugin_included(p, g_pool)
+        ]
+
     @classmethod
     def pupil_data_source_selection_order(cls) -> float:
         return float("inf")
@@ -76,17 +94,7 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
     def init_ui(self):
         self.add_menu()
 
-        pupil_producer_plugins = [
-            p
-            for p in self.g_pool.plugin_by_name.values()
-            if issubclass(p, Pupil_Producer_Base)
-        ]
-        # Skip pupil producers that are not available within g_pool context
-        pupil_producer_plugins = [
-            p
-            for p in pupil_producer_plugins
-            if p.is_available_within_context(self.g_pool)
-        ]
+        pupil_producer_plugins = self.available_pupil_producer_plugins(self.g_pool)
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_order())
         pupil_producer_labels = [
@@ -291,6 +299,53 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
             self.glfont.pop_state()
 
 
+class DisabledPupilProducer(Pupil_Producer_Base):
+    """
+    This is a stub implementation of a pupil producer,
+    intended to be used when no (other) pupil producer is available.
+    """
+
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Enable in Player only if Pupil Invisible recording
+                return True
+        return False
+
+    @classmethod
+    def plugin_menu_label(cls) -> str:
+        raise RuntimeError()  # This method should never be called
+        return "Disabled Pupil Producer"
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        raise RuntimeError()  # This method should never be called
+        return 0.1
+
+    def __init__(self, g_pool):
+        super().__init__(g_pool)
+        # Create empty pupil_positions for all plugins that depend on it
+        pupil_data = pm.PupilDataBisector(data=fm.PLData([], [], []))
+        g_pool.pupil_positions = pupil_data
+        self._pupil_changed_announcer.announce_existing()
+        logger.debug("pupil positions changed")
+
+    def init_ui(self):
+        pass
+
+    def deinit_ui(self):
+        pass
+
+    def _refresh_timelines(self):
+        pass
+
+
 class Pupil_From_Recording(Pupil_Producer_Base):
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
@@ -302,6 +357,12 @@ class Pupil_From_Recording(Pupil_Producer_Base):
                 == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE
             ):
                 # Disable pupil from recording in Player if Pupil Mobile recording
+                return False
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Disable pupil from recording in Player if Pupil Invisible recording
                 return False
         return super().is_available_within_context(g_pool)
 
