@@ -10,13 +10,14 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
+import traceback
 import typing as T
 
 import numpy as np
 import OpenGL.GL as gl
+import scipy.spatial
 from pyglui import ui
 from pyglui.cygl.utils import RGBA, draw_points_norm, draw_polyline_norm
-from scipy.spatial import ConvexHull
 
 from calibration_choreography import (
     ChoreographyAction,
@@ -397,8 +398,13 @@ class Accuracy_Visualizer(Plugin):
         self.error_lines = results.error_lines
         ref_locations = results.correlation.norm_space[1::2, :]
         if len(ref_locations) >= 3:
-            hull = ConvexHull(ref_locations)  # requires at least 3 points
-            self.calibration_area = hull.points[hull.vertices, :]
+            try:
+                # requires at least 3 points
+                hull = scipy.spatial.ConvexHull(ref_locations)
+                self.calibration_area = hull.points[hull.vertices, :]
+            except scipy.spatial.qhull.QhullError:
+                logger.warning("Calibration area could not be calculated")
+                logger.debug(traceback.format_exc())
 
     @staticmethod
     def calc_acc_prec_errlines(
