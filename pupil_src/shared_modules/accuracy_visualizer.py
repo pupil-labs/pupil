@@ -10,13 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-from collections import namedtuple
 import typing as T
+from collections import namedtuple
 
-import OpenGL.GL as gl
 import numpy as np
+import OpenGL.GL as gl
 from pyglui import ui
-from pyglui.cygl.utils import draw_points_norm, draw_polyline_norm, RGBA
+from pyglui.cygl.utils import RGBA, draw_points_norm, draw_polyline_norm
 from scipy.spatial import ConvexHull
 
 from calibration_choreography import (
@@ -24,15 +24,13 @@ from calibration_choreography import (
     ChoreographyMode,
     ChoreographyNotification,
 )
-from plugin import Plugin
-
 from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
 from gaze_mapping.notifications import (
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
 )
 from gaze_mapping.utils import closest_matches_monocular
-
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
