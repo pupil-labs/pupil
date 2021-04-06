@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 import typing as T
-from collections import namedtuple
 
 import numpy as np
 import OpenGL.GL as gl
