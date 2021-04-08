@@ -19,7 +19,7 @@ class Hotkey:
 
         Software: Capture, Player
         """
-        return "a"
+        return "x"
 
     @staticmethod
     def CAMERA_INTRINSIC_ESTIMATOR_COLLECT_NEW_CAPTURE_HOTKEY():
