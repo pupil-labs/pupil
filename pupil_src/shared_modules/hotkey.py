@@ -108,7 +108,7 @@ class Hotkey:
     @staticmethod
     def SEEK_BAR_PLAY_PAUSE_PLAYER_HOTKEY():
         # This is only implicitly used by pyglui.ui.Seek_Bar
-        """Skip to next frame
+        """Play and pause video
 
         Software: Player
         Printable: <SPACE>
