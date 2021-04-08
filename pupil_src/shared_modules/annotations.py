@@ -21,6 +21,8 @@ import file_methods as fm
 import player_methods as pm
 import zmq_tools
 from plugin import Plugin
+from hotkey import Hotkey
+
 
 logger = logging.getLogger(__name__)
 
@@ -57,20 +59,20 @@ class AnnotationPlugin(Plugin, abc.ABC):
     icon_chr = chr(0xE866)
     icon_font = "pupil_icons"
 
-    _DEFAULT_HOTKEY = "a"
-
     def __init__(self, g_pool, annotation_definitions=None):
         super().__init__(g_pool)
         self.menu = None
         self._annotation_list_menu = None
 
         if annotation_definitions is None:
-            annotation_definitions = [["My annotation", self._DEFAULT_HOTKEY]]
+            annotation_definitions = [
+                ["My annotation", Hotkey.ANNOTATION_EVENT_DEFAULT_HOTKEY()]
+            ]
         self._initial_annotation_definitions = annotation_definitions
         self._definition_to_buttons = {}
 
         self._new_annotation_label = "new annotation label"
-        self._new_annotation_hotkey = self._DEFAULT_HOTKEY
+        self._new_annotation_hotkey = Hotkey.ANNOTATION_EVENT_DEFAULT_HOTKEY()
 
     def get_init_dict(self):
         annotation_definitions = list(self._definition_to_buttons.keys())

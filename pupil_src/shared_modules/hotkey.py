@@ -14,6 +14,14 @@ class Hotkey:
     """"""
 
     @staticmethod
+    def ANNOTATION_EVENT_DEFAULT_HOTKEY():
+        """Add annotation (default hotkey)
+
+        Software: Capture, Player
+        """
+        return "a"
+
+    @staticmethod
     def CAMERA_INTRINSIC_ESTIMATOR_COLLECT_NEW_CAPTURE_HOTKEY():
         """Camera intrinsic estimator - collect new
 
