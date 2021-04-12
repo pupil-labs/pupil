@@ -144,18 +144,17 @@ def generate_markdown_hotkey_docs() -> str:
         )
         available_in_capture = "Capture" in hotkey_software
         available_in_player = "Player" in hotkey_software
-        order = int(available_in_capture) + int(available_in_player) * 10
 
-        emoji_true = ":heavy_check_mark:"
-        emoji_false = ":heavy_minus_sign:"
+        default_order = int(available_in_capture) + int(available_in_player) * 10
+        hotkey_order = hotkey_meta.get("Order", 1000 + default_order)
 
         return {
             "_ID": hotkey_id,
-            "_Order": order,
+            "_Order": hotkey_order,
+            "_In_Capture": available_in_capture,
+            "_In_Player": available_in_player,
             "Keyboard Shortcut": f"`{hotkey_printable or hotkey_value}`",
             "Description": hotkey_descr,
-            "Pupil Capture": emoji_true if available_in_capture else emoji_false,
-            "Pupil Player": emoji_true if available_in_player else emoji_false,
         }
 
     hotkeys_df = pd.DataFrame(
@@ -167,8 +166,22 @@ def generate_markdown_hotkey_docs() -> str:
     )
     hotkeys_df = hotkeys_df.set_index(["Keyboard Shortcut"])
     hotkeys_df = hotkeys_df.sort_values(by=["_Order", "_ID"])
-    hotkeys_df = hotkeys_df[[c for c in hotkeys_df.columns if not c.startswith("_")]]
-    return hotkeys_df.to_markdown()
+
+    # Only show columns that don't start with an underscore
+    visible_columns = [c for c in hotkeys_df.columns if not c.startswith("_")]
+
+    capture_df = hotkeys_df[hotkeys_df["_In_Capture"] == True]
+    player_df = hotkeys_df[hotkeys_df["_In_Player"] == True]
+
+    capture_title_md = "# Pupil Capture"
+    capture_table_md = capture_df[visible_columns].to_markdown()
+
+    player_title_md = "# Pupil Player"
+    player_table_md = player_df[visible_columns].to_markdown()
+
+    return "\n" + "\n\n".join(
+        [capture_title_md, capture_table_md, player_title_md, player_table_md]
+    )
 
 
 if __name__ == "__main__":
