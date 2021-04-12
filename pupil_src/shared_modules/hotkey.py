@@ -15,7 +15,7 @@ class Hotkey:
 
     @staticmethod
     def ANNOTATION_EVENT_DEFAULT_HOTKEY():
-        """Add annotation (default hotkey)
+        """Add annotation (default keyboard shortcut)
 
         Software: Capture, Player
         """
