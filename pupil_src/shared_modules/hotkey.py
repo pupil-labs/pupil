@@ -91,7 +91,7 @@ class Hotkey:
         """Skip to previous frame
 
         Software: Player
-        Printable: <ARROW LEFT>
+        Printable: <arrow left>
         """
         return 263
 
@@ -101,7 +101,7 @@ class Hotkey:
         """Skip to next frame
 
         Software: Player
-        Printable: <ARROW RIGHT>
+        Printable: <arrow right>
         """
         return 262
 
@@ -111,7 +111,7 @@ class Hotkey:
         """Play and pause video
 
         Software: Player
-        Printable: <SPACE>
+        Printable: <space>
         """
         return 32
 
