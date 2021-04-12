@@ -17,7 +17,8 @@ class Hotkey:
     def ANNOTATION_EVENT_DEFAULT_HOTKEY():
         """Add annotation (default keyboard shortcut)
 
-        Software: Capture, Player
+        Capture Order: 40
+        Player Order: 50
         """
         return "x"
 
@@ -25,7 +26,7 @@ class Hotkey:
     def CAMERA_INTRINSIC_ESTIMATOR_COLLECT_NEW_CAPTURE_HOTKEY():
         """Camera intrinsic estimation: Take snapshot of circle pattern
 
-        Software: Capture
+        Capture Order: 50
         """
         return "i"
 
@@ -33,7 +34,7 @@ class Hotkey:
     def EXPORT_START_PLAYER_HOTKEY():
         """Start export
 
-        Software: Player
+        Player Order: 30
         """
         return "e"
 
@@ -41,7 +42,7 @@ class Hotkey:
     def FIXATION_NEXT_PLAYER_HOTKEY():
         """Fixation: Show next
 
-        Software: Player
+        Player Order: 60
         """
         return "f"
 
@@ -49,7 +50,7 @@ class Hotkey:
     def FIXATION_PREV_PLAYER_HOTKEY():
         """Fixation: Show previous
 
-        Software: Player
+        Player Order: 61
         """
         return "F"
 
@@ -57,7 +58,7 @@ class Hotkey:
     def GAZE_CALIBRATION_CAPTURE_HOTKEY():
         """Start and stop calibration
 
-        Software: Capture
+        Capture Order: 20
         """
         return "c"
 
@@ -65,7 +66,7 @@ class Hotkey:
     def GAZE_VALIDATION_CAPTURE_HOTKEY():
         """Start and stop validation
 
-        Software: Capture
+        Capture Order: 21
         """
         return "t"
 
@@ -73,7 +74,7 @@ class Hotkey:
     def RECORDER_RUNNING_TOGGLE_CAPTURE_HOTKEY():
         """Start and stop recording
 
-        Software: Capture
+        Capture Order: 10
         """
         return "r"
 
@@ -81,7 +82,8 @@ class Hotkey:
     def SURFACE_TRACKER_ADD_SURFACE_CAPTURE_AND_PLAYER_HOTKEY():
         """Surface tracker: Add new surface
 
-        Software: Capture, Player
+        Capture Order: 30
+        Player Order: 40
         """
         return "a"
 
@@ -90,8 +92,8 @@ class Hotkey:
         # This is only implicitly used by pyglui.ui.Seek_Bar
         """Skip to previous frame
 
-        Software: Player
         Printable: <arrow left>
+        Player Order: 20
         """
         return 263
 
@@ -100,8 +102,8 @@ class Hotkey:
         # This is only implicitly used by pyglui.ui.Seek_Bar
         """Skip to next frame
 
-        Software: Player
         Printable: <arrow right>
+        Player Order: 21
         """
         return 262
 
@@ -110,8 +112,8 @@ class Hotkey:
         # This is only implicitly used by pyglui.ui.Seek_Bar
         """Play and pause video
 
-        Software: Player
         Printable: <space>
+        Player Order: 10
         """
         return 32
 
@@ -137,22 +139,13 @@ def generate_markdown_hotkey_docs() -> str:
             hotkey_meta = {}
 
         hotkey_printable = hotkey_meta.get("Printable")
-        hotkey_software = sorted(
-            s.strip()
-            for s in hotkey_meta.get("Software", "").split(",")
-            if len(s.strip()) > 0
-        )
-        available_in_capture = "Capture" in hotkey_software
-        available_in_player = "Player" in hotkey_software
-
-        default_order = int(available_in_capture) + int(available_in_player) * 10
-        hotkey_order = hotkey_meta.get("Order", 1000 + default_order)
+        hotkey_order_in_capture = hotkey_meta.get("Capture Order", None)
+        hotkey_order_in_player = hotkey_meta.get("Player Order", None)
 
         return {
             "_ID": hotkey_id,
-            "_Order": hotkey_order,
-            "_In_Capture": available_in_capture,
-            "_In_Player": available_in_player,
+            "_Order_In_Capture": hotkey_order_in_capture,
+            "_Order_In_Player": hotkey_order_in_player,
             "Keyboard Shortcut": f"`{hotkey_printable or hotkey_value}`",
             "Description": hotkey_descr,
         }
@@ -165,13 +158,15 @@ def generate_markdown_hotkey_docs() -> str:
         ]
     )
     hotkeys_df = hotkeys_df.set_index(["Keyboard Shortcut"])
-    hotkeys_df = hotkeys_df.sort_values(by=["_Order", "_ID"])
 
     # Only show columns that don't start with an underscore
     visible_columns = [c for c in hotkeys_df.columns if not c.startswith("_")]
 
-    capture_df = hotkeys_df[hotkeys_df["_In_Capture"] == True]
-    player_df = hotkeys_df[hotkeys_df["_In_Player"] == True]
+    capture_df = hotkeys_df[hotkeys_df["_Order_In_Capture"].notnull()]
+    capture_df = capture_df.sort_values(by=["_Order_In_Capture"])
+
+    player_df = hotkeys_df[hotkeys_df["_Order_In_Player"].notnull()]
+    player_df = player_df.sort_values(by=["_Order_In_Player"])
 
     capture_title_md = "# Pupil Capture"
     capture_table_md = capture_df[visible_columns].to_markdown()
