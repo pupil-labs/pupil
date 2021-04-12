@@ -90,7 +90,7 @@ class Hotkey:
     @staticmethod
     def SEEK_BAR_MOVE_BACKWARDS_PLAYER_HOTKEY():
         # This is only implicitly used by pyglui.ui.Seek_Bar
-        """Skip to previous frame
+        """Step to previous frame / Decrease playback speed
 
         Printable: <arrow left>
         Player Order: 20
@@ -100,7 +100,7 @@ class Hotkey:
     @staticmethod
     def SEEK_BAR_MOVE_FORWARDSS_PLAYER_HOTKEY():
         # This is only implicitly used by pyglui.ui.Seek_Bar
-        """Skip to next frame
+        """Step to next frame / Increase playback speed
 
         Printable: <arrow right>
         Player Order: 21
