@@ -23,7 +23,7 @@ class Hotkey:
 
     @staticmethod
     def CAMERA_INTRINSIC_ESTIMATOR_COLLECT_NEW_CAPTURE_HOTKEY():
-        """Camera intrinsic estimator - collect new
+        """Camera intrinsic estimation: Take snapshot of circle pattern
 
         Software: Capture
         """
