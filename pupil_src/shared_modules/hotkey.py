@@ -39,7 +39,7 @@ class Hotkey:
 
     @staticmethod
     def FIXATION_NEXT_PLAYER_HOTKEY():
-        """Fixation - show next
+        """Fixation: Show next
 
         Software: Player
         """
@@ -47,7 +47,7 @@ class Hotkey:
 
     @staticmethod
     def FIXATION_PREV_PLAYER_HOTKEY():
-        """Fixation - show previous
+        """Fixation: Show previous
 
         Software: Player
         """
@@ -79,7 +79,7 @@ class Hotkey:
 
     @staticmethod
     def SURFACE_TRACKER_ADD_SURFACE_CAPTURE_AND_PLAYER_HOTKEY():
-        """Surface tracker - add new surface
+        """Surface tracker: Add new surface
 
         Software: Capture, Player
         """
