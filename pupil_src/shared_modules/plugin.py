@@ -471,7 +471,10 @@ class Plugin_List(object):
         """
         for p in self._plugins[::-1]:
             if not p.alive:
-                if self.g_pool.app in ("capture", "player"):
+                if self.g_pool.app in ("capture", "player") or self.g_pool.process in (
+                    "eye0",
+                    "eye1",
+                ):
                     p.deinit_ui()
                 p.cleanup()
                 logger.debug("Unloaded Plugin: {}".format(p))
