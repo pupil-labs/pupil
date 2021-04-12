@@ -152,7 +152,7 @@ def generate_markdown_hotkey_docs() -> str:
         return {
             "_ID": hotkey_id,
             "_Order": order,
-            "Hotkey": f"`{hotkey_printable or hotkey_value}`",
+            "Keyboard Shortcut": f"`{hotkey_printable or hotkey_value}`",
             "Description": hotkey_descr,
             "Pupil Capture": emoji_true if available_in_capture else emoji_false,
             "Pupil Player": emoji_true if available_in_player else emoji_false,
@@ -165,7 +165,7 @@ def generate_markdown_hotkey_docs() -> str:
             if hotkey_id.endswith("_HOTKEY")
         ]
     )
-    hotkeys_df = hotkeys_df.set_index(["Hotkey"])
+    hotkeys_df = hotkeys_df.set_index(["Keyboard Shortcut"])
     hotkeys_df = hotkeys_df.sort_values(by=["_Order", "_ID"])
     hotkeys_df = hotkeys_df[[c for c in hotkeys_df.columns if not c.startswith("_")]]
     return hotkeys_df.to_markdown()
