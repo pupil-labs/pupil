@@ -99,6 +99,14 @@ def read_info_invisible_json_file(rec_dir: str) -> dict:
         return json.load(file)
 
 
+def read_pupil_invisible_info_file(rec_dir: str) -> dict:
+    """Read info file from Pupil Invisible recording."""
+    try:
+        return read_info_json_file(rec_dir)
+    except FileNotFoundError:
+        return read_info_invisible_json_file(rec_dir)
+
+
 def parse_duration_string(duration_string: str) -> int:
     """Returns number of seconds from string 'HH:MM:SS'."""
     H, M, S = [int(part) for part in duration_string.split(":")]
