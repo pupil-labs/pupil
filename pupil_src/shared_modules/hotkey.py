@@ -90,7 +90,7 @@ class Hotkey:
     @staticmethod
     def SEEK_BAR_MOVE_BACKWARDS_PLAYER_HOTKEY():
         # This is only implicitly used by pyglui.ui.Seek_Bar
-        """Step to previous frame / Decrease playback speed
+        """Step to previous frame\\* / Decrease playback speed\\*\\*
 
         Printable: <arrow left>
         Player Order: 20
@@ -100,7 +100,7 @@ class Hotkey:
     @staticmethod
     def SEEK_BAR_MOVE_FORWARDS_PLAYER_HOTKEY():
         # This is only implicitly used by pyglui.ui.Seek_Bar
-        """Step to next frame / Increase playback speed
+        """Step to next frame\\* / Increase playback speed\\*\\*
 
         Printable: <arrow right>
         Player Order: 21
@@ -174,8 +174,16 @@ def generate_markdown_hotkey_docs() -> str:
     player_title_md = "# Pupil Player"
     player_table_md = player_df[visible_columns].to_markdown()
 
+    player_footnote = "\\* While paused\n\\* During playback"
+
     return "\n" + "\n\n".join(
-        [capture_title_md, capture_table_md, player_title_md, player_table_md]
+        [
+            capture_title_md,
+            capture_table_md,
+            player_title_md,
+            player_table_md,
+            player_footnote,
+        ]
     )
 
 
