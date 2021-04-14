@@ -137,14 +137,18 @@ def _pi_path_core_path_pairs(recording: PupilRecording):
 
 
 def _rewrite_timestamps(recording: PupilRecording):
-    start_time = recording.meta_info.start_time_synced_ns
+
+    # Use start time from info file (instead of recording.meta_info.start_time_synced_ns)
+    # to have a more precise value and avoid having a negative first timestamp when rewriting
+    info_json = utils.read_pupil_invisible_info_file(recording.rec_dir)
+    start_time_synced_ns = int(info_json["start_time"])
 
     def conversion(timestamps: np.array):
         # Subtract start_time from all times in the recording, so timestamps
         # start at 0. This is to increase precision when converting
         # timestamps to float32, e.g. for OpenGL!
         SECONDS_PER_NANOSECOND = 1e-9
-        return (timestamps - start_time) * SECONDS_PER_NANOSECOND
+        return (timestamps - start_time_synced_ns) * SECONDS_PER_NANOSECOND
 
     update_utils._rewrite_times(recording, dtype="<u8", conversion=conversion)
 
