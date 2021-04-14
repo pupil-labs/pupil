@@ -48,7 +48,14 @@ class FileSeekError(Exception):
 class Frame:
     """docstring of Frame"""
 
-    def __init__(self, timestamp, av_frame, index):
+    def __init__(
+        self,
+        timestamp,
+        av_frame,
+        index,
+        untouched_img_buffer=None,
+        untouched_gray_buffer=None,
+    ):
         self.timestamp = float(timestamp)
         self.index = int(index)
         self.width = av_frame.width
@@ -56,17 +63,29 @@ class Frame:
         self.jpeg_buffer = None
         self.yuv_buffer = None
         self._av_frame = av_frame
-        self._img = None
-        self._gray = None
+        self._untouched_img = untouched_img_buffer
+        self._untouched_gray = untouched_gray_buffer
+        self._img = None if self._untouched_img is None else self._untouched_img.copy()
+        self._gray = (
+            None if self._untouched_gray is None else self._untouched_gray.copy()
+        )
+
         self.is_fake = False
 
     def copy(self):
-        return Frame(self.timestamp, self._av_frame, self.index)
+        return Frame(
+            self.timestamp,
+            self._av_frame,
+            self.index,
+            untouched_img_buffer=self._untouched_img,
+            untouched_gray_buffer=self._untouched_gray,
+        )
 
     @property
     def img(self):
         if self._img is None:
-            self._img = self._av_frame.to_nd_array(format="bgr24")
+            self._untouched_img = self._av_frame.to_nd_array(format="bgr24")
+            self._img = self._untouched_img.copy()
         return self._img
 
     @property
@@ -77,12 +96,15 @@ class Frame:
     def gray(self):
         if self._gray is None:
             plane = self._av_frame.planes[0]
-            self._gray = np.frombuffer(plane, np.uint8)
+            self._untouched_gray = np.frombuffer(plane, np.uint8)
             try:
-                self._gray.shape = self.height, self.width
+                self._untouched_gray.shape = self.height, self.width
             except ValueError:
-                self._gray = self._gray.reshape(-1, plane.line_size)
-                self._gray = np.ascontiguousarray(self._gray[:, : self.width])
+                self._untouched_gray = self._untouched_gray.reshape(-1, plane.line_size)
+                self._untouched_gray = np.ascontiguousarray(
+                    self._untouched_gray[:, : self.width]
+                )
+            self._gray = self._untouched_gray.copy()
         return self._gray
 
 
