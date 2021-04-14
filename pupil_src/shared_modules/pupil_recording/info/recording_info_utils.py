@@ -92,6 +92,13 @@ def read_info_json_file(rec_dir: str) -> dict:
         return json.load(file)
 
 
+def read_info_invisible_json_file(rec_dir: str) -> dict:
+    """Read `info.invisible.json` file from recording."""
+    file_path = os.path.join(rec_dir, "info.invisible.json")
+    with open(file_path, "r") as file:
+        return json.load(file)
+
+
 def parse_duration_string(duration_string: str) -> int:
     """Returns number of seconds from string 'HH:MM:SS'."""
     H, M, S = [int(part) for part in duration_string.split(":")]
