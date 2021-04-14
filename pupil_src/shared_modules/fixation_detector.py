@@ -51,6 +51,7 @@ import player_methods as pm
 from methods import denormalize
 from plugin import Plugin
 from pupil_recording import PupilRecording, RecordingInfo
+from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
 
@@ -415,7 +416,7 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
             setter=jump_next_fixation,
             getter=lambda: False,
             label=chr(0xE044),
-            hotkey="f",
+            hotkey=Hotkey.FIXATION_NEXT_PLAYER_HOTKEY(),
             label_font="pupil_icons",
         )
         self.next_fix_button.status_text = "Next Fixation"
@@ -426,7 +427,7 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
             setter=jump_prev_fixation,
             getter=lambda: False,
             label=chr(0xE045),
-            hotkey="F",
+            hotkey=Hotkey.FIXATION_PREV_PLAYER_HOTKEY(),
             label_font="pupil_icons",
         )
         self.prev_fix_button.status_text = "Previous Fixation"

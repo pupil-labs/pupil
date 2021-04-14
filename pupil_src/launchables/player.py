@@ -93,6 +93,7 @@ def player(
         import player_methods as pm
         from pupil_recording import PupilRecording
         from csv_utils import write_key_value_file
+        from hotkey import Hotkey
 
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
@@ -567,7 +568,7 @@ def player(
             label=chr(0xE2C5),
             getter=lambda: False,
             setter=do_export,
-            hotkey="e",
+            hotkey=Hotkey.EXPORT_START_PLAYER_HOTKEY(),
             label_font="pupil_icons",
         )
         g_pool.quickbar.extend([g_pool.export_button])

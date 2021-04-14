@@ -34,6 +34,8 @@ GLFWErrorReporting.set_default()
 
 from plugin import Plugin
 
+from hotkey import Hotkey
+
 # logging
 import logging
 
@@ -153,7 +155,11 @@ class Camera_Intrinsics_Estimation(Plugin):
         )
 
         self.button = ui.Thumb(
-            "collect_new", self, setter=self.advance, label="I", hotkey="i"
+            "collect_new",
+            self,
+            setter=self.advance,
+            label="I",
+            hotkey=Hotkey.CAMERA_INTRINSIC_ESTIMATOR_COLLECT_NEW_CAPTURE_HOTKEY(),
         )
         self.button.on_color[:] = (0.3, 0.2, 1.0, 0.9)
         self.g_pool.quickbar.insert(0, self.button)
