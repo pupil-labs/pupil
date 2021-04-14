@@ -79,12 +79,14 @@ def validator_optional_type(value_type) -> T.Callable[[T.Any], None]:
 
 
 def read_info_csv_file(rec_dir: str) -> dict:
+    """Read `info.csv` file from recording."""
     file_path = os.path.join(rec_dir, "info.csv")
     with open(file_path, "r") as file:
         return csv_utils.read_key_value_file(file)
 
 
 def read_info_json_file(rec_dir: str) -> dict:
+    """Read `info.json` file from recording."""
     file_path = os.path.join(rec_dir, "info.json")
     with open(file_path, "r") as file:
         return json.load(file)
