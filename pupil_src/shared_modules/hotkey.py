@@ -98,7 +98,7 @@ class Hotkey:
         return 263
 
     @staticmethod
-    def SEEK_BAR_MOVE_FORWARDSS_PLAYER_HOTKEY():
+    def SEEK_BAR_MOVE_FORWARDS_PLAYER_HOTKEY():
         # This is only implicitly used by pyglui.ui.Seek_Bar
         """Step to next frame / Increase playback speed
 
