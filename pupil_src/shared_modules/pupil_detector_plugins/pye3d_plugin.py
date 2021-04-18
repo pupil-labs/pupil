@@ -41,6 +41,11 @@ class Pye3DPlugin(PupilDetectorPlugin):
     icon_chr = chr(0xEC19)
     order = 0.101
 
+    # Visualization
+    COLOR_ULTRA_LONG_TERM_MODEL = (0.5, 0, 0, 1)
+    COLOR_LONG_TERM_MODEL = (0.8, 0.8, 0, 1)
+    COLOR_SHORT_TERM_MODEL = (0, 1, 0, 1)
+
     @property
     def pupil_detector(self):
         return self.detector
@@ -198,17 +203,17 @@ class Pye3DPlugin(PupilDetectorPlugin):
                 debug_info = result["debug_info"]
                 draw_ellipse(
                     ellipse=debug_info["projected_ultra_long_term"],
-                    rgba=(0.5, 0, 0, 1),
+                    rgba=self.COLOR_ULTRA_LONG_TERM_MODEL,
                     thickness=2,
                 )
                 draw_ellipse(
                     ellipse=debug_info["projected_long_term"],
-                    rgba=(0.8, 0.8, 0, 1),
+                    rgba=self.COLOR_LONG_TERM_MODEL,
                     thickness=2,
                 )
                 draw_ellipse(
                     ellipse=debug_info["projected_short_term"],
-                    rgba=(0, 1, 0, 1),
+                    rgba=self.COLOR_SHORT_TERM_MODEL,
                     thickness=2,
                 )
         if self.__debug_window_button:
