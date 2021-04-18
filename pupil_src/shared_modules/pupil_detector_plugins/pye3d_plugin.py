@@ -42,9 +42,9 @@ class Pye3DPlugin(PupilDetectorPlugin):
     order = 0.101
 
     # Visualization
-    COLOR_ULTRA_LONG_TERM_MODEL = (0.5, 0, 0, 1)
-    COLOR_LONG_TERM_MODEL = (0.8, 0.8, 0, 1)
-    COLOR_SHORT_TERM_MODEL = (0, 1, 0, 1)
+    COLOR_ULTRA_LONG_TERM_MODEL = (0.5, 0, 0.5, 1)  # purple
+    COLOR_LONG_TERM_MODEL = (0, 0.9, 0.1, 1)  # green
+    COLOR_SHORT_TERM_MODEL = (0.8, 0.8, 0, 1)  # yellow
 
     @property
     def pupil_detector(self):
