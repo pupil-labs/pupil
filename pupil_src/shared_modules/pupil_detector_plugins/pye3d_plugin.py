@@ -192,14 +192,14 @@ class Pye3DPlugin(PupilDetectorPlugin):
     def gl_display(self):
         self.debug_window_update()
         result = self._recent_detection_result
+
         if result is not None:
             if not self.is_debug_window_open:
-                # normal drawing
+                # normal eyeball drawing
                 draw_eyeball_outline(result)
-                draw_pupil_outline(result)
 
             elif "debug_info" in result:
-                # debug drawing
+                # debug eyeball drawing
                 debug_info = result["debug_info"]
                 draw_ellipse(
                     ellipse=debug_info["projected_ultra_long_term"],
@@ -216,6 +216,10 @@ class Pye3DPlugin(PupilDetectorPlugin):
                     rgba=self.COLOR_SHORT_TERM_MODEL,
                     thickness=2,
                 )
+
+            # always draw pupil
+            draw_pupil_outline(result)
+
         if self.__debug_window_button:
             self.__debug_window_button.label = self.__debug_window_button_label
 
