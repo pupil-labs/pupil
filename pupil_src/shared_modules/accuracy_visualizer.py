@@ -386,6 +386,9 @@ class Accuracy_Visualizer(Plugin):
         )
 
         if not results.is_valid:
+            logger.info(
+                "Did not collect enough data to estimate gaze mapping accuracy."
+            )
             return
 
         accuracy = results.accuracy.result
