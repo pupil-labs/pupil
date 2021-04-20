@@ -58,6 +58,13 @@ class CorrelatedAndCoordinateTransformedResult(T.NamedTuple):
             camera_space=np.ndarray([]),
         )
 
+    @property
+    def is_valid(self) -> bool:
+        if len(self.norm_space.shape) != 2:
+            return False
+        # TODO: Make validity check exhaustive
+        return True
+
 
 class CorrelationError(ValueError):
     pass
@@ -77,6 +84,13 @@ class AccuracyPrecisionResult(T.NamedTuple):
             error_lines=np.array([]),
             correlation=CorrelatedAndCoordinateTransformedResult.empty(),
         )
+
+    @property
+    def is_valid(self) -> bool:
+        if not self.correlation.is_valid:
+            return False
+        # TODO: Make validity check exhaustive
+        return True
 
 
 class ValidationInput:
