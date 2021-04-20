@@ -385,6 +385,9 @@ class Accuracy_Visualizer(Plugin):
             succession_threshold=self.succession_threshold,
         )
 
+        if not results.is_valid:
+            return
+
         accuracy = results.accuracy.result
         if np.isnan(accuracy):
             self.accuracy = None
