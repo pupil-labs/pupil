@@ -25,21 +25,15 @@ class Display_Recent_Gaze(System_Plugin_Base):
         super().__init__(g_pool)
         self.order = 0.8
         self.pupil_display_list = []
-        self.__recent_frame_size = None
 
     def recent_events(self, events):
         frame = events.get("frame", None)
-
-        if frame:
-            # Save/update current frame size whenever a frame is available
-            self.__recent_frame_size = (frame.width, frame.height)
-
-        if not self.__recent_frame_size:
-            # If there wasn't any frame yet to get the size from - return
+        if not frame:
             return
 
         for pt in events.get("gaze", []):
-            point = denormalize(pt["norm_pos"], self.__recent_frame_size, flip_y=True)
+            recent_frame_size = self.g_pool.capture.frame_size
+            point = denormalize(pt["norm_pos"], recent_frame_size, flip_y=True)
             self.pupil_display_list.append((point, pt["confidence"] * 0.8))
 
         self.pupil_display_list[:-3] = []
