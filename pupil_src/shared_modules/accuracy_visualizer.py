@@ -368,10 +368,12 @@ class Accuracy_Visualizer(Plugin):
         return True
 
     def recalculate(self):
+        NOT_ENOUGH_DATA_COLLECTED_ERR_MSG = (
+            "Did not collect enough data to estimate gaze mapping accuracy."
+        )
+
         if not self.recent_input.is_complete:
-            logger.info(
-                "Did not collect enough data to estimate gaze mapping accuracy."
-            )
+            logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
             return
 
         results = self.calc_acc_prec_errlines(
@@ -386,9 +388,7 @@ class Accuracy_Visualizer(Plugin):
         )
 
         if not results.is_valid:
-            logger.info(
-                "Did not collect enough data to estimate gaze mapping accuracy."
-            )
+            logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
             return
 
         accuracy = results.accuracy.result
