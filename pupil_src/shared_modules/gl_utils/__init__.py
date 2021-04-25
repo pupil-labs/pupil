@@ -16,6 +16,7 @@ from .utils import (
     basic_gl_setup,
     clear_gl_screen,
     Coord_System,
+    current_context,
     cvmat_to_glmat,
     get_content_scale,
     get_framebuffer_scale,

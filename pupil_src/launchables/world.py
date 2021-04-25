@@ -417,7 +417,8 @@ def world(
             )
 
             # Needed, to update the window buffer while resizing
-            consume_events_and_render_buffer()
+            with gl_utils.current_context(main_window):
+                consume_events_and_render_buffer()
 
         def on_window_key(window, key, scancode, action, mods):
             g_pool.gui.update_key(key, scancode, action, mods)
