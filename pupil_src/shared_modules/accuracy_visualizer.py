@@ -58,6 +58,13 @@ class CorrelatedAndCoordinateTransformedResult(T.NamedTuple):
             camera_space=np.ndarray([]),
         )
 
+    @property
+    def is_valid(self) -> bool:
+        if len(self.norm_space.shape) != 2:
+            return False
+        # TODO: Make validity check exhaustive
+        return True
+
 
 class CorrelationError(ValueError):
     pass
@@ -77,6 +84,13 @@ class AccuracyPrecisionResult(T.NamedTuple):
             error_lines=np.array([]),
             correlation=CorrelatedAndCoordinateTransformedResult.empty(),
         )
+
+    @property
+    def is_valid(self) -> bool:
+        if not self.correlation.is_valid:
+            return False
+        # TODO: Make validity check exhaustive
+        return True
 
 
 class ValidationInput:
@@ -354,10 +368,12 @@ class Accuracy_Visualizer(Plugin):
         return True
 
     def recalculate(self):
+        NOT_ENOUGH_DATA_COLLECTED_ERR_MSG = (
+            "Did not collect enough data to estimate gaze mapping accuracy."
+        )
+
         if not self.recent_input.is_complete:
-            logger.info(
-                "Did not collect enough data to estimate gaze mapping accuracy."
-            )
+            logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
             return
 
         results = self.calc_acc_prec_errlines(
@@ -370,6 +386,10 @@ class Accuracy_Visualizer(Plugin):
             outlier_threshold=self.outlier_threshold,
             succession_threshold=self.succession_threshold,
         )
+
+        if not results.is_valid:
+            logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
+            return
 
         accuracy = results.accuracy.result
         if np.isnan(accuracy):
