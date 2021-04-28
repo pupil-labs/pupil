@@ -331,6 +331,16 @@ def get_window_title_bar_rect(window) -> _Rectangle:
     )
 
 
+@contextlib.contextmanager
+def current_context(window):
+    prev_context = glfw.get_current_context()
+    glfw.make_context_current(window)
+    try:
+        yield
+    finally:
+        glfw.make_context_current(prev_context)
+
+
 _GLFWErrorReportingDict = T.Dict[T.Union[None, int], str]
 
 
