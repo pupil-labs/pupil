@@ -22,7 +22,7 @@ from pyglui.ui import get_opensans_font_path
 from pyglui.cygl.utils import draw_points
 from pyglui.cygl.utils import RGBA
 
-from gl_utils import draw_circle_filled
+from gl_utils import draw_circle_filled_func_builder
 
 from .gui_monitor import GUIMonitor
 from .gui_window import GUIWindow
@@ -103,6 +103,8 @@ class MarkerWindowController(observable.Observable):
         self.__glfont.set_size(32)
         self.__glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
         self.__glfont.set_align_string(v_align="center")
+        # Private helper
+        self.__draw_circle_filled = draw_circle_filled_func_builder(cache_size=4)
 
     # Public - Marker Management
 
@@ -318,22 +320,22 @@ class MarkerWindowController(observable.Observable):
         # TODO: adjust num_points such that circles look smooth; smaller circles need less points
         # TODO: compare runtimes with `draw_points`
 
-        draw_circle_filled(
+        self.__draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_OUTER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_OUTER, alpha),
         )
-        draw_circle_filled(
+        self.__draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_MIDDLE * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_MIDDLE, alpha),
         )
-        draw_circle_filled(
+        self.__draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_INNER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_INNER, alpha),
         )
-        draw_circle_filled(
+        self.__draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_FEEDBACK * radius,
             color=RGBA(*marker_circle_rgb_feedback, alpha),
