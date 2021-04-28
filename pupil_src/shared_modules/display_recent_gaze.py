@@ -27,10 +27,6 @@ class Display_Recent_Gaze(System_Plugin_Base):
         self.pupil_display_list = []
 
     def recent_events(self, events):
-        frame = events.get("frame", None)
-        if not frame:
-            return
-
         for pt in events.get("gaze", []):
             recent_frame_size = self.g_pool.capture.frame_size
             point = denormalize(pt["norm_pos"], recent_frame_size, flip_y=True)
