@@ -16,7 +16,7 @@ from pathlib import Path
 import re
 
 
-import av
+import pl_av
 import cv2
 import numpy as np
 
@@ -206,14 +206,14 @@ class Video:
             first_frame = next(container_decode(cont, video=0), None)
             if first_frame is None:
                 raise InvalidContainerError("Container does not contain frames")
-        except av.AVError as averr:
+        except pl_av.AVError as averr:
             raise InvalidContainerError from averr
         else:
             cont.seek(0)
             return cont
 
     def _open_container(self):
-        cont = av.open(self.path)
+        cont = pl_av.open(self.path)
         return cont
 
     def load_ts(self):
@@ -320,7 +320,7 @@ class VideoSet:
     def videos(self) -> T.List[Video]:
         return self._videos
 
-    def get_container(self, index) -> T.Optional[av.container.input.InputContainer]:
+    def get_container(self, index) -> T.Optional[pl_av.container.input.InputContainer]:
         return self.videos[index].load_container()
 
     @property

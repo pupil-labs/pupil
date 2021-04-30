@@ -17,7 +17,7 @@ import uuid
 from pathlib import Path
 from shutil import copy2
 
-import av
+import pl_av
 import numpy as np
 from scipy.interpolate import interp1d
 
@@ -277,12 +277,12 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
         audio_ts_loc = os.path.join(rec_dir, "audio_timestamps.npy")
         backup_ts_loc = os.path.join(rec_dir, "audio_timestamps_old.npy")
         if os.path.exists(wav_file_loc) and os.path.exists(audio_ts_loc):
-            in_container = av.open(wav_file_loc)
+            in_container = pl_av.open(wav_file_loc)
             in_stream = in_container.streams.audio[0]
             in_frame_size = 0
             in_frame_num = 0
 
-            out_container = av.open(aac_file_loc, "w")
+            out_container = pl_av.open(aac_file_loc, "w")
             out_stream = out_container.add_stream("aac")
 
             for in_packet in in_container.demux():
@@ -332,7 +332,7 @@ def update_recording_v094_to_v0913(rec_dir, retry_on_averror=True):
             np.save(audio_ts_loc, new_ts)
 
         _update_info_version_to("v0.9.13", rec_dir)
-    except av.AVError as averr:
+    except pl_av.AVError as averr:
         # Try to catch `libav.aac : Input contains (near) NaN/+-Inf` errors
         # Unfortunately, the above error is only logged not raised. Instead
         # `averr`, an `Invalid Argument` error with error number 22, is raised.
@@ -502,7 +502,7 @@ def update_recording_v111_v113(rec_dir):
             return
 
         world_video_path = existing_videos[0]
-        world_video = av.open(world_video_path)
+        world_video = pl_av.open(world_video_path)
         f = world_video.streams.video[0].format
         resolution = f.width, f.height
 

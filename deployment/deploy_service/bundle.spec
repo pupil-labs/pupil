@@ -13,7 +13,7 @@ import pkg_resources
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
 hidden_imports = []
-hidden_imports += collect_submodules("av")
+hidden_imports += collect_submodules("pl_av")
 
 if platform.system() != "Windows":
     hidden_imports.append("cysignals")

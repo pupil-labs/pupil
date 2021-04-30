@@ -17,8 +17,8 @@ from threading import Timer
 from time import monotonic
 import traceback
 
-import av
-import av.filter
+import pl_av
+import pl_av.filter
 import numpy as np
 import pyaudio as pa
 import pyglui.cygl.utils as pyglui_utils
@@ -31,7 +31,7 @@ from plugin import System_Plugin_Base
 from version_utils import parse_version
 
 
-assert parse_version(av.__version__) >= parse_version("0.4.4")
+assert parse_version(pl_av.__version__) >= parse_version("0.4.4")
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,7 @@ logger.setLevel(logger.DEBUG)
 av_logger = logging.getLogger("libav.aac")
 av_logger.addFilter(make_change_loglevel_fn(logging.DEBUG))
 
-# av.logging.set_level(av.logging.DEBUG)
+# pl_av.logging.set_level(pl_av.logging.DEBUG)
 # logging.getLogger('libav').setLevel(logging.DEBUG)
 
 viz_color = pyglui_utils.RGBA(0.9844, 0.5938, 0.4023, 1.0)
@@ -120,7 +120,7 @@ class Audio_Playback(System_Plugin_Base):
         self.audio_bytes_fifo.clear()
 
         self.audio_frame_iterator = self.get_audio_frame_iterator()
-        self.audio_resampler = av.audio.resampler.AudioResampler(
+        self.audio_resampler = pl_av.audio.resampler.AudioResampler(
             format=self.audio.stream.format.packed,
             layout=self.audio.stream.layout,
             rate=self.audio.stream.rate,
@@ -183,7 +183,7 @@ class Audio_Playback(System_Plugin_Base):
         """Graph: buffer -> volume filter -> resample -> buffersink"""
         self.current_audio_volume = self.req_audio_volume
         logger.debug("Setting volume {} ".format(self.current_audio_volume))
-        self.filter_graph = av.filter.Graph()
+        self.filter_graph = pl_av.filter.Graph()
         self.filter_graph_list = []
         self.filter_graph_list.append(
             self.filter_graph.add_buffer(template=self.audio.stream)
@@ -257,7 +257,7 @@ class Audio_Playback(System_Plugin_Base):
                 for frame in packet.decode():
                     if frame:
                         yield frame
-            except av.AVError:
+            except pl_av.AVError:
                 logger.debug(traceback.format_exc())
 
     def audio_idx_to_pts(self, idx):
@@ -266,7 +266,7 @@ class Audio_Playback(System_Plugin_Base):
     def seek_to_audio_frame(self, seek_pos):
         try:
             self.audio.stream.seek(self.audio_idx_to_pts(seek_pos))
-        except av.AVError:
+        except pl_av.AVError:
             raise FileSeekError()
         else:
             self.audio_frame_iterator = self.get_audio_frame_iterator()

@@ -18,9 +18,9 @@ import os
 import typing as T
 from fractions import Fraction
 
-import av
+import pl_av
 import numpy as np
-from av.packet import Packet
+from pl_av.packet import Packet
 
 import audio_utils
 from video_capture.utils import Video, InvalidContainerError
@@ -127,7 +127,7 @@ class AV_Writer(abc.ABC):
                 "Using a different container is risky!"
             )
 
-        self.container = av.open(output_file_path, "w")
+        self.container = pl_av.open(output_file_path, "w")
         logger.debug("Opened '{}' for writing.".format(output_file_path))
 
         self.configured = False
@@ -185,7 +185,7 @@ class AV_Writer(abc.ABC):
 
         # TODO: Use custom Frame wrapper class, that wraps backend-specific frames.
         # This way we could just attach the pts here to the frame.
-        # Currently this will fail e.g. for av.VideoFrame.
+        # Currently this will fail e.g. for pl_av.VideoFrame.
         video_packed_encoded = False
         for packet in self.encode_frame(input_frame, pts):
             if packet.stream is self.video_stream:
@@ -239,7 +239,7 @@ class AV_Writer(abc.ABC):
 
     @abc.abstractmethod
     def encode_frame(self, input_frame, pts: int) -> T.Iterator[Packet]:
-        """Encode a frame into one or multiple av packets with given pts."""
+        """Encode a frame into one or multiple pl_av packets with given pts."""
 
     @property
     @abc.abstractmethod
@@ -264,12 +264,12 @@ class MPEG_Writer(AV_Writer):
         return "mpeg4"
 
     def on_first_frame(self, input_frame) -> None:
-        # setup av frame once to use as buffer throughout the process
+        # setup pl_av frame once to use as buffer throughout the process
         if input_frame.yuv_buffer is not None:
             pix_format = "yuv422p"
         else:
             pix_format = "bgr24"
-        self.frame = av.VideoFrame(input_frame.width, input_frame.height, pix_format)
+        self.frame = pl_av.VideoFrame(input_frame.width, input_frame.height, pix_format)
         self.frame.time_base = self.time_base
 
     def encode_frame(self, input_frame, pts: int) -> T.Iterator[Packet]:
@@ -502,7 +502,7 @@ class _AudioPacketIterator:
         for part_idx, audio_part in enumerate(audio_parts):
 
             frames = container_decode(audio_part.container, audio=0)
-            frames = iter_catch(frames, av.AVError)
+            frames = iter_catch(frames, pl_av.AVError)
             for frame, timestamp in zip(frames, audio_part.timestamps):
                 if frame is None:
                     continue  # ignore audio decoding errors
@@ -589,7 +589,7 @@ class _AudioPacketIterator:
         dtype = np.dtype(_AudioPacketIterator._format_dtypes[av_format])
 
         def f(frame_sample_size):
-            frame = av.AudioFrame(
+            frame = pl_av.AudioFrame(
                 samples=frame_sample_size, format=av_format, layout=av_layout
             )
             frame.pts = None
@@ -603,7 +603,7 @@ class _AudioPacketIterator:
 
         return f
 
-    # https://github.com/mikeboers/PyAV/blob/develop/av/audio/frame.pyx
+    # https://github.com/mikeboers/PyAV/blob/develop/pl_av/audio/frame.pyx
     _format_dtypes = {
         "dbl": "<f8",
         "dblp": "<f8",

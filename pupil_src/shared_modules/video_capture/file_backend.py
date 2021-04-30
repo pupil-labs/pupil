@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 from multiprocessing import cpu_count
 from time import sleep, monotonic
 
-import av
+import pl_av
 import numpy as np
 from pyglui import ui
 
@@ -30,15 +30,15 @@ from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_S
 from .utils import VideoSet, InvalidContainerError
 
 logger = logging.getLogger(__name__)
-av.logging.set_level(av.logging.ERROR)
+pl_av.logging.set_level(pl_av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
-logging.getLogger("av.buffered_decoder").setLevel(logging.WARNING)
+logging.getLogger("pl_av.buffered_decoder").setLevel(logging.WARNING)
 
 # convert 2h64 decoding errors to debug messages
 av_logger = logging.getLogger("libav.h264")
 av_logger.addFilter(make_change_loglevel_fn(logging.DEBUG))
 
-assert av.__version__ >= "0.4.5", "pyav is out-of-date, please update"
+assert pl_av.__version__ >= "0.4.5", "pyav is out-of-date, please update"
 
 
 class FileSeekError(Exception):
@@ -191,7 +191,7 @@ class OnDemandDecoder(Decoder):
 
     def get_frame_iterator(self):
         frames = container_decode(self.container, self.video_stream)
-        frames = iter_catch(frames, av.AVError)
+        frames = iter_catch(frames, pl_av.AVError)
         for frame in frames:
             if frame:
                 yield frame
@@ -540,7 +540,7 @@ class File_Source(Playback_Source, Base_Source):
                 # explicit conversion to python int required, else:
                 # TypeError: ('Container.seek only accepts integer offset.')
                 self.video_stream.seek(int(target_entry.pts))
-            except av.AVError as e:
+            except pl_av.AVError as e:
                 raise FileSeekError() from e
         else:
             # TODO: Why seek here? Might be inefficient.

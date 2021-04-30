@@ -12,7 +12,7 @@ import collections
 import logging
 import traceback
 
-import av
+import pl_av
 import numpy as np
 
 import pupil_recording
@@ -60,10 +60,10 @@ def _load_audio_from_world_video_files(recording):
 
 def _load_audio_single(file_path, return_pts_based_timestamps=False):
     try:
-        container = av.open(str(file_path))
+        container = pl_av.open(str(file_path))
         stream = next(iter(container.streams.audio))
         logger.debug("Loaded audiostream: %s" % stream)
-    except (av.AVError, StopIteration):
+    except (pl_av.AVError, StopIteration):
         return None
 
     ts_path = file_path.with_name(file_path.stem + "_timestamps.npy")
@@ -87,7 +87,7 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
 
     try:
         container.seek(0)
-    except av.AVError as err:
+    except pl_av.AVError as err:
         logger.debug(f"{err}")
         return None
 
@@ -110,7 +110,7 @@ class Audio_Viz_Transform:
 
     def _setup_next_audio_part(self):
         self.audio = next(self.audio_all)
-        self.audio_resampler = av.audio.resampler.AudioResampler(
+        self.audio_resampler = pl_av.audio.resampler.AudioResampler(
             format=self.audio.stream.format, layout=self.audio.stream.layout, rate=60
         )
         self.next_audio_frame = self._next_audio_frame()
@@ -122,7 +122,7 @@ class Audio_Viz_Transform:
                 for frame in packet.decode():
                     if frame:
                         yield frame
-            except av.AVError:
+            except pl_av.AVError:
                 logger.debug(traceback.format_exc())
 
     def sec_to_frames(self, sec):

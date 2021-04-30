@@ -13,7 +13,7 @@ import logging
 import typing as T
 from pathlib import Path
 
-import av
+import pl_av
 import numpy as np
 
 import camera_models as cm
@@ -37,8 +37,8 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
     camera_hint = ""
     for video in videos:
         try:
-            container = av.open(str(video))
-        except av.AVError:
+            container = pl_av.open(str(video))
+        except pl_av.AVError:
             continue
 
         if container.streams.video[0].format is None:

@@ -15,7 +15,7 @@ import shutil
 import tempfile
 from pathlib import Path
 
-import av
+import pl_av
 import file_methods as fm
 import methods as m
 import numpy as np
@@ -207,8 +207,8 @@ class BrokenFirstFrameRecordingIssue:
                 temp_v_path = Path(temp_dir) / v_path.name
 
                 # Save video, dropping first frame, to temp file
-                in_container = av.open(str(v_path))
-                out_container = av.open(str(temp_v_path), "w")
+                in_container = pl_av.open(str(v_path))
+                out_container = pl_av.open(str(temp_v_path), "w")
 
                 # input -> output stream mapping
                 stream_mapping = {
@@ -253,7 +253,7 @@ class BrokenFirstFrameRecordingIssue:
         # If the first timestamp is greater, remove it from the timestamps and overwrite the file.
         for v_path, ts_path in cls._pi_world_video_and_raw_time_paths(recording):
 
-            in_container = av.open(str(v_path))
+            in_container = pl_av.open(str(v_path))
             packets = in_container.demux(video=0)
 
             # Try to demux the first frame.
@@ -261,7 +261,7 @@ class BrokenFirstFrameRecordingIssue:
             # If no error is raised, ignore this video.
             try:
                 _ = next(packets).decode()
-            except av.AVError:
+            except pl_av.AVError:
                 pass  # Expected
             except StopIteration:
                 continue  # Not expected
@@ -273,7 +273,7 @@ class BrokenFirstFrameRecordingIssue:
             # If an error is raised, ignore this video.
             try:
                 _ = next(packets).decode()
-            except av.AVError:
+            except pl_av.AVError:
                 continue  # Not expected
             except StopIteration:
                 continue  # Not expected
