@@ -91,7 +91,7 @@ def player(
         from version_utils import parse_version
         from methods import normalize, denormalize, delta_t, get_system_info
         import player_methods as pm
-        from pupil_recording import PupilRecording
+        from pupil_recording import recording_from_dir
         from csv_utils import write_key_value_file
         from hotkey import Hotkey
 
@@ -134,7 +134,7 @@ def player(
         from head_pose_tracker.offline_head_pose_tracker import (
             Offline_Head_Pose_Tracker,
         )
-        from video_capture import File_Source
+        from video_capture import File_Source, Pikit_Source
         from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
         from pupil_recording import (
@@ -329,7 +329,7 @@ def player(
         def get_dt():
             return next(tick)
 
-        recording = PupilRecording(rec_dir)
+        recording = recording_from_dir(rec_dir)
         meta_info = recording.meta_info
 
         # log info about Pupil Platform and Platform in player.log
@@ -352,15 +352,20 @@ def player(
         g_pool.ipc_push_url = ipc_push_url
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
         g_pool.camera_render_size = None
+        g_pool.rec_dir = rec_dir
+        g_pool.meta_info = meta_info
 
-        video_path = recording.files().core().world().videos()[0].resolve()
-        File_Source(
-            g_pool,
-            timing="external",
-            source_path=video_path,
-            buffered_decoding=True,
-            fill_gaps=True,
-        )
+        if recording.use_pikit_backend:
+            Pikit_Source(g_pool)
+        else:
+            video_path = recording.files().core().world().videos()[0].resolve()
+            File_Source(
+                g_pool,
+                timing="external",
+                source_path=video_path,
+                buffered_decoding=True,
+                fill_gaps=True,
+            )
 
         # load session persistent settings
         session_settings = Persistent_Dict(
@@ -397,8 +402,6 @@ def player(
         g_pool.timestamps = g_pool.capture.timestamps
         g_pool.get_timestamp = lambda: 0.0
         g_pool.user_dir = user_dir
-        g_pool.rec_dir = rec_dir
-        g_pool.meta_info = meta_info
         g_pool.min_data_confidence = session_settings.get(
             "min_data_confidence", MIN_DATA_CONFIDENCE_DEFAULT
         )
@@ -595,15 +598,15 @@ def player(
             ("Plugin_Manager", {}),
             ("Seek_Control", {}),
             ("Log_Display", {}),
-            ("Raw_Data_Exporter", {}),
-            ("Vis_Polyline", {}),
-            ("Vis_Circle", {}),
+            # ("Raw_Data_Exporter", {}),
+            # ("Vis_Polyline", {}),
+            # ("Vis_Circle", {}),
             ("System_Graphs", {}),
-            ("System_Timelines", {}),
-            ("World_Video_Exporter", {}),
-            *_pupil_producer_plugins,
-            *_gaze_producer_plugins,
-            ("Audio_Playback", {}),
+            # ("System_Timelines", {}),
+            # ("World_Video_Exporter", {}),
+            # *_pupil_producer_plugins,
+            # *_gaze_producer_plugins,
+            # ("Audio_Playback", {}),
         ]
         _plugins_to_load = session_settings.get("loaded_plugins", None)
         if _plugins_to_load is None:

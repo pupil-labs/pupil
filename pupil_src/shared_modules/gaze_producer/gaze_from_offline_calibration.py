@@ -13,7 +13,7 @@ from gaze_producer import controller, model
 from gaze_producer import ui as plugin_ui
 from gaze_producer.gaze_producer_base import GazeProducerBase
 from plugin_timeline import PluginTimeline
-from pupil_recording import PupilRecording, RecordingInfo
+from pupil_recording import recording_from_dir, RecordingInfo
 from tasklib.manager import UniqueTaskManager
 
 
@@ -26,7 +26,7 @@ class GazeFromOfflineCalibration(GazeProducerBase):
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            recording = recording_from_dir(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
             if (
                 meta_info.recording_software_name
@@ -51,7 +51,9 @@ class GazeFromOfflineCalibration(GazeProducerBase):
 
         self._task_manager = UniqueTaskManager(plugin=self)
 
-        self._recording_uuid = PupilRecording(g_pool.rec_dir).meta_info.recording_uuid
+        self._recording_uuid = recording_from_dir(
+            g_pool.rec_dir
+        ).meta_info.recording_uuid
 
         self._setup_storages()
         self._setup_controllers()

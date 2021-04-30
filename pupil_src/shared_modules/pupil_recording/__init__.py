@@ -9,5 +9,5 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 from .info import RecordingInfoFile, RecordingInfo
-from .recording import PupilRecording
+from .recording import PupilRecording, recording_from_dir
 from .recording_utils import InvalidRecordingException, assert_valid_recording_type

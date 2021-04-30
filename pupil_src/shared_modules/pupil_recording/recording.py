@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
+import abc
 import collections
 import enum
 import logging
@@ -16,7 +16,13 @@ import re
 import typing as T
 from pathlib import Path
 
-from .info.recording_info import RecordingInfoFile, RecordingInfoInvalidError
+import pikit
+
+from .info import (
+    RecordingInfoFile,
+    RecordingInfoInvalidError,
+    InvisibleRecordingInfoFile,
+)
 from .recording_utils import (
     InvalidRecordingException,
     assert_valid_rec_dir,
@@ -26,10 +32,48 @@ from .recording_utils import (
 logger = logging.getLogger(__name__)
 
 
-class PupilRecording:
+def recording_from_dir(rec_dir: str):
+    try:
+        return PupilRecording(rec_dir)
+    except InvalidRecordingException:
+        try:
+            return InvisibleRecording(rec_dir)
+        except pikit.Recording.InvalidRecording:
+            raise ValueError(f"{rec_dir} is not a valid recording!")
+
+
+class AbstractRecording(abc.ABC):
+    @property
+    @abc.abstractmethod
+    def use_pikit_backend(self) -> bool:
+        return NotImplemented
+
+
+class InvisibleRecording(AbstractRecording):
+    def __init__(self, rec_dir):
+        self._rec = pikit.Recording(rec_dir)
+        self._rec_dir = rec_dir
+        self.meta_info = InvisibleRecordingInfoFile(
+            rec_dir, should_load_file=True, should_validate=False
+        )
+
+    @property
+    def rec_dir(self):
+        return self._rec_dir
+
+    @property
+    def use_pikit_backend(self) -> bool:
+        return True
+
+
+class PupilRecording(AbstractRecording):
     def __init__(self, rec_dir):
         self._info_file = None
         self.load(rec_dir=rec_dir)
+
+    @property
+    def use_pikit_backend(self) -> bool:
+        return False
 
     @property
     def meta_info(self) -> RecordingInfoFile:

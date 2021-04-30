@@ -13,14 +13,14 @@ from pyglui import ui
 import file_methods as fm
 import player_methods as pm
 from gaze_producer.gaze_producer_base import GazeProducerBase
-from pupil_recording import PupilRecording, RecordingInfo
+from pupil_recording import recording_from_dir, RecordingInfo
 
 
 class GazeFromRecording(GazeProducerBase):
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            recording = recording_from_dir(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
             if (
                 meta_info.recording_software_name

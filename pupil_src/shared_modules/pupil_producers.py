@@ -27,7 +27,7 @@ import pyglui.cygl.utils as cygl_utils
 import zmq_tools
 from observable import Observable
 from plugin import System_Plugin_Base
-from pupil_recording import PupilRecording, RecordingInfo
+from pupil_recording import recording_from_dir, RecordingInfo
 from pyglui import ui
 from pyglui.pyfontstash import fontstash as fs
 from video_capture.utils import VideoSet
@@ -308,7 +308,7 @@ class DisabledPupilProducer(Pupil_Producer_Base):
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            recording = recording_from_dir(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
             if (
                 meta_info.recording_software_name
@@ -350,7 +350,7 @@ class Pupil_From_Recording(Pupil_Producer_Base):
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            recording = recording_from_dir(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
             if (
                 meta_info.recording_software_name
@@ -396,7 +396,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            recording = recording_from_dir(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
             if (
                 meta_info.recording_software_name

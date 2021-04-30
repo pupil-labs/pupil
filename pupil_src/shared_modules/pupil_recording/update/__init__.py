@@ -63,6 +63,7 @@ def update_recording(rec_dir: str):
                 "This recording cannot be opened in Player.",
                 recovery="Please reach out to info@pupil-labs.com for support!",
             )
+        return
 
     if recording_type in _transformations_to_new_style:
         _transformations_to_new_style[recording_type](rec_dir)

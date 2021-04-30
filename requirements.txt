@@ -26,8 +26,9 @@ pupil-detectors==2.0.*
 pye3d==0.0.6
 
 # pupil-labs/PyAV 0.4.6
-pl_av @ git+https://github.com/pupil-labs/PyAV@v0.4.6 ; platform_system != "Windows"
-pl_av @ https://github.com/pupil-labs/PyAV/releases/download/v0.4.6/pl_av-0.4.6-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
+# pl_av @ git+https://github.com/pupil-labs/PyAV@v0.4.6 ; platform_system != "Windows"
+# pl_av @ https://github.com/pupil-labs/PyAV/releases/download/v0.4.6/pl_av-0.4.6-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
+pl_av @ git+https://github.com/pupil-labs/PyAV@pl_av
 
 # pupil-labs/pyuvc 0.14
 uvc @ git+https://github.com/pupil-labs/pyuvc@v0.14.1 ; platform_system != "Windows" # Minor patch fixes build issues in pyproject.toml

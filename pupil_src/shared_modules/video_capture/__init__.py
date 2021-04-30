@@ -38,11 +38,11 @@ from .base_backend import (
 from .file_backend import File_Manager, File_Source, FileSeekError
 from .hmd_streaming import HMD_Streaming_Source
 from .uvc_backend import UVC_Manager, UVC_Source
+from .pikit_backend import Pikit_Source
 
 logger = logging.getLogger(__name__)
 
-
-source_classes = [File_Source, UVC_Source, HMD_Streaming_Source]
+source_classes = [File_Source, UVC_Source, HMD_Streaming_Source, Pikit_Source]
 manager_classes = [File_Manager, UVC_Manager]
 
 try:

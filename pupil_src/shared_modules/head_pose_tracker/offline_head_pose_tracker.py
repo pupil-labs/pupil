@@ -13,7 +13,7 @@ import player_methods as pm
 from head_pose_tracker import controller, storage
 from head_pose_tracker import ui as plugin_ui
 from plugin_timeline import PluginTimeline
-from pupil_recording import PupilRecording
+from pupil_recording import recording_from_dir
 from tasklib.manager import PluginTaskManager
 
 from .base_head_pose_tracker import Head_Pose_Tracker_Base
@@ -30,7 +30,7 @@ class Offline_Head_Pose_Tracker(Head_Pose_Tracker_Base):
 
         self._task_manager = PluginTaskManager(plugin=self)
         self._current_recording_uuid = str(
-            PupilRecording(g_pool.rec_dir).meta_info.recording_uuid
+            recording_from_dir(g_pool.rec_dir).meta_info.recording_uuid
         )
 
         self._setup_storages()

@@ -50,7 +50,7 @@ from observable import Observable
 import player_methods as pm
 from methods import denormalize
 from plugin import Plugin
-from pupil_recording import PupilRecording, RecordingInfo
+from pupil_recording import recording_from_dir, RecordingInfo
 from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
@@ -274,7 +274,7 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            recording = recording_from_dir(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
             if (
                 meta_info.recording_software_name

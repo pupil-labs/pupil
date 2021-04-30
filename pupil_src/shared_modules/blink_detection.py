@@ -28,7 +28,7 @@ import gl_utils
 import player_methods as pm
 from observable import Observable
 from plugin import Plugin
-from pupil_recording import PupilRecording, RecordingInfo
+from pupil_recording import recording_from_dir, RecordingInfo
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +189,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            recording = recording_from_dir(rec_dir=g_pool.rec_dir)
             meta_info = recording.meta_info
             if (
                 meta_info.recording_software_name
