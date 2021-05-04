@@ -203,33 +203,35 @@ class Clock_Sync_Follower(threading.Thread):
 
     def _get_offset(self):
         try:
-            server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_socket.settimeout(1.0)
-            server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            server_socket.connect((self.host, self.port))
-            times = []
-            for request in range(60):
-                t0 = self.get_time()
-                server_socket.send(b"sync")
-                message = server_socket.recv(8)
-                t2 = self.get_time()
-                if message:
-                    t1 = struct.unpack("<d", message)[0]
-                    times.append((t0, t1, t2))
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+                server_socket.settimeout(1.0)
+                server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                server_socket.connect((self.host, self.port))
+                times = []
+                for request in range(60):
+                    t0 = self.get_time()
+                    server_socket.send(b"sync")
+                    message = server_socket.recv(8)
+                    t2 = self.get_time()
+                    if message:
+                        t1 = struct.unpack("<d", message)[0]
+                        times.append((t0, t1, t2))
 
-            server_socket.close()
+                server_socket.close()
 
-            times.sort(key=lambda t: t[2] - t[0])
-            times = times[: int(len(times) * 0.69)]
-            # delays = [t2-t0 for t0, t1, t2 in times]
-            offsets = [t0 - ((t1 + (t2 - t0) / 2)) for t0, t1, t2 in times]
-            mean_offset = sum(offsets) / len(offsets)
-            offset_jitter = sum([abs(mean_offset - o) for o in offsets]) / len(offsets)
-            # mean_delay = sum(delays)/len(delays)
-            # delay_jitter = sum([abs(mean_delay-o)for o in delays])/len(delays)
+                times.sort(key=lambda t: t[2] - t[0])
+                times = times[: int(len(times) * 0.69)]
+                # delays = [t2-t0 for t0, t1, t2 in times]
+                offsets = [t0 - ((t1 + (t2 - t0) / 2)) for t0, t1, t2 in times]
+                mean_offset = sum(offsets) / len(offsets)
+                offset_jitter = sum([abs(mean_offset - o) for o in offsets]) / len(
+                    offsets
+                )
+                # mean_delay = sum(delays)/len(delays)
+                # delay_jitter = sum([abs(mean_delay-o)for o in delays])/len(delays)
 
-            # logger.debug('offset: %s (%s),delay %s(%s)'%(mean_offset/self.ms,offset_jitter/self.ms,mean_delay/self.ms,delay_jitter/self.ms))
-            return mean_offset, offset_jitter
+                # logger.debug('offset: %s (%s),delay %s(%s)'%(mean_offset/self.ms,offset_jitter/self.ms,mean_delay/self.ms,delay_jitter/self.ms))
+                return mean_offset, offset_jitter
 
         except socket.error as e:
             logger.debug("{} for {}:{}".format(e, self.host, self.port))
