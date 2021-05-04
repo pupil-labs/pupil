@@ -48,10 +48,13 @@ class Time_Echo(socketserver.BaseRequestHandler):
         super().__init__(*args, **kwargs)
 
     def handle(self):
-        # expecting `sync` message
-        data = self.request.recv(4)
-        if data.decode("utf-8") == "sync":
-            self.request.send(struct.pack("<d", self.time_fn()))
+        while True:
+            # expecting `sync` message
+            data = self.request.recv(4)
+            if not data:
+                break
+            if data.decode("utf-8") == "sync":
+                self.request.send(struct.pack("<d", self.time_fn()))
 
 
 class Time_Echo_Server(socketserver.ThreadingTCPServer):
