@@ -481,8 +481,10 @@ class Exporter:
                     "num_detected_markers",
                     "dist_img_to_surf_trans",
                     "surf_to_dist_img_trans",
+                    "num_definition_markers",
                 )
             )
+            surface_definition_marker_count = len(surface.registered_marker_uids)
             for idx, (ts, ref_surf_data) in enumerate(
                 zip(self.world_timestamps, surface.location_cache)
             ):
@@ -501,6 +503,7 @@ class Exporter:
                                 ref_surf_data.num_detected_markers,
                                 ref_surf_data.dist_img_to_surf_trans,
                                 ref_surf_data.surf_to_dist_img_trans,
+                                surface_definition_marker_count,
                             )
                         )
 
