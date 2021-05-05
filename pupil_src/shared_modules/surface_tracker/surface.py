@@ -291,11 +291,8 @@ class Surface(abc.ABC):
             registered_markers_undist.keys()
         )
 
-        # If the surface is defined by 2+ markers, we require 2+ markers to be detected.
-        # If the surface is defined by 1 marker, we require 1 marker to be detected.
-        if not visible_registered_marker_ids or len(
-            visible_registered_marker_ids
-        ) < min(2, len(registered_markers_undist)):
+        # If no surface marker is detected, return
+        if not visible_registered_marker_ids:
             return Surface_Location(detected=False)
 
         visible_verts_dist = np.array(
