@@ -221,6 +221,7 @@ def get_export_proxy(
     gaze_positions,
     fixations,
     camera_model,
+    marker_cache,
     mp_context,
 ):
     exporter = Exporter(
@@ -231,6 +232,7 @@ def get_export_proxy(
         gaze_positions,
         fixations,
         camera_model,
+        marker_cache,
     )
     proxy = background_helper.IPC_Logging_Task_Proxy(
         "Offline Surface Tracker Exporter",
@@ -250,6 +252,7 @@ class Exporter:
         gaze_positions,
         fixations,
         camera_model,
+        marker_cache,
     ):
         self.export_range = export_range
         self.metrics_dir = os.path.join(export_dir, "surfaces")
@@ -260,6 +263,7 @@ class Exporter:
         self.camera_model = camera_model
         self.gaze_on_surfaces = None
         self.fixations_on_surfaces = None
+        self.marker_cache = marker_cache
 
     def save_surface_statisics_to_file(self):
         logger.info("exporting metrics to {}".format(self.metrics_dir))
@@ -277,6 +281,7 @@ class Exporter:
             self.fixations_on_surfaces,
         ) = self._map_gaze_and_fixations()
 
+        self._export_marker_detections()
         self._export_surface_visibility()
         self._export_surface_gaze_distribution()
         self._export_surface_events()
@@ -337,6 +342,15 @@ class Exporter:
         )
 
         return gaze_on_surface, fixations_on_surface
+
+    def _export_marker_detections(self):
+        file_path = os.path.join(self.metrics_dir, "marker_detections.csv")
+        with open(file_path, "w", encoding="utf-8", newline="") as csv_file:
+            csv_writer = csv.writer(csv_file, delimiter=",")
+            csv_writer.writerow(("world_index", "marker_uid"))
+            for idx, markers in enumerate(self.marker_cache):
+                for m in markers:
+                    csv_writer.writerow((idx, m.uid))
 
     def _export_surface_visibility(self):
         with open(

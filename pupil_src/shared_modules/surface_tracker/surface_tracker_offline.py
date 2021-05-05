@@ -567,6 +567,7 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
                 self.g_pool.gaze_positions,
                 self.g_pool.fixations,
                 self.camera_model,
+                self.marker_cache,
                 mp_context,
             )
             self.export_proxies.add(proxy)
