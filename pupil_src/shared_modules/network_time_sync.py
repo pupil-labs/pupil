@@ -217,19 +217,17 @@ class Clock_Sync_Follower(threading.Thread):
                         t1 = struct.unpack("<d", message)[0]
                         times.append((t0, t1, t2))
 
-                times.sort(key=lambda t: t[2] - t[0])
-                times = times[: int(len(times) * 0.69)]
-                # delays = [t2-t0 for t0, t1, t2 in times]
-                offsets = [t0 - ((t1 + (t2 - t0) / 2)) for t0, t1, t2 in times]
-                mean_offset = sum(offsets) / len(offsets)
-                offset_jitter = sum([abs(mean_offset - o) for o in offsets]) / len(
-                    offsets
-                )
-                # mean_delay = sum(delays)/len(delays)
-                # delay_jitter = sum([abs(mean_delay-o)for o in delays])/len(delays)
+            times.sort(key=lambda t: t[2] - t[0])
+            times = times[: int(len(times) * 0.69)]
+            # delays = [t2-t0 for t0, t1, t2 in times]
+            offsets = [t0 - ((t1 + (t2 - t0) / 2)) for t0, t1, t2 in times]
+            mean_offset = sum(offsets) / len(offsets)
+            offset_jitter = sum([abs(mean_offset - o) for o in offsets]) / len(offsets)
+            # mean_delay = sum(delays)/len(delays)
+            # delay_jitter = sum([abs(mean_delay-o)for o in delays])/len(delays)
 
-                # logger.debug('offset: %s (%s),delay %s(%s)'%(mean_offset/self.ms,offset_jitter/self.ms,mean_delay/self.ms,delay_jitter/self.ms))
-                return mean_offset, offset_jitter
+            # logger.debug('offset: %s (%s),delay %s(%s)'%(mean_offset/self.ms,offset_jitter/self.ms,mean_delay/self.ms,delay_jitter/self.ms))
+            return mean_offset, offset_jitter
 
         except socket.error as e:
             logger.debug("{} for {}:{}".format(e, self.host, self.port))
