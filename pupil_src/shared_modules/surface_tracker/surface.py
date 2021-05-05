@@ -140,6 +140,10 @@ class Surface(abc.ABC):
         return self.build_up_status >= 1.0
 
     @property
+    def registered_marker_uids(self) -> typing.Set[Surface_Marker_UID]:
+        return set(self._registered_markers_dist.keys())
+
+    @property
     def registered_markers_dist(self) -> Surface_Marker_UID_To_Aggregate_Mapping:
         return self._registered_markers_dist
 
