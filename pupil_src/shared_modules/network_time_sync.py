@@ -217,8 +217,6 @@ class Clock_Sync_Follower(threading.Thread):
                         t1 = struct.unpack("<d", message)[0]
                         times.append((t0, t1, t2))
 
-                server_socket.close()
-
                 times.sort(key=lambda t: t[2] - t[0])
                 times = times[: int(len(times) * 0.69)]
                 # delays = [t2-t0 for t0, t1, t2 in times]
