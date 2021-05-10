@@ -19,6 +19,7 @@ import cv2
 
 import background_helper
 import player_methods
+import file_methods
 
 logger = logging.getLogger(__name__)
 
@@ -221,7 +222,7 @@ def get_export_proxy(
     gaze_positions,
     fixations,
     camera_model,
-    marker_cache,
+    marker_cache_path,
     mp_context,
 ):
     exporter = Exporter(
@@ -232,7 +233,7 @@ def get_export_proxy(
         gaze_positions,
         fixations,
         camera_model,
-        marker_cache,
+        marker_cache_path,
     )
     proxy = background_helper.IPC_Logging_Task_Proxy(
         "Offline Surface Tracker Exporter",
@@ -252,7 +253,7 @@ class Exporter:
         gaze_positions,
         fixations,
         camera_model,
-        marker_cache,
+        marker_cache_path,
     ):
         self.export_range = export_range
         self.metrics_dir = os.path.join(export_dir, "surfaces")
@@ -263,7 +264,7 @@ class Exporter:
         self.camera_model = camera_model
         self.gaze_on_surfaces = None
         self.fixations_on_surfaces = None
-        self.marker_cache = marker_cache
+        self.marker_cache_path = marker_cache_path
 
     def save_surface_statisics_to_file(self):
         logger.info("exporting metrics to {}".format(self.metrics_dir))
@@ -344,13 +345,23 @@ class Exporter:
         return gaze_on_surface, fixations_on_surface
 
     def _export_marker_detections(self):
-        file_path = os.path.join(self.metrics_dir, "marker_detections.csv")
-        with open(file_path, "w", encoding="utf-8", newline="") as csv_file:
-            csv_writer = csv.writer(csv_file, delimiter=",")
-            csv_writer.writerow(("world_index", "marker_uid"))
-            for idx, markers in enumerate(self.marker_cache):
-                for m in markers:
-                    csv_writer.writerow((idx, m.uid))
+
+        # Load the temporary marker cache created by the offline surface tracker
+        marker_cache = file_methods.Persistent_Dict(self.marker_cache_path)
+        marker_cache = marker_cache["marker_cache"]
+
+        try:
+            file_path = os.path.join(self.metrics_dir, "marker_detections.csv")
+            with open(file_path, "w", encoding="utf-8", newline="") as csv_file:
+                csv_writer = csv.writer(csv_file, delimiter=",")
+                csv_writer.writerow(("world_index", "marker_uid"))
+                for idx, markers in enumerate(marker_cache):
+                    for m in markers:
+                        csv_writer.writerow((idx, m.uid))
+        finally:
+            # Delete the temporary marker cache created by the offline surface tracker
+            os.remove(self.marker_cache_path)
+            self.marker_cache_path = None
 
     def _export_surface_visibility(self):
         with open(
