@@ -357,10 +357,31 @@ class Exporter:
             file_path = os.path.join(self.metrics_dir, "marker_detections.csv")
             with open(file_path, "w", encoding="utf-8", newline="") as csv_file:
                 csv_writer = csv.writer(csv_file, delimiter=",")
-                csv_writer.writerow(("world_index", "marker_uid"))
+                csv_writer.writerow(
+                    (
+                        "world_index",
+                        "marker_uid",
+                        "corner_0_x",
+                        "corner_0_y",
+                        "corner_1_x",
+                        "corner_1_y",
+                        "corner_2_x",
+                        "corner_2_y",
+                        "corner_3_x",
+                        "corner_3_y",
+                    )
+                )
                 for idx, serialized_markers in enumerate(marker_cache):
                     for m in map(Surface_Marker.deserialize, serialized_markers):
-                        csv_writer.writerow((idx, m.uid))
+                        flat_corners = [x for c in m.verts_px for x in c[0]]
+                        assert len(flat_corners) == 8  # sanity check
+                        csv_writer.writerow(
+                            (
+                                idx,
+                                m.uid,
+                                *flat_corners,
+                            )
+                        )
         finally:
             # Delete the temporary marker cache created by the offline surface tracker
             os.remove(self.marker_cache_path)
