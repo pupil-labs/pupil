@@ -21,6 +21,9 @@ import background_helper
 import player_methods
 import file_methods
 
+from .surface_marker import Surface_Marker
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -355,8 +358,8 @@ class Exporter:
             with open(file_path, "w", encoding="utf-8", newline="") as csv_file:
                 csv_writer = csv.writer(csv_file, delimiter=",")
                 csv_writer.writerow(("world_index", "marker_uid"))
-                for idx, markers in enumerate(marker_cache):
-                    for m in markers:
+                for idx, serialized_markers in enumerate(marker_cache):
+                    for m in map(Surface_Marker.deserialize, serialized_markers):
                         csv_writer.writerow((idx, m.uid))
         finally:
             # Delete the temporary marker cache created by the offline surface tracker
