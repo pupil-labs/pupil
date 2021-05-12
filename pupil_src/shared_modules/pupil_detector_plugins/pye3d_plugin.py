@@ -22,7 +22,7 @@ from .visualizer_pye3d import Eye_Visualizer
 logger = logging.getLogger(__name__)
 
 version_installed = getattr(pye3d, "__version__", "0.0.1")
-version_supported = "0.0.6"
+version_supported = "0.0.7"
 
 if version_installed != version_supported:
     logger.info(
