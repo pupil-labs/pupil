@@ -285,7 +285,6 @@ class Exporter:
             self.fixations_on_surfaces,
         ) = self._map_gaze_and_fixations()
 
-        self._export_marker_detections()
         self._export_surface_visibility()
         self._export_surface_gaze_distribution()
         self._export_surface_events()
@@ -306,6 +305,17 @@ class Exporter:
             logger.info(
                 "Saved surface gaze and fixation data for '{}'".format(surface.name)
             )
+
+        # Cleanup surface related data to release memory
+        self.surfaces = None
+        self.fixations = None
+        self.gaze_positions = None
+        self.gaze_on_surfaces = None
+        self.fixations_on_surfaces = None
+
+        # Perform marker export *after* surface data is released
+        # to avoid holding everything in memory all at once.
+        self._export_marker_detections()
 
         logger.info("Done exporting reference surface data.")
         return
