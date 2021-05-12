@@ -42,7 +42,9 @@ class Persistent_Dict(dict):
         super().__init__(*args, **kwargs)
         self.file_path = os.path.expanduser(file_path)
         try:
-            self.update(**load_object(self.file_path, allow_legacy=False))
+            if os.path.getsize(file_path) > 0:
+                # Only try to load object if file is not empty
+                self.update(**load_object(self.file_path, allow_legacy=False))
         except IOError:
             logger.debug(
                 f"Session settings file '{self.file_path}' not found."

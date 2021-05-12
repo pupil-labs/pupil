@@ -140,6 +140,10 @@ class Surface(abc.ABC):
         return self.build_up_status >= 1.0
 
     @property
+    def registered_marker_uids(self) -> typing.Set[Surface_Marker_UID]:
+        return set(self._registered_markers_dist.keys())
+
+    @property
     def registered_markers_dist(self) -> Surface_Marker_UID_To_Aggregate_Mapping:
         return self._registered_markers_dist
 
@@ -291,11 +295,8 @@ class Surface(abc.ABC):
             registered_markers_undist.keys()
         )
 
-        # If the surface is defined by 2+ markers, we require 2+ markers to be detected.
-        # If the surface is defined by 1 marker, we require 1 marker to be detected.
-        if not visible_registered_marker_ids or len(
-            visible_registered_marker_ids
-        ) < min(2, len(registered_markers_undist)):
+        # If no surface marker is detected, return
+        if not visible_registered_marker_ids:
             return Surface_Location(detected=False)
 
         visible_verts_dist = np.array(

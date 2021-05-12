@@ -17,6 +17,7 @@ import typing as T
 import audio
 from pyglui import ui
 from plugin import Plugin
+from hotkey import Hotkey
 
 from gaze_mapping.gazer_base import GazerBase
 from gaze_mapping import default_gazer_class
@@ -422,7 +423,7 @@ class CalibrationChoreographyPlugin(Plugin):
                 "is_active",
                 self,
                 label="C",
-                hotkey="c",
+                hotkey=Hotkey.GAZE_CALIBRATION_CAPTURE_HOTKEY(),
                 setter=calibration_setter,
                 on_color=self._THUMBNAIL_COLOR_ON,
             )
@@ -431,7 +432,7 @@ class CalibrationChoreographyPlugin(Plugin):
                 "is_active",
                 self,
                 label="T",
-                hotkey="t",
+                hotkey=Hotkey.GAZE_VALIDATION_CAPTURE_HOTKEY(),
                 setter=validation_setter,
                 on_color=self._THUMBNAIL_COLOR_ON,
             )

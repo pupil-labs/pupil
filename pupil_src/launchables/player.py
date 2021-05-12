@@ -93,6 +93,7 @@ def player(
         import player_methods as pm
         from pupil_recording import PupilRecording
         from csv_utils import write_key_value_file
+        from hotkey import Hotkey
 
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
@@ -113,7 +114,11 @@ def player(
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
         from log_history import Log_History
-        from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
+        from pupil_producers import (
+            DisabledPupilProducer,
+            Pupil_From_Recording,
+            Offline_Pupil_Detection,
+        )
         from gaze_producer.gaze_from_recording import GazeFromRecording
         from gaze_producer.gaze_from_offline_calibration import (
             GazeFromOfflineCalibration,
@@ -180,6 +185,7 @@ def player(
             Raw_Data_Exporter,
             Annotation_Player,
             Log_History,
+            DisabledPupilProducer,
             Pupil_From_Recording,
             Offline_Pupil_Detection,
             GazeFromRecording,
@@ -562,7 +568,7 @@ def player(
             label=chr(0xE2C5),
             getter=lambda: False,
             setter=do_export,
-            hotkey="e",
+            hotkey=Hotkey.EXPORT_START_PLAYER_HOTKEY(),
             label_font="pupil_icons",
         )
         g_pool.quickbar.extend([g_pool.export_button])
@@ -576,6 +582,7 @@ def player(
             # In priority order (first is default)
             ("Pupil_From_Recording", {}),
             ("Offline_Pupil_Detection", {}),
+            ("DisabledPupilProducer", {}),
         ]
         _pupil_producer_plugins = list(reversed(_pupil_producer_plugins))
         _gaze_producer_plugins = [

@@ -21,6 +21,9 @@ import csv_utils
 import player_methods as pm
 from plugin import Plugin
 
+from pupil_producers import Pupil_Producer_Base
+
+
 # logging
 logger = logging.getLogger(__name__)
 
@@ -116,9 +119,19 @@ class Raw_Data_Exporter(Plugin):
         should_export_gaze_positions=True,
     ):
         super().__init__(g_pool)
+
+        # If no pupil producer is available, don't export pupil positions
+        if not self._is_pupil_producer_avaiable:
+            should_export_pupil_positions = False
+
         self.should_export_pupil_positions = should_export_pupil_positions
         self.should_export_field_info = should_export_field_info
         self.should_export_gaze_positions = should_export_gaze_positions
+
+    @property
+    def _is_pupil_producer_avaiable(self) -> bool:
+        producers = Pupil_Producer_Base.available_pupil_producer_plugins(self.g_pool)
+        return len(producers) > 0
 
     def init_ui(self):
         self.add_menu()
@@ -129,11 +142,13 @@ class Raw_Data_Exporter(Plugin):
                 "Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins."
             )
         )
-        self.menu.append(
-            ui.Switch(
-                "should_export_pupil_positions", self, label="Export Pupil Positions"
-            )
+
+        pupil_positions_switch = ui.Switch(
+            "should_export_pupil_positions", self, label="Export Pupil Positions"
         )
+        pupil_positions_switch.read_only = not self._is_pupil_producer_avaiable
+        self.menu.append(pupil_positions_switch)
+
         self.menu.append(
             ui.Switch(
                 "should_export_field_info",

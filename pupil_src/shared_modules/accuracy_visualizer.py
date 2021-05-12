@@ -10,29 +10,27 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-from collections import namedtuple
+import traceback
 import typing as T
 
-import OpenGL.GL as gl
 import numpy as np
+import OpenGL.GL as gl
+import scipy.spatial
 from pyglui import ui
-from pyglui.cygl.utils import draw_points_norm, draw_polyline_norm, RGBA
-from scipy.spatial import ConvexHull
+from pyglui.cygl.utils import RGBA, draw_points_norm, draw_polyline_norm
 
 from calibration_choreography import (
     ChoreographyAction,
     ChoreographyMode,
     ChoreographyNotification,
 )
-from plugin import Plugin
-
 from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
 from gaze_mapping.notifications import (
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
 )
 from gaze_mapping.utils import closest_matches_monocular
-
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
@@ -60,6 +58,13 @@ class CorrelatedAndCoordinateTransformedResult(T.NamedTuple):
             camera_space=np.ndarray([]),
         )
 
+    @property
+    def is_valid(self) -> bool:
+        if len(self.norm_space.shape) != 2:
+            return False
+        # TODO: Make validity check exhaustive
+        return True
+
 
 class CorrelationError(ValueError):
     pass
@@ -79,6 +84,13 @@ class AccuracyPrecisionResult(T.NamedTuple):
             error_lines=np.array([]),
             correlation=CorrelatedAndCoordinateTransformedResult.empty(),
         )
+
+    @property
+    def is_valid(self) -> bool:
+        if not self.correlation.is_valid:
+            return False
+        # TODO: Make validity check exhaustive
+        return True
 
 
 class ValidationInput:
@@ -356,10 +368,12 @@ class Accuracy_Visualizer(Plugin):
         return True
 
     def recalculate(self):
+        NOT_ENOUGH_DATA_COLLECTED_ERR_MSG = (
+            "Did not collect enough data to estimate gaze mapping accuracy."
+        )
+
         if not self.recent_input.is_complete:
-            logger.info(
-                "Did not collect enough data to estimate gaze mapping accuracy."
-            )
+            logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
             return
 
         results = self.calc_acc_prec_errlines(
@@ -372,6 +386,10 @@ class Accuracy_Visualizer(Plugin):
             outlier_threshold=self.outlier_threshold,
             succession_threshold=self.succession_threshold,
         )
+
+        if not results.is_valid:
+            logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
+            return
 
         accuracy = results.accuracy.result
         if np.isnan(accuracy):
@@ -400,8 +418,13 @@ class Accuracy_Visualizer(Plugin):
         self.error_lines = results.error_lines
         ref_locations = results.correlation.norm_space[1::2, :]
         if len(ref_locations) >= 3:
-            hull = ConvexHull(ref_locations)  # requires at least 3 points
-            self.calibration_area = hull.points[hull.vertices, :]
+            try:
+                # requires at least 3 points
+                hull = scipy.spatial.ConvexHull(ref_locations)
+                self.calibration_area = hull.points[hull.vertices, :]
+            except scipy.spatial.qhull.QhullError:
+                logger.warning("Calibration area could not be calculated")
+                logger.debug(traceback.format_exc())
 
     @staticmethod
     def calc_acc_prec_errlines(

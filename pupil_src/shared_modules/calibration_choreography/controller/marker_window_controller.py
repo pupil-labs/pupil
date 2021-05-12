@@ -22,6 +22,8 @@ from pyglui.ui import get_opensans_font_path
 from pyglui.cygl.utils import draw_points
 from pyglui.cygl.utils import RGBA
 
+from gl_utils import draw_circle_filled_func_builder
+
 from .gui_monitor import GUIMonitor
 from .gui_window import GUIWindow
 
@@ -101,6 +103,8 @@ class MarkerWindowController(observable.Observable):
         self.__glfont.set_size(32)
         self.__glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
         self.__glfont.set_align_string(v_align="center")
+        # Private helper
+        self.__draw_circle_filled = draw_circle_filled_func_builder(cache_size=4)
 
     # Public - Marker Management
 
@@ -316,22 +320,22 @@ class MarkerWindowController(observable.Observable):
         # TODO: adjust num_points such that circles look smooth; smaller circles need less points
         # TODO: compare runtimes with `draw_points`
 
-        _draw_circle_filled(
+        self.__draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_OUTER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_OUTER, alpha),
         )
-        _draw_circle_filled(
+        self.__draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_MIDDLE * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_MIDDLE, alpha),
         )
-        _draw_circle_filled(
+        self.__draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_INNER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_INNER, alpha),
         )
-        _draw_circle_filled(
+        self.__draw_circle_filled(
             screen_point,
             size=self._MARKER_CIRCLE_SIZE_FEEDBACK * radius,
             color=RGBA(*marker_circle_rgb_feedback, alpha),
@@ -528,37 +532,3 @@ def _interp_fn(t, b, c, d, start_sample=15.0, stop_sample=55.0):
         return 1 - _easeInOutQuad(t - stop_sample, b, c, d - stop_sample)
     else:
         return 1.0
-
-
-@functools.lru_cache(4)  # 4 circles needed to draw calibration marker
-def _circle_points_around_zero(radius: float, num_points: int) -> np.ndarray:
-    t = np.linspace(0, 2 * np.pi, num_points, dtype=np.float64)
-    t.shape = -1, 1
-    points = np.hstack([np.cos(t), np.sin(t)])
-    points *= radius
-    return points
-
-
-@functools.lru_cache(4)  # 4 circles needed to draw calibration marker
-def _circle_points_offset(
-    offset: T.Tuple[float, float], radius: float, num_points: int, flat: bool = True
-) -> np.ndarray:
-    # NOTE: .copy() to avoid modifying the cached result
-    points = _circle_points_around_zero(radius, num_points).copy()
-    points[:, 0] += offset[0]
-    points[:, 1] += offset[1]
-    if flat:
-        points.shape = -1
-    return points
-
-
-def _draw_circle_filled(
-    screen_point: T.Tuple[float, float], size: float, color: RGBA, num_points: int = 50
-):
-    points = _circle_points_offset(
-        screen_point, radius=size, num_points=num_points, flat=False
-    )
-    gl.glColor4f(color.r, color.g, color.b, color.a)
-    gl.glEnableClientState(gl.GL_VERTEX_ARRAY)
-    gl.glVertexPointer(2, gl.GL_DOUBLE, 0, points)
-    gl.glDrawArrays(gl.GL_POLYGON, 0, points.shape[0])
