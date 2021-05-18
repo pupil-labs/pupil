@@ -131,6 +131,9 @@ class GUIWindow(Observable):
         if not self.is_open:
             return
         with self._switch_to_current_context():
+            if glfw.get_window_monitor(self.__gl_handle):
+                # exit full screen mode
+                glfw.set_window_monitor(self.__gl_handle, None, 0, 0, 10, 10, 30)
             glfw.set_input_mode(self.__gl_handle, glfw.CURSOR, glfw.CURSOR_NORMAL)
             glfw.destroy_window(self.__gl_handle)
         self.__gl_handle = None
