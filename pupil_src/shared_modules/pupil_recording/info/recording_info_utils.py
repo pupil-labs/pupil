@@ -88,14 +88,16 @@ def read_info_csv_file(rec_dir: str) -> dict:
 def read_info_json_file(rec_dir: str) -> dict:
     """Read `info.json` file from recording."""
     file_path = os.path.join(rec_dir, "info.json")
-    with open(file_path, "r") as file:
+    # guaranteed to be utf-8 encoded
+    with open(file_path, "r", encoding="utf-8") as file:
         return json.load(file)
 
 
 def read_info_invisible_json_file(rec_dir: str) -> dict:
     """Read `info.invisible.json` file from recording."""
     file_path = os.path.join(rec_dir, "info.invisible.json")
-    with open(file_path, "r") as file:
+    # guaranteed to be utf-8 encoded
+    with open(file_path, "r", encoding="utf-8") as file:
         return json.load(file)
 
 
