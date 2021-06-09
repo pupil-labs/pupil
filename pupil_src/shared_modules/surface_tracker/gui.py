@@ -21,7 +21,7 @@ import pyglui.cygl.utils as pyglui_utils
 
 import gl_utils
 import glfw
-from gl_utils import GLFWErrorReporting
+from gl_utils import draw_circle_filled_func_builder, GLFWErrorReporting
 
 GLFWErrorReporting.set_default()
 
@@ -97,6 +97,8 @@ class GUI:
         self.glfont.add_font("opensans", pyglui.ui.get_opensans_font_path())
         self.glfont.set_size(23)
         self.glfont.set_color_float(text_font_color_rgba)
+
+        self._draw_circle_filled = draw_circle_filled_func_builder()
 
     def update(self):
         if self.show_heatmap:
@@ -254,22 +256,26 @@ class GUI:
         edit_button_color_rgba = rgb_to_rgba(self.color_primary_rgb)
         edit_anchor_color_rgba = rgb_to_rgba(self.color_secondary_rgb)
         text_color_rgba = rgb_to_rgba(self.color_secondary_rgb)
-        pyglui_utils.draw_points(
-            [marker_edit_anchor], color=pyglui_utils.RGBA(*edit_button_color_rgba)
+        self._draw_circle_filled(
+            tuple(marker_edit_anchor),
+            size=20 / 2,
+            color=pyglui_utils.RGBA(*edit_button_color_rgba),
         )
         if surface in self._edit_surf_markers:
-            pyglui_utils.draw_points(
-                [marker_edit_anchor],
-                size=13,
+            self._draw_circle_filled(
+                tuple(marker_edit_anchor),
+                size=13 / 2,
                 color=pyglui_utils.RGBA(*edit_anchor_color_rgba),
             )
-        pyglui_utils.draw_points(
-            [surface_edit_anchor], color=pyglui_utils.RGBA(*edit_button_color_rgba)
+        self._draw_circle_filled(
+            tuple(surface_edit_anchor),
+            size=20 / 2,
+            color=pyglui_utils.RGBA(*edit_button_color_rgba),
         )
         if surface in self._edit_surf_corners:
-            pyglui_utils.draw_points(
-                [surface_edit_anchor],
-                size=13,
+            self._draw_circle_filled(
+                tuple(surface_edit_anchor),
+                size=13 / 2,
                 color=pyglui_utils.RGBA(*edit_anchor_color_rgba),
             )
         # Text
@@ -334,16 +340,22 @@ class GUI:
         for marker_type, inactive_markers in inactive_markers_by_type.items():
             color_rgb = SURFACE_MARKER_TOGGLE_INACTIVE_COLOR_RGB_BY_TYPE[marker_type]
             color_rgba = rgb_to_rgba(color_rgb, alpha=0.8)
-            pyglui_utils.draw_points(
-                inactive_markers, size=20, color=pyglui_utils.RGBA(*color_rgba)
-            )
+            for pt in inactive_markers:
+                self._draw_circle_filled(
+                    tuple(pt),
+                    size=20 / 2,
+                    color=pyglui_utils.RGBA(*color_rgba),
+                )
 
         for marker_type, active_markers in active_markers_by_type.items():
             color_rgb = SURFACE_MARKER_TOGGLE_ACTIVE_COLOR_RGB_BY_TYPE[marker_type]
             color_rgba = rgb_to_rgba(color_rgb, alpha=0.8)
-            pyglui_utils.draw_points(
-                active_markers, size=20, color=pyglui_utils.RGBA(*color_rgba)
-            )
+            for pt in active_markers:
+                self._draw_circle_filled(
+                    tuple(pt),
+                    size=20 / 2,
+                    color=pyglui_utils.RGBA(*color_rgba),
+                )
 
     def _draw_surface_corner_handles(self, surface):
         img_corners = surface.map_from_surf(
@@ -353,9 +365,12 @@ class GUI:
         )
 
         handle_color_rgba = rgb_to_rgba(self.color_primary_rgb, alpha=0.5)
-        pyglui_utils.draw_points(
-            img_corners, size=20, color=pyglui_utils.RGBA(*handle_color_rgba)
-        )
+        for pt in img_corners:
+            self._draw_circle_filled(
+                tuple(pt),
+                size=20 / 2,
+                color=pyglui_utils.RGBA(*handle_color_rgba),
+            )
 
     def _draw_heatmap(self, surface):
         # TODO The heatmap is computed in undistorted space. For the visualization to
@@ -652,10 +667,10 @@ class Surface_Window:
     def draw_recent_pupil_positions(self):
         try:
             for gp in self.surface.gaze_history:
-                pyglui_utils.draw_points(
-                    [gp["norm_pos"]],
+                self._draw_circle_filled(
+                    tuple(gp["norm_pos"]),
+                    size=80 / 2,
                     color=pyglui_utils.RGBA(0.0, 0.8, 0.5, 0.8),
-                    size=80,
                 )
         except AttributeError:
             # If gaze_history does not exist, we are in the Surface_Tracker_Offline.
