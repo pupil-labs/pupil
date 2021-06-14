@@ -192,10 +192,6 @@ class AnnotationPlugin(Plugin, abc.ABC):
     def _remove_button_menu(self, button_menu):
         self._annotation_list_menu.remove(button_menu)
 
-    @staticmethod
-    def _annotation_description(label, world_index) -> str:
-        return f"{label} annotation @ frame index {world_index}"
-
 
 class Annotation_Capture(AnnotationPlugin):
     """
@@ -224,18 +220,16 @@ class Annotation_Capture(AnnotationPlugin):
         recent_annotation_data = []
         while self.annotation_sub.new_data:
             topic, annotation_datum = self.annotation_sub.recv()
-            ts = self.g_pool.get_timestamp()
-            world_index = (
-                events["frame.world"][0]["index"]
-                if "frame.world" in events and len(events["frame.world"]) > 0
-                else None
-            )
             annotation_desc = self._annotation_description(
-                label=annotation_datum["label"], world_index=world_index
+                label=annotation_datum["label"], timestamp=annotation_datum["timestamp"]
             )
             logger.info(annotation_desc)
             recent_annotation_data.append(annotation_datum)
         events["annotation"] = recent_annotation_data
+
+    @staticmethod
+    def _annotation_description(label, timestamp) -> str:
+        return f"{label} annotation ({timestamp:.3f} seconds old)"
 
 
 class Annotation_Player(AnnotationPlugin, Plugin):
@@ -357,3 +351,7 @@ class Annotation_Player(AnnotationPlugin, Plugin):
         # return tuple with system keys first and alphabetically sorted
         # user keys afterwards
         return csv_keys + tuple(sorted(user_keys))
+
+    @staticmethod
+    def _annotation_description(label, world_index) -> str:
+        return f"{label} annotation @ frame index {world_index}"
