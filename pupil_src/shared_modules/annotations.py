@@ -220,16 +220,17 @@ class Annotation_Capture(AnnotationPlugin):
         recent_annotation_data = []
         while self.annotation_sub.new_data:
             topic, annotation_datum = self.annotation_sub.recv()
+            ts = self.g_pool.get_timestamp()
             annotation_desc = self._annotation_description(
-                label=annotation_datum["label"], timestamp=annotation_datum["timestamp"]
+                label=annotation_datum["label"], age=ts - annotation_datum["timestamp"]
             )
             logger.info(annotation_desc)
             recent_annotation_data.append(annotation_datum)
         events["annotation"] = recent_annotation_data
 
     @staticmethod
-    def _annotation_description(label, timestamp) -> str:
-        return f"{label} annotation ({timestamp:.3f} seconds old)"
+    def _annotation_description(label, age) -> str:
+        return f"{label} annotation ({age:.3f} seconds old)"
 
 
 class Annotation_Player(AnnotationPlugin, Plugin):
