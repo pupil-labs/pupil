@@ -28,7 +28,7 @@ from pyglui.ui import get_opensans_font_path
 
 import glfw
 import gl_utils
-from gl_utils import GLFWErrorReporting
+from gl_utils import draw_circle_filled_func_builder, GLFWErrorReporting
 
 GLFWErrorReporting.set_default()
 
@@ -103,6 +103,8 @@ class Camera_Intrinsics_Estimation(Plugin):
             logger.info(
                 "No camera intrinsics calibration is currently set for this camera!"
             )
+
+        self._draw_circle_filled = draw_circle_filled_func_builder()
 
     def init_ui(self):
         self.add_menu()
@@ -387,7 +389,12 @@ class Camera_Intrinsics_Estimation(Plugin):
         grid -= np.mean(grid)
         grid += (p_window_size[0] / 2 - r, p_window_size[1] / 2 + r)
 
-        draw_points(grid, size=r, color=RGBA(0.0, 0.0, 0.0, 1), sharpness=0.95)
+        for pt in grid:
+            self._draw_circle_filled(
+                tuple(pt),
+                size=r / 2,
+                color=RGBA(0.0, 0.0, 0.0, 1),
+            )
 
         if self.clicks_to_close < 5:
             self.glfont.set_size(int(p_window_size[0] / 30.0))
