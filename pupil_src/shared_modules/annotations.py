@@ -230,7 +230,7 @@ class Annotation_Capture(AnnotationPlugin):
 
     @staticmethod
     def _annotation_description(label, age) -> str:
-        return f"{label} annotation ({age:.3f} seconds old)"
+        return f"{label} annotation ({age:.3f} seconds ago)"
 
 
 class Annotation_Player(AnnotationPlugin, Plugin):
