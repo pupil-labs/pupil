@@ -11,7 +11,7 @@ pyzmq
 scikit-learn
 scipy
 glfw>=2.0.0
-pyre @ https://github.com/zeromq/pyre/archive/master.zip
+ndsi==1.4.*
 
 cysignals ; platform_system != "Windows"
 
@@ -36,7 +36,3 @@ uvc @ https://github.com/pupil-labs/pyuvc/releases/download/v0.14/uvc-0.14-cp36-
 # pupil-labs/pyglui 1.29
 pyglui @ git+https://github.com/pupil-labs/pyglui@v1.29 ; platform_system != "Windows"
 pyglui @ https://github.com/pupil-labs/pyglui/releases/download/v1.29/pyglui-1.29-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
-
-# pupil-labs/pyndsi 1.4
-ndsi @ git+https://github.com/pupil-labs/pyndsi@v1.4 ; platform_system != "Windows"
-ndsi @ https://github.com/pupil-labs/pyndsi/releases/download/v1.4/ndsi-1.4-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
