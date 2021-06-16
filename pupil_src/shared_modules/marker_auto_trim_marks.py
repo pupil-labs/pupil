@@ -19,7 +19,7 @@ from ctypes import c_int
 
 from pyglui import ui
 from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup, cvmat_to_glmat
-from pyglui.cygl.utils import RGBA, draw_points, draw_polyline
+from pyglui.cygl.utils import RGBA, draw_polyline
 from OpenGL.GL import (
     GL_LINES,
     GL_MODELVIEW,

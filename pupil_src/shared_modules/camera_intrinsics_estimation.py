@@ -22,7 +22,7 @@ from camera_models import Fisheye_Dist_Camera, Radial_Dist_Camera
 
 import OpenGL.GL as gl
 from pyglui import ui
-from pyglui.cygl.utils import draw_polyline, draw_points, RGBA, draw_gl_texture
+from pyglui.cygl.utils import draw_polyline, RGBA, draw_gl_texture
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 
