@@ -12,9 +12,13 @@ import logging
 from typing import Dict, Tuple
 
 import cv2
-from pyglui.cygl.utils import RGBA, draw_points, draw_polyline
+from pyglui.cygl.utils import RGBA, draw_polyline
+from gl_utils import draw_circle_filled_func_builder
 
 logger = logging.getLogger(__name__)
+
+
+_draw_circle_filled = draw_circle_filled_func_builder()
 
 
 def draw_ellipse(
@@ -46,11 +50,10 @@ def draw_ellipse(
 
     draw_polyline(pts, thickness, RGBA(*rgba))
     if draw_center:
-        draw_points(
-            [ellipse["center"]],
-            size=20,
+        _draw_circle_filled(
+            tuple(ellipse["center"]),
+            size=20 / 2,
             color=RGBA(*rgba),
-            sharpness=1.0,
         )
 
 
