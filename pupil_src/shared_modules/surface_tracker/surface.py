@@ -288,8 +288,11 @@ class Surface(abc.ABC):
         camera_model,
         registered_markers_undist,
         registered_markers_dist,
+        context=None,
     ):
         """Computes a Surface_Location based on a list of visible markers."""
+        if context is None:
+            context = {}
 
         visible_registered_marker_ids = set(visible_markers.keys()) & set(
             registered_markers_undist.keys()
@@ -320,7 +323,9 @@ class Surface(abc.ABC):
         registered_verts_dist.shape = (-1, 2)
 
         homographies_dist = Surface._find_homographies(
-            registered_verts_dist, visible_verts_dist
+            registered_verts_dist,
+            visible_verts_dist,
+            context=context,
         )
         if any(matrix is None for matrix in homographies_dist):
             return Surface_Location(detected=False)
@@ -329,7 +334,9 @@ class Surface(abc.ABC):
             visible_verts_dist
         )
         homographies_undist = Surface._find_homographies(
-            registered_verts_undist, visible_verts_undist
+            registered_verts_undist,
+            visible_verts_undist,
+            context=context,
         )
         if any(matrix is None for matrix in homographies_undist):
             return Surface_Location(detected=False)
@@ -347,7 +354,10 @@ class Surface(abc.ABC):
         )
 
     @staticmethod
-    def _find_homographies(points_A, points_B):
+    def _find_homographies(points_A, points_B, context=None):
+        if context is None:
+            context = {}
+
         points_A = points_A.reshape((-1, 1, 2))
         points_B = points_B.reshape((-1, 1, 2))
 
