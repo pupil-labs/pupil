@@ -302,16 +302,28 @@ class IMUTimeline(Plugin):
 
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
-        if g_pool.app == "player":
-            recording = PupilRecording(rec_dir=g_pool.rec_dir)
-            meta_info = recording.meta_info
-            if (
-                meta_info.recording_software_name
-                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
-            ):
-                # Enable in Player only if Pupil Invisible recording
-                return True
-        return False
+        if g_pool.app != "player":
+            # Plugin not available if not running in Player
+            return False
+
+        recording = PupilRecording(rec_dir=g_pool.rec_dir)
+        meta_info = recording.meta_info
+
+        if (
+            meta_info.recording_software_name
+            != RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+        ):
+            # Plugin not available if recording is not from Pupil Invisible
+            return False
+
+        imu_recs = cls._imu_recordings(g_pool)
+
+        if not len(imu_recs):
+            # Plugin not available if recording doesn't have IMU files (due to hardware failure, for example)
+            logger.debug(f"{cls.__name__} unavailable because there are no IMU files")
+            return False
+
+        return True
 
     @classmethod
     def _imu_recordings(cls, g_pool) -> T.List[IMURecording]:
