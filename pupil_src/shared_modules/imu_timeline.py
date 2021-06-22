@@ -14,6 +14,7 @@ import os
 import typing
 import logging
 import numpy as np
+import typing as T
 
 import OpenGL.GL as gl
 from pyglui import ui, pyfontstash
@@ -312,11 +313,18 @@ class IMUTimeline(Plugin):
                 return True
         return False
 
+    @classmethod
+    def _imu_recordings(cls, g_pool) -> T.List[IMURecording]:
+        rec = PupilRecording(g_pool.rec_dir)
+        imu_files: T.List[pathlib.Path] = sorted(
+            rec.files().filter_patterns(cls.IMU_PATTERN_RAW)
+        )
+        return [IMURecording(imu_file) for imu_file in imu_files]
+
     def __init__(self, g_pool):
         super().__init__(g_pool)
-        rec = PupilRecording(g_pool.rec_dir)
-        imu_files = sorted(rec.files().filter_patterns(self.IMU_PATTERN_RAW))
-        imu_recs = [IMURecording(imu_file) for imu_file in imu_files]
+        imu_recs = self._imu_recordings(g_pool)
+
         self.bg_task = None
         self.is_invisible_rec = False
         if not len(imu_recs):
