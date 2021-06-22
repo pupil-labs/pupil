@@ -338,11 +338,7 @@ class IMUTimeline(Plugin):
         imu_recs = self._imu_recordings(g_pool)
 
         self.bg_task = None
-        self.is_invisible_rec = False
-        if not len(imu_recs):
-            return
 
-        self.is_invisible_rec = True
         self.gyro_timeline = None
         self.accel_timeline = None
         self.orient_timeline = None
@@ -360,9 +356,6 @@ class IMUTimeline(Plugin):
         self.orient_keys = ["pitch", "roll"]
 
     def init_ui(self):
-        if not self.is_invisible_rec:
-            return
-
         self.add_menu()
         self.menu.label = "IMU Timeline"
         self.menu.append(ui.Info_Text("View IMU data and export into .csv file"))
@@ -419,9 +412,6 @@ class IMUTimeline(Plugin):
         self._fuse()
 
     def deinit_ui(self):
-        if not self.is_invisible_rec:
-            return
-
         if self.should_draw_raw:
             self.g_pool.user_timelines.remove(self.gyro_timeline)
             self.g_pool.user_timelines.remove(self.accel_timeline)
@@ -591,8 +581,6 @@ class IMUTimeline(Plugin):
             gl.glTranslatef(0, self.TIMELINE_LINE_HEIGHT * scale, 0)
 
     def on_notify(self, notification):
-        if not self.is_invisible_rec:
-            return
         if notification["subject"] == "madgwick_fusion.should_fuse":
             self._fuse()
         elif notification["subject"] == "should_export":
