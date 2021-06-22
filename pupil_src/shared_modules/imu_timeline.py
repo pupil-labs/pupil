@@ -41,7 +41,7 @@ def glfont_generator():
 def get_limits(data, keys):
     return (
         min([min(data[key]) for key in keys]),
-        max([max(data[key]) for key in keys])
+        max([max(data[key]) for key in keys]),
     )
 
 
@@ -52,10 +52,7 @@ def fuser(data_raw, gyro_error):
 
     for ind, datum in enumerate(data_raw):
         gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z = datum
-        fusion.update(
-            (accel_x, accel_y, accel_z),
-            (gyro_x, gyro_y, gyro_z)
-        )
+        fusion.update((accel_x, accel_y, accel_z), (gyro_x, gyro_y, gyro_z))
         yield "Fusing imu", ()
         yield "Fused datum", ((fusion.pitch, fusion.roll), ind)
 
@@ -71,7 +68,7 @@ def merge_arrays(arr1, arr2):
         ("accel_y", "<f4"),
         ("accel_z", "<f4"),
         ("pitch", "<f4"),
-        ("roll", "<f4")
+        ("roll", "<f4"),
     ]
     new_array = np.empty(len(arr1), dtype=NEW_DTYPE).view(np.recarray)
 
@@ -114,14 +111,18 @@ class Fusion(object):
         self.sample_dur = sample_dur  # Time between updates
         self.q = [1.0, 0.0, 0.0, 0.0]  # vector to hold quaternion
         gyro_mean_error = np.radians(gyro_error)
-        self.beta = np.sqrt(3.0 / 4.0) * gyro_mean_error  # compute beta (see README in original github page)
+        self.beta = (
+            np.sqrt(3.0 / 4.0) * gyro_mean_error
+        )  # compute beta (see README in original github page)
         self.pitch = 0
         self.roll = 0
 
     def update(self, accel, gyro):  # 2-tuples (x, y, z) for accel, gyro
         ax, ay, az = accel  # Units G (but later normalised)
         gx, gy, gz = (np.radians(x) for x in gyro)  # Units deg/s
-        q1, q2, q3, q4 = (self.q[x] for x in range(4))  # short name local variable for readability
+        q1, q2, q3, q4 = (
+            self.q[x] for x in range(4)
+        )  # short name local variable for readability
         # Auxiliary variables to avoid repeated arithmetic
         _2q1 = 2 * q1
         _2q2 = 2 * q2
@@ -148,10 +149,30 @@ class Fusion(object):
 
         # Gradient decent algorithm corrective step
         s1 = _4q1 * q3q3 + _2q3 * ax + _4q1 * q2q2 - _2q2 * ay
-        s2 = _4q2 * q4q4 - _2q4 * ax + 4 * q1q1 * q2 - _2q1 * ay - _4q2 + _8q2 * q2q2 + _8q2 * q3q3 + _4q2 * az
-        s3 = 4 * q1q1 * q3 + _2q1 * ax + _4q3 * q4q4 - _2q4 * ay - _4q3 + _8q3 * q2q2 + _8q3 * q3q3 + _4q3 * az
+        s2 = (
+            _4q2 * q4q4
+            - _2q4 * ax
+            + 4 * q1q1 * q2
+            - _2q1 * ay
+            - _4q2
+            + _8q2 * q2q2
+            + _8q2 * q3q3
+            + _4q2 * az
+        )
+        s3 = (
+            4 * q1q1 * q3
+            + _2q1 * ax
+            + _4q3 * q4q4
+            - _2q4 * ay
+            - _4q3
+            + _8q3 * q2q2
+            + _8q3 * q3q3
+            + _4q3 * az
+        )
         s4 = 4 * q2q2 * q4 - _2q2 * ax + 4 * q3q3 * q4 - _2q3 * ay
-        norm = 1 / np.sqrt(s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4)  # normalise step magnitude
+        norm = 1 / np.sqrt(
+            s1 * s1 + s2 * s2 + s3 * s3 + s4 * s4
+        )  # normalise step magnitude
         s1 *= norm
         s2 *= norm
         s3 *= norm
@@ -168,15 +189,31 @@ class Fusion(object):
         q2 += q_dot2 * self.sample_dur
         q3 += q_dot3 * self.sample_dur
         q4 += q_dot4 * self.sample_dur
-        norm = 1 / np.sqrt(q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4)  # normalise quaternion
+        norm = 1 / np.sqrt(
+            q1 * q1 + q2 * q2 + q3 * q3 + q4 * q4
+        )  # normalise quaternion
         self.q = q1 * norm, q2 * norm, q3 * norm, q4 * norm
 
         # These are modified to account for Invisible IMU coordinate system and positioning of
         # the IMU within the invisible headset
-        self.roll = np.degrees(-np.arcsin(2.0 * (self.q[1] * self.q[3] - self.q[0] * self.q[2]))) + 7
-        self.pitch = np.degrees(np.arctan2(2.0 * (self.q[0] * self.q[1] + self.q[2] * self.q[3]),
-                                           self.q[0] * self.q[0] - self.q[1] * self.q[1] - self.q[2] * self.q[2] +
-                                           self.q[3] * self.q[3])) + 90
+        self.roll = (
+            np.degrees(
+                -np.arcsin(2.0 * (self.q[1] * self.q[3] - self.q[0] * self.q[2]))
+            )
+            + 7
+        )
+        self.pitch = (
+            np.degrees(
+                np.arctan2(
+                    2.0 * (self.q[0] * self.q[1] + self.q[2] * self.q[3]),
+                    self.q[0] * self.q[0]
+                    - self.q[1] * self.q[1]
+                    - self.q[2] * self.q[2]
+                    + self.q[3] * self.q[3],
+                )
+            )
+            + 90
+        )
 
 
 class IMURecording:
@@ -204,7 +241,9 @@ class IMURecording:
             return
 
         self.ts = np.load(str(self.path_ts))
-        self.raw = np.fromfile(str(self.path_raw), dtype=self.DTYPE_RAW).view(np.recarray)
+        self.raw = np.fromfile(str(self.path_raw), dtype=self.DTYPE_RAW).view(
+            np.recarray
+        )
         num_ts_during_init = self.ts.size - len(self.raw)
         if num_ts_during_init > 0:
             self.ts = self.ts[num_ts_during_init:]
@@ -227,6 +266,7 @@ class IMUTimeline(Plugin):
         roll: orientation expressed as Euler angles
     See Pupil docs for relevant coordinate systems
     """
+
     gyro_error = 50
     should_draw_raw = False
     should_draw_orientation = False
@@ -279,7 +319,9 @@ class IMUTimeline(Plugin):
         self.data_raw = np.concatenate([rec.raw for rec in imu_recs])
         self.data_ts = np.concatenate([rec.ts for rec in imu_recs])
         self.data_len = len(self.data_raw)
-        self.data_orient = np.empty([self.data_len], dtype=self.DTYPE_ORIENT).view(np.recarray)
+        self.data_orient = np.empty([self.data_len], dtype=self.DTYPE_ORIENT).view(
+            np.recarray
+        )
         self.gyro_keys = ["gyro_x", "gyro_y", "gyro_z"]
         self.accel_keys = ["accel_x", "accel_y", "accel_z"]
         self.orient_keys = ["pitch", "roll"]
@@ -312,9 +354,7 @@ class IMUTimeline(Plugin):
 
         def set_gyro_error(new_value):
             self.gyro_error = new_value
-            self.notify_all(
-                {"subject": "madgwick_fusion.should_fuse", "delay": 1.0}
-            )
+            self.notify_all({"subject": "madgwick_fusion.should_fuse", "delay": 1.0})
 
         self.menu.append(
             ui.Switch(
@@ -380,16 +420,14 @@ class IMUTimeline(Plugin):
             self.gyro_error,
         )
 
-        self.bg_task = bh.IPC_Logging_Task_Proxy(
-            "Fusion", fuser, args=generator_args
-        )
+        self.bg_task = bh.IPC_Logging_Task_Proxy("Fusion", fuser, args=generator_args)
 
     def recent_events(self, events):
         if self.bg_task:
             for progress, task_data in self.bg_task.fetch():
                 self.status = progress
                 if task_data:
-                    current_progress = (task_data[1] / self.data_len)
+                    current_progress = task_data[1] / self.data_len
                     self.menu_icon.indicator_stop = current_progress
                     self.data_orient["pitch"][task_data[1]] = task_data[0][0]
                     self.data_orient["roll"][task_data[1]] = task_data[0][1]
@@ -462,15 +500,21 @@ class IMUTimeline(Plugin):
 
     def draw_raw_gyro(self, width, height, scale):
         y_limits = get_limits(self.data_raw, self.gyro_keys)
-        self._draw_grouped(self.data_raw, self.gyro_keys, y_limits, width, height, scale)
+        self._draw_grouped(
+            self.data_raw, self.gyro_keys, y_limits, width, height, scale
+        )
 
     def draw_raw_accel(self, width, height, scale):
         y_limits = get_limits(self.data_raw, self.accel_keys)
-        self._draw_grouped(self.data_raw, self.accel_keys, y_limits, width, height, scale)
+        self._draw_grouped(
+            self.data_raw, self.accel_keys, y_limits, width, height, scale
+        )
 
     def draw_orient(self, width, height, scale):
         y_limits = get_limits(self.data_orient, self.orient_keys)
-        self._draw_grouped(self.data_orient, self.orient_keys, y_limits, width, height, scale)
+        self._draw_grouped(
+            self.data_orient, self.orient_keys, y_limits, width, height, scale
+        )
 
     def _draw_grouped(self, data, keys, y_limits, width, height, scale):
         ts_min = self.g_pool.timestamps[0]
@@ -486,10 +530,14 @@ class IMUTimeline(Plugin):
         self._draw_legend_grouped(self.gyro_keys, width, height, scale, self.glfont_raw)
 
     def draw_legend_accel(self, width, height, scale):
-        self._draw_legend_grouped(self.accel_keys, width, height, scale, self.glfont_raw)
+        self._draw_legend_grouped(
+            self.accel_keys, width, height, scale, self.glfont_raw
+        )
 
     def draw_legend_orient(self, width, height, scale):
-        self._draw_legend_grouped(self.orient_keys, width, height, scale, self.glfont_orient)
+        self._draw_legend_grouped(
+            self.orient_keys, width, height, scale, self.glfont_orient
+        )
 
     def _draw_legend_grouped(self, labels, width, height, scale, glfont):
         glfont.set_size(self.TIMELINE_LINE_HEIGHT * 0.8 * scale)
@@ -521,10 +569,7 @@ class IMUTimeline(Plugin):
                 logger.warning("Running Madgwick's algorithm")
 
     def export_data(self, export_window, export_dir):
-        for_export = merge_arrays(
-            self.data_raw,
-            self.data_orient
-        )
+        for_export = merge_arrays(self.data_raw, self.data_orient)
 
         imu_bisector = Imu_Bisector(for_export, self.data_ts)
         imu_exporter = Imu_Exporter()
@@ -532,7 +577,7 @@ class IMUTimeline(Plugin):
             imu_bisector=imu_bisector,
             timestamps=self.g_pool.timestamps,
             export_window=export_window,
-            export_dir=export_dir
+            export_dir=export_dir,
         )
 
 
@@ -581,15 +626,12 @@ class Imu_Exporter(_Base_Positions_Exporter):
             "accel_y",
             "accel_z",
             "pitch",
-            "roll"
+            "roll",
         )
 
     @classmethod
     def dict_export(
-            cls,
-            raw_value: csv_utils.CSV_EXPORT_RAW_TYPE,
-            world_ts: float,
-            world_index: int
+        cls, raw_value: csv_utils.CSV_EXPORT_RAW_TYPE, world_ts: float, world_index: int
     ) -> dict:
         try:
             imu_timestamp = str(world_ts)
@@ -622,12 +664,10 @@ class Imu_Exporter(_Base_Positions_Exporter):
             "accel_y": accel_y,
             "accel_z": accel_z,
             "pitch": pitch,
-            "roll": roll
+            "roll": roll,
         }
 
-    def csv_export_write(
-            self, imu_bisector, timestamps, export_window, export_dir
-    ):
+    def csv_export_write(self, imu_bisector, timestamps, export_window, export_dir):
         export_file = type(self).csv_export_filename()
         export_path = os.path.join(export_dir, export_file)
 
@@ -639,12 +679,12 @@ class Imu_Exporter(_Base_Positions_Exporter):
             dict_writer = csv.DictWriter(csvfile, fieldnames=csv_header)
             dict_writer.writeheader()
 
-            for d_raw, wts, idx in zip(export_section["data"],
-                                       export_section["data_ts"],
-                                       export_world_idc):
-                dict_row = type(self).dict_export(raw_value=d_raw,
-                                                  world_ts=wts,
-                                                  world_index=idx)
+            for d_raw, wts, idx in zip(
+                export_section["data"], export_section["data_ts"], export_world_idc
+            ):
+                dict_row = type(self).dict_export(
+                    raw_value=d_raw, world_ts=wts, world_index=idx
+                )
                 dict_writer.writerow(dict_row)
 
         logger.info(f"Created '{export_file}' file.")
