@@ -22,7 +22,7 @@ from pyglui.cygl import utils as cygl_utils
 import background_helper as bh
 import gl_utils
 from plugin import Plugin
-from pupil_recording import PupilRecording
+from pupil_recording import PupilRecording, RecordingInfo
 from raw_data_exporter import _Base_Positions_Exporter
 import player_methods as pm
 import csv_utils
@@ -298,6 +298,19 @@ class IMUTimeline(Plugin):
     @classmethod
     def parse_pretty_class_name(cls) -> str:
         return "IMU Timeline"
+
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Enable in Player only if Pupil Invisible recording
+                return True
+        return False
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
