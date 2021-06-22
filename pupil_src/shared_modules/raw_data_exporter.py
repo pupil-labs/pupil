@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -20,6 +20,9 @@ from pyglui import ui
 import csv_utils
 import player_methods as pm
 from plugin import Plugin
+
+from pupil_producers import Pupil_Producer_Base
+
 
 # logging
 logger = logging.getLogger(__name__)
@@ -116,9 +119,19 @@ class Raw_Data_Exporter(Plugin):
         should_export_gaze_positions=True,
     ):
         super().__init__(g_pool)
+
+        # If no pupil producer is available, don't export pupil positions
+        if not self._is_pupil_producer_avaiable:
+            should_export_pupil_positions = False
+
         self.should_export_pupil_positions = should_export_pupil_positions
         self.should_export_field_info = should_export_field_info
         self.should_export_gaze_positions = should_export_gaze_positions
+
+    @property
+    def _is_pupil_producer_avaiable(self) -> bool:
+        producers = Pupil_Producer_Base.available_pupil_producer_plugins(self.g_pool)
+        return len(producers) > 0
 
     def init_ui(self):
         self.add_menu()
@@ -129,11 +142,13 @@ class Raw_Data_Exporter(Plugin):
                 "Select your export frame range using the trim marks in the seek bar. This will affect all exporting plugins."
             )
         )
-        self.menu.append(
-            ui.Switch(
-                "should_export_pupil_positions", self, label="Export Pupil Positions"
-            )
+
+        pupil_positions_switch = ui.Switch(
+            "should_export_pupil_positions", self, label="Export Pupil Positions"
         )
+        pupil_positions_switch.read_only = not self._is_pupil_producer_avaiable
+        self.menu.append(pupil_positions_switch)
+
         self.menu.append(
             ui.Switch(
                 "should_export_field_info",
@@ -296,7 +311,6 @@ class Pupil_Positions_Exporter(_Base_Positions_Exporter):
         try:
             diameter_3d = raw_value["diameter_3d"]
             model_confidence = raw_value["model_confidence"]
-            model_id = raw_value["model_id"]
             sphere_center = raw_value["sphere"]["center"]
             sphere_radius = raw_value["sphere"]["radius"]
             circle_3d_center = raw_value["circle_3d"]["center"]
@@ -310,7 +324,6 @@ class Pupil_Positions_Exporter(_Base_Positions_Exporter):
         except KeyError:
             diameter_3d = None
             model_confidence = None
-            model_id = None
             sphere_center = [None, None, None]
             sphere_radius = None
             circle_3d_center = [None, None, None]
@@ -321,6 +334,9 @@ class Pupil_Positions_Exporter(_Base_Positions_Exporter):
             projected_sphere_center = [None, None]
             projected_sphere_axis = [None, None]
             projected_sphere_angle = None
+
+        # pye3d no longer includes this field. Keeping for backwards-compatibility.
+        model_id = raw_value.get("model_id", None)
 
         return {
             # 2d data
@@ -420,14 +436,28 @@ class Gaze_Positions_Exporter(_Base_Positions_Exporter):
             gaze_points_3d = raw_value["gaze_point_3d"]
             # binocular
             if raw_value.get("eye_centers_3d", None) is not None:
-                eye_centers0_3d = raw_value["eye_centers_3d"].get(0, [None, None, None])
-                eye_centers1_3d = raw_value["eye_centers_3d"].get(1, [None, None, None])
-                #
-                gaze_normals0_3d = raw_value["gaze_normals_3d"].get(
-                    0, [None, None, None]
+                eye_centers_3d = raw_value["eye_centers_3d"]
+                gaze_normals_3d = raw_value["gaze_normals_3d"]
+
+                eye_centers0_3d = (
+                    eye_centers_3d.get("0", None)
+                    or eye_centers_3d.get(0, None)  # backwards compatibility
+                    or [None, None, None]
                 )
-                gaze_normals1_3d = raw_value["gaze_normals_3d"].get(
-                    1, [None, None, None]
+                eye_centers1_3d = (
+                    eye_centers_3d.get("1", None)
+                    or eye_centers_3d.get(1, None)  # backwards compatibility
+                    or [None, None, None]
+                )
+                gaze_normals0_3d = (
+                    gaze_normals_3d.get("0", None)
+                    or gaze_normals_3d.get(0, None)  # backwards compatibility
+                    or [None, None, None]
+                )
+                gaze_normals1_3d = (
+                    gaze_normals_3d.get("1", None)
+                    or gaze_normals_3d.get(1, None)  # backwards compatibility
+                    or [None, None, None]
                 )
             # monocular
             elif raw_value.get("eye_center_3d", None) is not None:

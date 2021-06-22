@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,35 +10,87 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import logging
-from collections import namedtuple
+import traceback
 import typing as T
 
-import OpenGL.GL as gl
 import numpy as np
+import OpenGL.GL as gl
+import scipy.spatial
 from pyglui import ui
-from pyglui.cygl.utils import draw_points_norm, draw_polyline_norm, RGBA
-from scipy.spatial import ConvexHull
+from pyglui.cygl.utils import RGBA, draw_points_norm, draw_polyline_norm
 
 from calibration_choreography import (
     ChoreographyAction,
     ChoreographyMode,
     ChoreographyNotification,
 )
-from plugin import Plugin
-
 from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
 from gaze_mapping.notifications import (
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
 )
 from gaze_mapping.utils import closest_matches_monocular
-
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
-Calculation_Result = namedtuple(
-    "Calculation_Result", ["result", "num_used", "num_total"]
-)
+
+class CalculationResult(T.NamedTuple):
+    result: float
+    num_used: int
+    num_total: int
+
+
+class CorrelatedAndCoordinateTransformedResult(T.NamedTuple):
+    """Holds result from correlating reference and gaze data and their respective
+    transformations into norm, image, and camera coordinate systems.
+    """
+
+    norm_space: np.ndarray  # shape: 2*n, 2
+    image_space: np.ndarray  # shape: 2*n, 2
+    camera_space: np.ndarray  # shape: 2*n, 3
+
+    @staticmethod
+    def empty() -> "CorrelatedAndCoordinateTransformedResult":
+        return CorrelatedAndCoordinateTransformedResult(
+            norm_space=np.ndarray([]),
+            image_space=np.ndarray([]),
+            camera_space=np.ndarray([]),
+        )
+
+    @property
+    def is_valid(self) -> bool:
+        if len(self.norm_space.shape) != 2:
+            return False
+        # TODO: Make validity check exhaustive
+        return True
+
+
+class CorrelationError(ValueError):
+    pass
+
+
+class AccuracyPrecisionResult(T.NamedTuple):
+    accuracy: CalculationResult
+    precision: CalculationResult
+    error_lines: np.ndarray
+    correlation: CorrelatedAndCoordinateTransformedResult
+
+    @staticmethod
+    def failed() -> "AccuracyPrecisionResult":
+        return AccuracyPrecisionResult(
+            accuracy=CalculationResult(0.0, 0, 0),
+            precision=CalculationResult(0.0, 0, 0),
+            error_lines=np.array([]),
+            correlation=CorrelatedAndCoordinateTransformedResult.empty(),
+        )
+
+    @property
+    def is_valid(self) -> bool:
+        if not self.correlation.is_valid:
+            return False
+        # TODO: Make validity check exhaustive
+        return True
 
 
 class ValidationInput:
@@ -105,10 +157,6 @@ class ValidationInput:
 
     @staticmethod
     def __gazer_class_from_name(gazer_class_name: str) -> T.Optional[T.Any]:
-        if "HMD" in gazer_class_name:
-            logger.info("Accuracy visualization is disabled for HMD calibration")
-            return None
-
         gazers_by_name = gazer_classes_by_class_name(registered_gazer_classes())
 
         try:
@@ -320,10 +368,12 @@ class Accuracy_Visualizer(Plugin):
         return True
 
     def recalculate(self):
+        NOT_ENOUGH_DATA_COLLECTED_ERR_MSG = (
+            "Did not collect enough data to estimate gaze mapping accuracy."
+        )
+
         if not self.recent_input.is_complete:
-            logger.info(
-                "Did not collect enough data to estimate gaze mapping accuracy."
-            )
+            logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
             return
 
         results = self.calc_acc_prec_errlines(
@@ -337,7 +387,11 @@ class Accuracy_Visualizer(Plugin):
             succession_threshold=self.succession_threshold,
         )
 
-        accuracy = results[0].result
+        if not results.is_valid:
+            logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
+            return
+
+        accuracy = results.accuracy.result
         if np.isnan(accuracy):
             self.accuracy = None
             logger.warning(
@@ -349,7 +403,7 @@ class Accuracy_Visualizer(Plugin):
                 "Angular accuracy: {}. Used {} of {} samples.".format(*results[0])
             )
 
-        precision = results[1].result
+        precision = results.precision.result
         if np.isnan(precision):
             self.precision = None
             logger.warning(
@@ -361,12 +415,16 @@ class Accuracy_Visualizer(Plugin):
                 "Angular precision: {}. Used {} of {} samples.".format(*results[1])
             )
 
-        self.error_lines = results[2]
-
-        ref_locations = [loc["norm_pos"] for loc in self.recent_input.ref_list]
+        self.error_lines = results.error_lines
+        ref_locations = results.correlation.norm_space[1::2, :]
         if len(ref_locations) >= 3:
-            hull = ConvexHull(ref_locations)  # requires at least 3 points
-            self.calibration_area = hull.points[hull.vertices, :]
+            try:
+                # requires at least 3 points
+                hull = scipy.spatial.ConvexHull(ref_locations)
+                self.calibration_area = hull.points[hull.vertices, :]
+            except scipy.spatial.qhull.QhullError:
+                logger.warning("Calibration area could not be calculated")
+                logger.debug(traceback.format_exc())
 
     @staticmethod
     def calc_acc_prec_errlines(
@@ -378,36 +436,25 @@ class Accuracy_Visualizer(Plugin):
         intrinsics,
         outlier_threshold,
         succession_threshold=np.cos(np.deg2rad(0.5)),
-    ):
+    ) -> AccuracyPrecisionResult:
         gazer = gazer_class(g_pool, params=gazer_params)
 
         gaze_pos = gazer.map_pupil_to_gaze(pupil_list)
         ref_pos = ref_list
 
-        width, height = intrinsics.resolution
-
-        # reuse closest_matches_monocular to correlate one label to each prediction
-        # correlated['ref']: prediction, correlated['pupil']: label location
-        correlated = closest_matches_monocular(gaze_pos, ref_pos)
-        # [[pred.x, pred.y, label.x, label.y], ...], shape: n x 4
-        locations = np.array(
-            [(*e["ref"]["norm_pos"], *e["pupil"]["norm_pos"]) for e in correlated]
-        )
-        if locations.size == 0:
-            accuracy_result = Calculation_Result(0.0, 0, 0)
-            precision_result = Calculation_Result(0.0, 0, 0)
-            error_lines = np.array([])
-            return accuracy_result, precision_result, error_lines
-        error_lines = locations.copy()  # n x 4
-        locations[:, ::2] *= width
-        locations[:, 1::2] = (1.0 - locations[:, 1::2]) * height
-        locations.shape = -1, 2
+        try:
+            correlation_result = Accuracy_Visualizer.correlate_and_coordinate_transform(
+                gaze_pos, ref_pos, intrinsics
+            )
+            error_lines = correlation_result.norm_space.reshape(-1, 4)
+            undistorted_3d = correlation_result.camera_space
+        except CorrelationError:
+            return AccuracyPrecisionResult.failed()
 
         # Accuracy is calculated as the average angular
         # offset (distance) (in degrees of visual angle)
         # between fixations locations and the corresponding
         # locations of the fixation targets.
-        undistorted_3d = intrinsics.unprojectPoints(locations, normalize=True)
 
         # Cosine distance of A and B: (A @ B) / (||A|| * ||B||)
         # No need to calculate norms, since A and B are normalized in our case.
@@ -426,7 +473,7 @@ class Accuracy_Visualizer(Plugin):
             -1, 2
         )  # shape: num_used x 2
         accuracy = np.rad2deg(np.arccos(selected_samples.clip(-1.0, 1.0).mean()))
-        accuracy_result = Calculation_Result(accuracy, num_used, num_total)
+        accuracy_result = CalculationResult(accuracy, num_used, num_total)
 
         # lets calculate precision:  (RMS of distance of succesive samples.)
         # This is a little rough as we do not compensate headmovements in this test.
@@ -457,9 +504,89 @@ class Accuracy_Visualizer(Plugin):
         precision = np.sqrt(
             np.mean(np.rad2deg(np.arccos(succesive_distances.clip(-1.0, 1.0))) ** 2)
         )
-        precision_result = Calculation_Result(precision, num_used, num_total)
+        precision_result = CalculationResult(precision, num_used, num_total)
 
-        return accuracy_result, precision_result, error_lines
+        return AccuracyPrecisionResult(
+            accuracy_result, precision_result, error_lines, correlation_result
+        )
+
+    @staticmethod
+    def correlate_and_coordinate_transform(
+        gaze_pos, ref_pos, intrinsics
+    ) -> CorrelatedAndCoordinateTransformedResult:
+        # reuse closest_matches_monocular to correlate one label to each prediction
+        # correlated['ref']: prediction, correlated['pupil']: label location
+        # NOTE the switch of the ref and pupil keys! This effects mostly hmd data.
+        correlated = closest_matches_monocular(gaze_pos, ref_pos)
+        # [[pred.x, pred.y, label.x, label.y], ...], shape: n x 4
+        if not correlated:
+            raise CorrelationError("No correlation possible")
+
+        try:
+            return Accuracy_Visualizer._coordinate_transform_ref_in_norm_space(
+                correlated, intrinsics
+            )
+        except KeyError as err:
+            if "norm_pos" in err.args:
+                return Accuracy_Visualizer._coordinate_transform_ref_in_camera_space(
+                    correlated, intrinsics
+                )
+            else:
+                raise
+
+    @staticmethod
+    def _coordinate_transform_ref_in_norm_space(
+        correlated, intrinsics
+    ) -> CorrelatedAndCoordinateTransformedResult:
+        width, height = intrinsics.resolution
+        locations_norm = np.array(
+            [(*e["ref"]["norm_pos"], *e["pupil"]["norm_pos"]) for e in correlated]
+        )
+        locations_image = locations_norm.copy()  # n x 4
+        locations_image[:, ::2] *= width
+        locations_image[:, 1::2] = (1.0 - locations_image[:, 1::2]) * height
+        locations_image.shape = -1, 2
+        locations_norm.shape = -1, 2
+        locations_camera = intrinsics.unprojectPoints(locations_image, normalize=True)
+        return CorrelatedAndCoordinateTransformedResult(
+            locations_norm, locations_image, locations_camera
+        )
+
+    @staticmethod
+    def _coordinate_transform_ref_in_camera_space(
+        correlated, intrinsics
+    ) -> CorrelatedAndCoordinateTransformedResult:
+        width, height = intrinsics.resolution
+        locations_mixed = np.array(
+            # NOTE: This looks incorrect, but is actually correct. The switch comes from
+            # using closest_matches_monocular() above with switched arguments.
+            [(*e["ref"]["norm_pos"], *e["pupil"]["mm_pos"]) for e in correlated]
+        )  # n x 5
+        pupil_norm = locations_mixed[:, 0:2]  # n x 2
+        pupil_image = pupil_norm.copy()
+        pupil_image[:, 0] *= width
+        pupil_image[:, 1] = (1.0 - pupil_image[:, 1]) * height
+        pupil_camera = intrinsics.unprojectPoints(pupil_image, normalize=True)  # n x 3
+
+        ref_camera = locations_mixed[:, 2:5]  # n x 3
+        ref_camera /= np.linalg.norm(ref_camera, axis=1, keepdims=True)
+        ref_image = intrinsics.projectPoints(ref_camera)  # n x 2
+        ref_norm = ref_image.copy()
+        ref_norm[:, 0] /= width
+        ref_norm[:, 1] = 1.0 - (ref_norm[:, 1] / height)
+
+        locations_norm = np.hstack([pupil_norm, ref_norm])  # n x 4
+        locations_norm.shape = -1, 2
+
+        locations_image = np.hstack([pupil_image, ref_image])  # n x 4
+        locations_image.shape = -1, 2
+
+        locations_camera = np.hstack([pupil_camera, ref_camera])  # n x 6
+        locations_camera.shape = -1, 3
+
+        return CorrelatedAndCoordinateTransformedResult(
+            locations_norm, locations_image, locations_camera
+        )
 
     def gl_display(self):
         if self.vis_mapping_error and self.error_lines is not None:

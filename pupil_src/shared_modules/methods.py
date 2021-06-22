@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,16 +9,22 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os, sys, platform, getpass
+import getpass
+import logging
+import os
+import platform
+import sys
+import traceback
+import typing as T
 from time import time
+
+import cv2
 import numpy as np
 
 try:
     import numexpr as ne
 except Exception:
     ne = None
-import cv2
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -774,3 +780,40 @@ def timeit(method):
         return result
 
     return timed
+
+
+X = T.TypeVar("X")
+
+
+def iter_catch(
+    iterator: T.Iterator[X],
+    errors_to_catch: T.Union[Exception, T.Tuple[Exception]],
+    log_on_catch: bool = True,
+) -> T.Iterator[T.Optional[X]]:
+    iterator = iter(iterator)
+    while True:
+        try:
+            yield next(iterator)
+        except errors_to_catch:
+            if log_on_catch:
+                logger.debug(traceback.format_exc())
+            yield None
+        except StopIteration:
+            return
+
+
+def container_decode(container, *args, **kwargs):
+    """Does the same as container.decode() but does not crash silently on Windows
+    TODO: Replace once container.decode() is fixed in pyav
+    """
+    for packet in container.demux(*args, **kwargs):
+        yield from packet.decode()
+
+
+def make_change_loglevel_fn(level):
+    def _change_level(record):
+        record.levelno = level
+        record.levelname = logging.getLevelName(record.levelno)
+        return record
+
+    return _change_level

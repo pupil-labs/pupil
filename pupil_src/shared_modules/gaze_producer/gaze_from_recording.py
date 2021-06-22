@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,9 +13,23 @@ from pyglui import ui
 import file_methods as fm
 import player_methods as pm
 from gaze_producer.gaze_producer_base import GazeProducerBase
+from pupil_recording import PupilRecording, RecordingInfo
 
 
 class GazeFromRecording(GazeProducerBase):
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE
+            ):
+                # Disable gaze from recording in Player if Pupil Mobile recording
+                return False
+        return super().is_available_within_context(g_pool)
+
     @classmethod
     def plugin_menu_label(cls) -> str:
         return "Gaze Data From Recording"

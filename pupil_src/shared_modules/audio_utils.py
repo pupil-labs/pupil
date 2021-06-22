@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 import collections
 import logging
+import traceback
 
 import av
 import numpy as np
@@ -25,7 +26,7 @@ class NoAudioLoadedError(Exception):
 
 
 LoadedAudio = collections.namedtuple(
-    "LoadedAudio", ["container", "stream", "timestamps"]
+    "LoadedAudio", ["container", "stream", "timestamps", "pts"]
 )
 
 
@@ -71,19 +72,26 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
     except IOError:
         return None
 
-    if return_pts_based_timestamps:
-        start = timestamps[0]
-        timestamps = np.fromiter(
-            (
-                float(start + p.pts * p.time_base)
-                for p in container.demux(audio=0)
-                if p is not None and p.pts is not None and p.time_base is not None
-            ),
-            dtype=float,
-        )
-        container.seek(0)
+    start = timestamps[0]
+    packet_pts = np.array(
+        [p.pts for p in container.demux(stream) if p is not None and p.pts is not None],
+    )
 
-    return LoadedAudio(container, stream, timestamps)
+    if return_pts_based_timestamps:
+        timestamps = start + packet_pts * stream.time_base
+
+    # pts seeking requires primitive Python integers and does not accept numpy int types;
+    # `.tolist()` converts numpy integers to primitive Python integers; do conversion after
+    # `packet_pts * stream.time_base` to leverage numpy element-wise function application
+    packet_pts = packet_pts.tolist()
+
+    try:
+        container.seek(0)
+    except av.AVError as err:
+        logger.debug(f"{err}")
+        return None
+
+    return LoadedAudio(container, stream, timestamps, packet_pts)
 
 
 class Audio_Viz_Transform:
@@ -110,9 +118,12 @@ class Audio_Viz_Transform:
 
     def _next_audio_frame(self):
         for packet in self.audio.container.demux(self.audio.stream):
-            for frame in packet.decode():
-                if frame:
-                    yield frame
+            try:
+                for frame in packet.decode():
+                    if frame:
+                        yield frame
+            except av.AVError:
+                logger.debug(traceback.format_exc())
 
     def sec_to_frames(self, sec):
         return int(np.ceil(sec * self.audio.stream.rate / self.audio.stream.frame_size))

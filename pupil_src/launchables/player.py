@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -69,10 +69,13 @@ def player(
         # imports
         from file_methods import Persistent_Dict, next_export_sub_dir
 
+        from OpenGL.GL import GL_COLOR_BUFFER_BIT
+
         # display
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         # check versions for our own depedencies as they are fast-changing
         from pyglui import __version__ as pyglui_version
@@ -90,6 +93,7 @@ def player(
         import player_methods as pm
         from pupil_recording import PupilRecording
         from csv_utils import write_key_value_file
+        from hotkey import Hotkey
 
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
@@ -110,11 +114,16 @@ def player(
         from annotations import Annotation_Player
         from raw_data_exporter import Raw_Data_Exporter
         from log_history import Log_History
-        from pupil_producers import Pupil_From_Recording, Offline_Pupil_Detection
+        from pupil_producers import (
+            DisabledPupilProducer,
+            Pupil_From_Recording,
+            Offline_Pupil_Detection,
+        )
         from gaze_producer.gaze_from_recording import GazeFromRecording
         from gaze_producer.gaze_from_offline_calibration import (
             GazeFromOfflineCalibration,
         )
+        from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
         from blink_detection import Offline_Blink_Detection
@@ -134,7 +143,7 @@ def player(
         )
 
         assert parse_version(pyglui_version) >= parse_version(
-            "1.28"
+            "1.29"
         ), "pyglui out of date, please upgrade to newest version"
 
         process_was_interrupted = False
@@ -150,6 +159,9 @@ def player(
         signal.signal(signal.SIGINT, interrupt_handler)
 
         runtime_plugins = import_runtime_plugins(os.path.join(user_dir, "plugins"))
+        runtime_plugins = [
+            p for p in runtime_plugins if not issubclass(p, PupilDetectorPlugin)
+        ]
         system_plugins = [
             Log_Display,
             Seek_Control,
@@ -173,6 +185,7 @@ def player(
             Raw_Data_Exporter,
             Annotation_Player,
             Log_History,
+            DisabledPupilProducer,
             Pupil_From_Recording,
             Offline_Pupil_Detection,
             GazeFromRecording,
@@ -238,7 +251,7 @@ def player(
 
             # Always clear buffers on resize to make sure that there are no overlapping
             # artifacts from previous frames.
-            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClear(GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
             content_scale = gl_utils.get_content_scale(window)
@@ -331,6 +344,7 @@ def player(
         # create container for globally scoped vars
         g_pool = SimpleNamespace()
         g_pool.app = "player"
+        g_pool.process = "player"
         g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_pub
         g_pool.ipc_pub_url = ipc_pub_url
@@ -367,7 +381,6 @@ def player(
         glfw.init()
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         main_window = glfw.create_window(width, height, window_name, None, None)
-
         window_position_manager = gl_utils.WindowPositionManager()
         window_pos = window_position_manager.new_window_position(
             window=main_window,
@@ -555,7 +568,7 @@ def player(
             label=chr(0xE2C5),
             getter=lambda: False,
             setter=do_export,
-            hotkey="e",
+            hotkey=Hotkey.EXPORT_START_PLAYER_HOTKEY(),
             label_font="pupil_icons",
         )
         g_pool.quickbar.extend([g_pool.export_button])
@@ -565,6 +578,19 @@ def player(
         g_pool.gui.append(g_pool.quickbar)
 
         # we always load these plugins
+        _pupil_producer_plugins = [
+            # In priority order (first is default)
+            ("Pupil_From_Recording", {}),
+            ("Offline_Pupil_Detection", {}),
+            ("DisabledPupilProducer", {}),
+        ]
+        _pupil_producer_plugins = list(reversed(_pupil_producer_plugins))
+        _gaze_producer_plugins = [
+            # In priority order (first is default)
+            ("GazeFromRecording", {}),
+            ("GazeFromOfflineCalibration", {}),
+        ]
+        _gaze_producer_plugins = list(reversed(_gaze_producer_plugins))
         default_plugins = [
             ("Plugin_Manager", {}),
             ("Seek_Control", {}),
@@ -575,14 +601,25 @@ def player(
             ("System_Graphs", {}),
             ("System_Timelines", {}),
             ("World_Video_Exporter", {}),
-            ("Pupil_From_Recording", {}),
-            ("GazeFromRecording", {}),
+            *_pupil_producer_plugins,
+            *_gaze_producer_plugins,
             ("Audio_Playback", {}),
         ]
+        _plugins_to_load = session_settings.get("loaded_plugins", None)
+        if _plugins_to_load is None:
+            # If no plugins are available from a previous session,
+            # then use the default plugin list
+            _plugins_to_load = default_plugins
+        else:
+            # If there are plugins available from a previous session,
+            # then prepend plugins that are required, but might have not been available before
+            _plugins_to_load = [
+                *_pupil_producer_plugins,
+                *_gaze_producer_plugins,
+                *_plugins_to_load,
+            ]
 
-        g_pool.plugins = Plugin_List(
-            g_pool, session_settings.get("loaded_plugins", default_plugins)
-        )
+        g_pool.plugins = Plugin_List(g_pool, _plugins_to_load)
 
         # Manually add g_pool.capture to the plugin list
         g_pool.plugins._plugins.append(g_pool.capture)
@@ -801,8 +838,9 @@ def player_drop(
 
     try:
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         import gl_utils
         from OpenGL.GL import glClearColor

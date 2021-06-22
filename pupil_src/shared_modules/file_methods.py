@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -23,9 +23,10 @@ from pathlib import Path
 import msgpack
 import numpy as np
 
+
 assert (
-    msgpack.version[1] == 5
-), "msgpack out of date, please upgrade to version (0, 5, 6 ) or later."
+    msgpack.version[0] == 1
+), "msgpack out of date, please upgrade to version (1, 0, 0)"
 
 
 logger = logging.getLogger(__name__)
@@ -41,7 +42,9 @@ class Persistent_Dict(dict):
         super().__init__(*args, **kwargs)
         self.file_path = os.path.expanduser(file_path)
         try:
-            self.update(**load_object(self.file_path, allow_legacy=False))
+            if os.path.getsize(file_path) > 0:
+                # Only try to load object if file is not empty
+                self.update(**load_object(self.file_path, allow_legacy=False))
         except IOError:
             logger.debug(
                 f"Session settings file '{self.file_path}' not found."
@@ -77,7 +80,7 @@ def load_object(file_path, allow_legacy=True):
     with file_path.open("rb") as fh:
         try:
             gc.disable()  # speeds deserialization up.
-            data = msgpack.unpack(fh, raw=False)
+            data = msgpack.unpack(fh, strict_map_key=False)
         except Exception as e:
             if not allow_legacy:
                 raise e
@@ -118,7 +121,9 @@ class Incremental_Legacy_Pupil_Data_Loader(object):
 
     def __enter__(self):
         self.file_handle = open(self.file_loc, "rb")
-        self.unpacker = msgpack.Unpacker(self.file_handle, raw=False, use_list=False)
+        self.unpacker = msgpack.Unpacker(
+            self.file_handle, use_list=False, strict_map_key=False
+        )
         self.num_key_value_pairs = self.unpacker.read_map_header()
         self._skipped = True
         return self
@@ -143,7 +148,9 @@ def load_pldata_file(directory, topic):
         topics = collections.deque()
         data_ts = np.load(ts_file)
         with open(msgpack_file, "rb") as fh:
-            for topic, payload in msgpack.Unpacker(fh, raw=False, use_list=False):
+            for topic, payload in msgpack.Unpacker(
+                fh, use_list=False, strict_map_key=False
+            ):
                 data.append(Serialized_Dict(msgpack_bytes=payload))
                 topics.append(topic)
     except FileNotFoundError:
@@ -235,10 +242,10 @@ class Serialized_Dict(object):
         if not self._data:
             self._data = msgpack.unpackb(
                 self._ser_data,
-                raw=False,
                 use_list=False,
                 object_hook=self.unpacking_object_hook,
                 ext_hook=self.unpacking_ext_hook,
+                strict_map_key=False,
             )
             self._cache_ref.pop(0).purge_cache()
             self._cache_ref.append(self)
@@ -360,7 +367,6 @@ class Serialized_Dict(object):
 
         return msgpack.unpackb(
             self._ser_data,
-            raw=False,
             use_list=False,
             ext_hook=unpacking_ext_hook,
         )

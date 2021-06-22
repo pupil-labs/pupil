@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -30,7 +30,7 @@ class _SerializedNamedTupleMixin:
 
     @classmethod
     def sanitize_serialized_dict(cls, dict_: dict) -> dict:
-        field_classes = cls._field_types
+        field_classes = cls.__annotations__
         for field_name in cls._fields:
             field_cls = field_classes[field_name]
             dict_[field_name] = field_cls(dict_[field_name])

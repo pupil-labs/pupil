@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,12 +16,13 @@ import cv2
 import numpy as np
 
 import glfw
+from gl_utils import draw_circle_filled_func_builder, GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
-from methods import normalize
+from methods import normalize, denormalize
 from pyglui import ui
-from pyglui.cygl.utils import draw_points_norm, RGBA
+from pyglui.cygl.utils import RGBA
 import audio
 
 from .controller import GUIMonitor
@@ -58,6 +59,7 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
         self.__number_of_ref_points_gathered_from_last_click = 0
         self.__previously_detected_feature = None
         self.__feature_tracker = NaturalFeatureTracker()
+        self._draw_circle_filled = draw_circle_filled_func_builder()
 
     def get_init_dict(self):
         return {}
@@ -110,9 +112,11 @@ class NaturalFeatureChoreographyPlugin(CalibrationChoreographyPlugin):
     def gl_display(self):
         feature = self.__previously_detected_feature
         if feature:
-            draw_points_norm(
-                [feature["norm_pos"]],
-                size=self._RADIUS_OF_CIRCLE_DISPLAYED,
+            recent_frame_size = self.g_pool.capture.frame_size
+            point = denormalize(feature["norm_pos"], recent_frame_size, flip_y=True)
+            self._draw_circle_filled(
+                tuple(point),
+                size=self._RADIUS_OF_CIRCLE_DISPLAYED / 2,
                 color=RGBA(0.0, 1.0, 0.0, 0.5),
             )
 

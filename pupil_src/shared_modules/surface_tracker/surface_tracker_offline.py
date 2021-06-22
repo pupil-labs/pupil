@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,6 +14,7 @@ import logging
 import multiprocessing
 import os
 import platform
+import tempfile
 import time
 import typing as T
 
@@ -559,6 +560,16 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
                     break
 
         elif notification["subject"] == "should_export":
+            # Create new marker cache temporary file
+            # Backgroud exporter is responsible of removing the temporary file when finished
+            file_handle, marker_cache_path = tempfile.mkstemp()
+            os.close(file_handle)  # https://bugs.python.org/issue42830
+
+            # Save marker cache into the new temporary file
+            temp_marker_cache = file_methods.Persistent_Dict(marker_cache_path)
+            temp_marker_cache["marker_cache"] = self.marker_cache
+            temp_marker_cache.save()
+
             proxy = background_tasks.get_export_proxy(
                 notification["export_dir"],
                 notification["range"],
@@ -567,6 +578,7 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
                 self.g_pool.gaze_positions,
                 self.g_pool.fixations,
                 self.camera_model,
+                marker_cache_path,
                 mp_context,
             )
             self.export_proxies.add(proxy)

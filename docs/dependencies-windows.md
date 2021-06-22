@@ -90,30 +90,22 @@ The following steps require you to store dynamic libraries in the `pupil_externa
 
 #### FFMPEG
 
-- [Download FFMPEG v4.0 Windows **shared** binaries](https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2020-10-12-12-31/ffmpeg-n4.3.1-20-g8a2acdc6da-win64-lgpl-shared-4.3.zip)
+- [Download FFMPEG v4.3 Windows **shared LGPL** binaries](https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2021-03-31-12-39/ffmpeg-n4.3.2-162-g4bbcaf7559-win64-lgpl-shared-4.3.zip) 
 - Unzip `ffmpeg-*-shared-4.3.zip` to your work dir
-- Copy the following 8 `.dll` files to `pupil_external`
+- Copy the following 7 `.dll` files from `ffmpeg-*-lgpl-shared-4.3\bin` to `pupil_external`
     - `avcodec-58.dll`
     - `avdevice-58.dll`
     - `avfilter-7.dll`
     - `avformat-58.dll`
     - `avutil-56.dll`
-    - `postproc-55.dll`
     - `swresample-3.dll`
     - `swscale-5.dll`
 
 ## Start Pupil
 
-To start either of the applications -- Capture, Player, or Service -- you can to execute the respective `run_*.bat` file (e.g. by double clicking), i.e. `run_capture.bat`, `run_player.bat`, or `run_service.bat`.
+To start either of the applications -- Capture, Player, or Service -- you need to run
+the `main.py` file with the respective application name as argument.
 
-```powershell
-cd pupil_src
-run_capture.bat
-# or run_player.bat
-# or run_service.bat
-```
-
-You can also run `main.py` directly from your IDE or command line. Make sure that the `pupil_external` folder is part of your system path.
 ```sh
 cd pupil_src
 python main.py capture # or player/service

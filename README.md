@@ -25,7 +25,7 @@ rel="noopener"
 target="_blank">
 	<p align="center">
 		<img 
-		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_app_download_banner.jpg" 
+		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_app_download_banner.png" 
 		alt="Download the latest Pupil Core Apps: Pupil Capture, Pupil Player, Pupil Service"/>
 	</p>
 </a>
@@ -42,7 +42,7 @@ There are a number of ways you can interact with Pupil Core software as a develo
 - [Develop a Plugin](https://docs.pupil-labs.com/developer/core/plugin-api/): Plugins are loaded at runtime from the app bundle. Note: if your plugin requires Python libraries that are not included in the application bundle, then you will need to run from source. 
 - [Run from Source](#installing-dependencies): Can't do what you need to do with the network based api or plugin? Then get ready to dive into the inner workings of Pupil and run from source!
 
-All setup and dependency installation instructions are contained in this repo. All other developer documentation is [here](https://docs.pupil-labs.com/developer/core "Pupil Core developer docs").
+All setup and dependency installation instructions are contained in this repo. All other developer documentation is [here](https://docs.pupil-labs.com/developer/core/overview/ "Pupil Core developer docs").
 
 ### Installing Dependencies
 - [Ubuntu 18.04 LTS](./docs/dependencies-ubuntu18.md "Pupil dependency installation for Ubuntu 18.04") (recommended Linux distribution)
@@ -61,17 +61,6 @@ cd pupil
 _Note_: If you are using Windows, you will have to complete a few more steps after cloning the repo. Please refer to the [Windows 10 dependencies setup guide](./docs/dependencies-windows.md "Pupil dependency installation for Windows 10").
 
 ### Run Pupil
-
-#### Windows
-
-```powershell
-cd pupil_src
-run_capture.bat
-# or run_player.bat
-# or run_service.bat
-```
-
-#### macOS/Linux
 
 ```sh
 cd pupil_src

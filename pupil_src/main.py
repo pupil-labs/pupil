@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -61,6 +61,17 @@ if running_from_bundle:
 else:
     # Specifiy user dir.
     user_dir = os.path.join(pupil_base_dir, "{}_settings".format(parsed_args.app))
+
+    # Add pupil_external binaries to PATH
+    if platform.system() == "Windows":
+        import os
+        import pathlib
+
+        path_external = (
+            pathlib.Path(__file__) / ".." / ".." / "pupil_external"
+        ).resolve()
+        print(f"Adding {path_external} to PATH")
+        os.environ["PATH"] += f"{os.pathsep}{path_external}"
 
 # create folder for user settings, tmp data
 if not os.path.isdir(user_dir):
@@ -310,6 +321,7 @@ def launcher():
                             parsed_args.hide_ui,
                             parsed_args.debug,
                             n.get("pub_socket_hwm"),
+                            parsed_args.app,  # parent_application
                         ),
                     ).start()
                 elif "notify.player_process.should_start" in topic:
@@ -392,6 +404,14 @@ def launcher():
                             "doc": launcher.__doc__,
                         }
                     )
+                elif "notify.launcher_process.should_stop" in topic:
+                    if parsed_args.app == "capture":
+                        cmd_push.notify({"subject": "world_process.should_stop"})
+                    elif parsed_args.app == "service":
+                        cmd_push.notify({"subject": "service_process.should_stop"})
+                    elif parsed_args.app == "player":
+                        cmd_push.notify({"subject": "player_process.should_stop"})
+
             else:
                 if not active_children():
                     break

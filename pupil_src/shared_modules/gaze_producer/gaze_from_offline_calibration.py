@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,7 +13,7 @@ from gaze_producer import controller, model
 from gaze_producer import ui as plugin_ui
 from gaze_producer.gaze_producer_base import GazeProducerBase
 from plugin_timeline import PluginTimeline
-from pupil_recording import PupilRecording
+from pupil_recording import PupilRecording, RecordingInfo
 from tasklib.manager import UniqueTaskManager
 
 
@@ -22,6 +22,19 @@ from tasklib.manager import UniqueTaskManager
 class GazeFromOfflineCalibration(GazeProducerBase):
     icon_chr = chr(0xEC14)
     icon_font = "pupil_icons"
+
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Disable post-hoc gaze calibration in Player if Pupil Invisible recording
+                return False
+        return super().is_available_within_context(g_pool)
 
     @classmethod
     def plugin_menu_label(cls) -> str:

@@ -1,14 +1,14 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from .recording_info import RecordingInfoFile
+from .recording_info import RecordingInfoFile, RecordingInfo
 from .recording_info_2_0 import _RecordingInfoFile_2_0
 from .recording_info_2_1 import _RecordingInfoFile_2_1
 from .recording_info_2_2 import _RecordingInfoFile_2_2

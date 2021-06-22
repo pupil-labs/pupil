@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -39,6 +39,9 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
         try:
             container = av.open(str(video))
         except av.AVError:
+            continue
+
+        if container.streams.video[0].format is None:
             continue
 
         for camera in cm.default_intrinsics:

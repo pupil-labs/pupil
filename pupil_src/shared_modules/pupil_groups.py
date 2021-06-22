@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,15 +9,19 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import zmq, time, uuid
-from pyre import Pyre, PyreEvent, zhelper
+import logging
+import time
+import traceback
+import uuid
+
+import msgpack
+import zmq
 from pyglui import ui
+from pyre import Pyre, PyreEvent, zhelper
+
+import os_utils
 from plugin import Plugin
 from zmq_tools import Msg_Dispatcher, Msg_Receiver
-import msgpack as serializer
-
-import logging
-import os_utils
 
 os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
@@ -229,12 +233,12 @@ class Pupil_Groups(Plugin):
                 remote_key = "remote_notify"
                 if notification[remote_key] == "all":
                     del notification[remote_key]
-                    serialized = serializer.dumps(notification)
+                    serialized = msgpack.packb(notification)
                     group_member.shout(self.active_group, serialized)
                 else:
                     peer_uuid_bytes = notification[remote_key]
                     del notification[remote_key]
-                    serialized = serializer.dumps(notification)
+                    serialized = msgpack.packb(notification)
                     peer_uuid = uuid.UUID(bytes=peer_uuid_bytes)
                     group_member.whisper(peer_uuid, serialized)
 
@@ -244,7 +248,7 @@ class Pupil_Groups(Plugin):
                     for msg in event.msg:
                         try:
                             # try to unpack data
-                            notification = serializer.loads(msg, encoding="utf-8")
+                            notification = msgpack.unpackb(msg)
                             # test if dictionary and if `subject` key is present
                             notification["subject"]
                             # add peer information
@@ -261,6 +265,8 @@ class Pupil_Groups(Plugin):
                                     event.peer_name, event.peer_uuid
                                 )
                             )
+                            logger.debug(traceback.format_exc())
+
                 elif event.type == "JOIN" and event.group == self.active_group:
                     local_out.notify(
                         {

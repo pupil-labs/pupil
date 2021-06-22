@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,11 +15,14 @@ import socket
 
 import numpy as np
 
+from OpenGL.GL import GL_COLOR_BUFFER_BIT
+
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from gl_utils import GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
+
 from pyglui import ui, cygl
 from plugin import System_Plugin_Base
 
@@ -55,6 +58,7 @@ class Service_UI(System_Plugin_Base):
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if g_pool.hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
+
         main_window = glfw.create_window(*window_size, "Pupil Service", None, None)
 
         window_position_manager = gl_utils.WindowPositionManager()
@@ -79,7 +83,7 @@ class Service_UI(System_Plugin_Base):
         def on_resize(window, w, h):
             # Always clear buffers on resize to make sure that there are no overlapping
             # artifacts from previous frames.
-            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClear(GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
             self.window_size = w, h

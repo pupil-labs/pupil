@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -19,6 +19,10 @@ import cv2
 
 import background_helper
 import player_methods
+import file_methods
+
+from .surface_marker import Surface_Marker
+
 
 logger = logging.getLogger(__name__)
 
@@ -221,6 +225,7 @@ def get_export_proxy(
     gaze_positions,
     fixations,
     camera_model,
+    marker_cache_path,
     mp_context,
 ):
     exporter = Exporter(
@@ -231,6 +236,7 @@ def get_export_proxy(
         gaze_positions,
         fixations,
         camera_model,
+        marker_cache_path,
     )
     proxy = background_helper.IPC_Logging_Task_Proxy(
         "Offline Surface Tracker Exporter",
@@ -250,6 +256,7 @@ class Exporter:
         gaze_positions,
         fixations,
         camera_model,
+        marker_cache_path,
     ):
         self.export_range = export_range
         self.metrics_dir = os.path.join(export_dir, "surfaces")
@@ -260,6 +267,7 @@ class Exporter:
         self.camera_model = camera_model
         self.gaze_on_surfaces = None
         self.fixations_on_surfaces = None
+        self.marker_cache_path = marker_cache_path
 
     def save_surface_statisics_to_file(self):
         logger.info("exporting metrics to {}".format(self.metrics_dir))
@@ -297,6 +305,17 @@ class Exporter:
             logger.info(
                 "Saved surface gaze and fixation data for '{}'".format(surface.name)
             )
+
+        # Cleanup surface related data to release memory
+        self.surfaces = None
+        self.fixations = None
+        self.gaze_positions = None
+        self.gaze_on_surfaces = None
+        self.fixations_on_surfaces = None
+
+        # Perform marker export *after* surface data is released
+        # to avoid holding everything in memory all at once.
+        self._export_marker_detections()
 
         logger.info("Done exporting reference surface data.")
         return
@@ -337,6 +356,46 @@ class Exporter:
         )
 
         return gaze_on_surface, fixations_on_surface
+
+    def _export_marker_detections(self):
+
+        # Load the temporary marker cache created by the offline surface tracker
+        marker_cache = file_methods.Persistent_Dict(self.marker_cache_path)
+        marker_cache = marker_cache["marker_cache"]
+
+        try:
+            file_path = os.path.join(self.metrics_dir, "marker_detections.csv")
+            with open(file_path, "w", encoding="utf-8", newline="") as csv_file:
+                csv_writer = csv.writer(csv_file, delimiter=",")
+                csv_writer.writerow(
+                    (
+                        "world_index",
+                        "marker_uid",
+                        "corner_0_x",
+                        "corner_0_y",
+                        "corner_1_x",
+                        "corner_1_y",
+                        "corner_2_x",
+                        "corner_2_y",
+                        "corner_3_x",
+                        "corner_3_y",
+                    )
+                )
+                for idx, serialized_markers in enumerate(marker_cache):
+                    for m in map(Surface_Marker.deserialize, serialized_markers):
+                        flat_corners = [x for c in m.verts_px for x in c[0]]
+                        assert len(flat_corners) == 8  # sanity check
+                        csv_writer.writerow(
+                            (
+                                idx,
+                                m.uid,
+                                *flat_corners,
+                            )
+                        )
+        finally:
+            # Delete the temporary marker cache created by the offline surface tracker
+            os.remove(self.marker_cache_path)
+            self.marker_cache_path = None
 
     def _export_surface_visibility(self):
         with open(
@@ -481,8 +540,10 @@ class Exporter:
                     "num_detected_markers",
                     "dist_img_to_surf_trans",
                     "surf_to_dist_img_trans",
+                    "num_definition_markers",
                 )
             )
+            surface_definition_marker_count = len(surface.registered_marker_uids)
             for idx, (ts, ref_surf_data) in enumerate(
                 zip(self.world_timestamps, surface.location_cache)
             ):
@@ -501,6 +562,7 @@ class Exporter:
                                 ref_surf_data.num_detected_markers,
                                 ref_surf_data.dist_img_to_surf_trans,
                                 ref_surf_data.surf_to_dist_img_trans,
+                                surface_definition_marker_count,
                             )
                         )
 

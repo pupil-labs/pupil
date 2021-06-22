@@ -1,13 +1,13 @@
-# """
-# (*)~---------------------------------------------------------------------------
-# Pupil - eye tracking platform
-# Copyright (C) 2012-2020 Pupil Labs
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2021 Pupil Labs
 
-# Distributed under the terms of the GNU
-# Lesser General Public License (LGPL v3.0).
-# See COPYING and COPYING.LESSER for license details.
-# ---------------------------------------------------------------------------~(*)
-# """
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
 import enum
 import logging
 from platform import system
@@ -18,7 +18,7 @@ import numpy as np
 
 import audio
 from pyglui import ui
-from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
+from pyglui.cygl.utils import draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Plugin
@@ -27,8 +27,9 @@ from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
 import OpenGL.GL as gl
 
 import glfw
+from gl_utils import GLFWErrorReporting
 
-glfw.ERROR_REPORTING = "raise"
+GLFWErrorReporting.set_default()
 
 from .mixin import MonitorSelectionMixin
 from .controller import (

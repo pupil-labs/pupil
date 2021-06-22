@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -27,6 +27,7 @@ import pyglui.cygl.utils as cygl_utils
 import zmq_tools
 from observable import Observable
 from plugin import System_Plugin_Base
+from pupil_recording import PupilRecording, RecordingInfo
 from pyglui import ui
 from pyglui.pyfontstash import fontstash as fs
 from video_capture.utils import VideoSet
@@ -56,6 +57,24 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
     def pupil_data_source_selection_label(cls) -> str:
         return cls.plugin_menu_label()
 
+    @staticmethod
+    def available_pupil_producer_plugins(g_pool) -> list:
+        def is_plugin_included(p, g_pool) -> bool:
+            # Skip plugins that are not pupil producers
+            if not issubclass(p, Pupil_Producer_Base):
+                return False
+            # Skip pupil producer stub
+            if p is DisabledPupilProducer:
+                return False
+            # Skip pupil producers that are not available within g_pool context
+            if not p.is_available_within_context(g_pool):
+                return False
+            return True
+
+        return [
+            p for p in g_pool.plugin_by_name.values() if is_plugin_included(p, g_pool)
+        ]
+
     @classmethod
     def pupil_data_source_selection_order(cls) -> float:
         return float("inf")
@@ -75,11 +94,7 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
     def init_ui(self):
         self.add_menu()
 
-        pupil_producer_plugins = [
-            p
-            for p in self.g_pool.plugin_by_name.values()
-            if issubclass(p, Pupil_Producer_Base)
-        ]
+        pupil_producer_plugins = self.available_pupil_producer_plugins(self.g_pool)
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_label())
         pupil_producer_plugins.sort(key=lambda p: p.pupil_data_source_selection_order())
         pupil_producer_labels = [
@@ -284,7 +299,73 @@ class Pupil_Producer_Base(Observable, System_Plugin_Base):
             self.glfont.pop_state()
 
 
+class DisabledPupilProducer(Pupil_Producer_Base):
+    """
+    This is a stub implementation of a pupil producer,
+    intended to be used when no (other) pupil producer is available.
+    """
+
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Enable in Player only if Pupil Invisible recording
+                return True
+        return False
+
+    @classmethod
+    def plugin_menu_label(cls) -> str:
+        raise RuntimeError()  # This method should never be called
+        return "Disabled Pupil Producer"
+
+    @classmethod
+    def pupil_data_source_selection_order(cls) -> float:
+        raise RuntimeError()  # This method should never be called
+        return 0.1
+
+    def __init__(self, g_pool):
+        super().__init__(g_pool)
+        # Create empty pupil_positions for all plugins that depend on it
+        pupil_data = pm.PupilDataBisector(data=fm.PLData([], [], []))
+        g_pool.pupil_positions = pupil_data
+        self._pupil_changed_announcer.announce_existing()
+        logger.debug("pupil positions changed")
+
+    def init_ui(self):
+        pass
+
+    def deinit_ui(self):
+        pass
+
+    def _refresh_timelines(self):
+        pass
+
+
 class Pupil_From_Recording(Pupil_Producer_Base):
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE
+            ):
+                # Disable pupil from recording in Player if Pupil Mobile recording
+                return False
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Disable pupil from recording in Player if Pupil Invisible recording
+                return False
+        return super().is_available_within_context(g_pool)
+
     @classmethod
     def plugin_menu_label(cls) -> str:
         return "Pupil Data From Recording"
@@ -313,6 +394,19 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
     session_data_name = "offline_pupil"
 
     @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Disable post-hoc pupil detector in Player if Pupil Invisible recording
+                return False
+        return super().is_available_within_context(g_pool)
+
+    @classmethod
     def plugin_menu_label(cls) -> str:
         return "Post-Hoc Pupil Detection"
 
@@ -328,7 +422,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         self.data_sub = zmq_tools.Msg_Receiver(
             zmq_ctx,
             g_pool.ipc_sub_url,
-            topics=("pupil", "notify.file_source.video_finished"),
+            topics=("pupil", "notify.file_source"),
             hwm=100_000,
         )
 
@@ -354,6 +448,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         # Start offline pupil detection if not complete yet:
         self.eye_video_loc = [None, None]
         self.eye_frame_num = [0, 0]
+        self.eye_frame_idx = [-1, -1]
 
         # start processes
         for eye_id in range(2):
@@ -381,6 +476,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         video_loc = existing_locs[0]
         n_valid_frames = np.count_nonzero(self.videoset.lookup.container_idx > -1)
         self.eye_frame_num[eye_id] = n_valid_frames
+        self.eye_frame_idx = [-1, -1]
 
         capure_settings = "File_Source", {"source_path": video_loc, "timing": None}
         self.notify_all(
@@ -395,16 +491,23 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     @property
     def detection_progress(self) -> float:
-        total = sum(self.eye_frame_num)
-        # TODO: Figure out the number of frames independent of 3d detection
-        detected = self._pupil_data_store.count_collected(detector_tag="3d")
-        if total:
-            return min(
-                detected / total,
-                1.0,
-            )
-        else:
+
+        if not sum(self.eye_frame_num):
             return 0.0
+
+        progress_by_eye = [0.0, 0.0]
+
+        for eye_id in (0, 1):
+            total_frames = self.eye_frame_num[eye_id]
+            if total_frames > 0:
+                current_index = self.eye_frame_idx[eye_id]
+                progress = (current_index + 1) / total_frames
+                progress = max(0.0, min(progress, 1.0))
+            else:
+                progress = 1.0
+            progress_by_eye[eye_id] = progress
+
+        return min(progress_by_eye)
 
     def stop_eye_process(self, eye_id):
         self.notify_all({"subject": "eye_process.should_stop", "eye_id": eye_id})
@@ -425,15 +528,20 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
             else:
                 payload = self.data_sub.deserialize_payload(*remaining_frames)
                 if payload["subject"] == "file_source.video_finished":
-                    for eyeid in (0, 1):
-                        if self.eye_video_loc[eyeid] == payload["source_path"]:
-                            logger.debug("eye {} process complete".format(eyeid))
-                            self.detection_status[eyeid] = "complete"
-                            self.stop_eye_process(eyeid)
+                    for eye_id in (0, 1):
+                        if self.eye_video_loc[eye_id] == payload["source_path"]:
+                            logger.debug("eye {} process complete".format(eye_id))
+                            self.eye_frame_idx[eye_id] = self.eye_frame_num[eye_id]
+                            self.detection_status[eye_id] = "complete"
+                            self.stop_eye_process(eye_id)
                             break
                     if self.eye_video_loc == [None, None]:
                         data = self._pupil_data_store.as_pupil_data_bisector()
                         self.publish_new(pupil_data_bisector=data)
+                if payload["subject"] == "file_source.current_frame_index":
+                    for eye_id in (0, 1):
+                        if self.eye_video_loc[eye_id] == payload["source_path"]:
+                            self.eye_frame_idx[eye_id] = payload["index"]
 
         self.menu_icon.indicator_stop = self.detection_progress
 

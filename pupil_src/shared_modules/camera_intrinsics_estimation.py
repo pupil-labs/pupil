@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -22,17 +22,19 @@ from camera_models import Fisheye_Dist_Camera, Radial_Dist_Camera
 
 import OpenGL.GL as gl
 from pyglui import ui
-from pyglui.cygl.utils import draw_polyline, draw_points, RGBA, draw_gl_texture
+from pyglui.cygl.utils import draw_polyline, RGBA, draw_gl_texture
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from gl_utils import draw_circle_filled_func_builder, GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
 
 from plugin import Plugin
+
+from hotkey import Hotkey
 
 # logging
 import logging
@@ -102,6 +104,8 @@ class Camera_Intrinsics_Estimation(Plugin):
                 "No camera intrinsics calibration is currently set for this camera!"
             )
 
+        self._draw_circle_filled = draw_circle_filled_func_builder()
+
     def init_ui(self):
         self.add_menu()
         self.menu.label = "Camera Intrinsics Estimation"
@@ -153,7 +157,11 @@ class Camera_Intrinsics_Estimation(Plugin):
         )
 
         self.button = ui.Thumb(
-            "collect_new", self, setter=self.advance, label="I", hotkey="i"
+            "collect_new",
+            self,
+            setter=self.advance,
+            label="I",
+            hotkey=Hotkey.CAMERA_INTRINSIC_ESTIMATOR_COLLECT_NEW_CAPTURE_HOTKEY(),
         )
         self.button.on_color[:] = (0.3, 0.2, 1.0, 0.9)
         self.g_pool.quickbar.insert(0, self.button)
@@ -381,7 +389,12 @@ class Camera_Intrinsics_Estimation(Plugin):
         grid -= np.mean(grid)
         grid += (p_window_size[0] / 2 - r, p_window_size[1] / 2 + r)
 
-        draw_points(grid, size=r, color=RGBA(0.0, 0.0, 0.0, 1), sharpness=0.95)
+        for pt in grid:
+            self._draw_circle_filled(
+                tuple(pt),
+                size=r / 2,
+                color=RGBA(0.0, 0.0, 0.0, 1),
+            )
 
         if self.clicks_to_close < 5:
             self.glfont.set_size(int(p_window_size[0] / 30.0))

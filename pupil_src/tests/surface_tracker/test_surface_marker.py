@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,9 +12,21 @@ See COPYING and COPYING.LESSER for license details.
 import pytest
 import itertools
 
-from surface_tracker.surface_marker import Surface_Marker, Surface_Marker_Type, Surface_Marker_TagID
-from surface_tracker.surface_marker import create_surface_marker_uid, parse_surface_marker_type, parse_surface_marker_tag_id, parse_surface_marker_tag_family
-from surface_tracker.surface_marker import _Apriltag_V3_Marker_Detection, _Square_Marker_Detection
+from surface_tracker.surface_marker import (
+    Surface_Marker,
+    Surface_Marker_Type,
+    Surface_Marker_TagID,
+)
+from surface_tracker.surface_marker import (
+    create_surface_marker_uid,
+    parse_surface_marker_type,
+    parse_surface_marker_tag_id,
+    parse_surface_marker_tag_family,
+)
+from surface_tracker.surface_marker import (
+    _Apriltag_V3_Marker_Detection,
+    _Square_Marker_Detection,
+)
 
 
 def test_surface_marker_from_raw_detection():

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -26,6 +26,7 @@ from .surface_marker_detector import (
     MarkerType,
     ApriltagFamily,
 )
+from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             setter=self.on_add_surface_click,
             getter=lambda: False,
             label="A",
-            hotkey="a",
+            hotkey=Hotkey.SURFACE_TRACKER_ADD_SURFACE_CAPTURE_AND_PLAYER_HOTKEY(),
         )
         self.g_pool.quickbar.append(self.add_button)
         self._update_ui()

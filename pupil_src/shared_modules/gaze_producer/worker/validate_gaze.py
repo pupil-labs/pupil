@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -72,7 +72,7 @@ def validate(
         for ref in refs_in_validation_range
     ]
 
-    accuracy_result, precision_result, _ = Accuracy_Visualizer.calc_acc_prec_errlines(
+    result = Accuracy_Visualizer.calc_acc_prec_errlines(
         g_pool=g_pool,
         gazer_class=gazer_class,
         gazer_params=gazer_params,
@@ -81,7 +81,7 @@ def validate(
         intrinsics=g_pool.capture.intrinsics,
         outlier_threshold=gaze_mapper.validation_outlier_threshold_deg,
     )
-    return accuracy_result, precision_result
+    return result.accuracy, result.precision
 
 
 def _create_ref_dict(ref, frame_size):

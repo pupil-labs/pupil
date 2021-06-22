@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -158,6 +158,7 @@ def _export_world_video(
 
         g_pool = GlobalContainer()
         g_pool.app = "exporter"
+        g_pool.process = "exporter"
         g_pool.min_data_confidence = min_data_confidence
 
         videos = recording.files().core().world().videos()

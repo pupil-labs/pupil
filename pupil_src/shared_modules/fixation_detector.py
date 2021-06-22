@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -50,6 +50,8 @@ from observable import Observable
 import player_methods as pm
 from methods import denormalize
 from plugin import Plugin
+from pupil_recording import PupilRecording, RecordingInfo
+from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
 
@@ -269,6 +271,19 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
     fixations will have their method field set to "gaze".
     """
 
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Disable fixation detector in Player if Pupil Invisible recording
+                return False
+        return super().is_available_within_context(g_pool)
+
     def __init__(
         self,
         g_pool,
@@ -401,7 +416,7 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
             setter=jump_next_fixation,
             getter=lambda: False,
             label=chr(0xE044),
-            hotkey="f",
+            hotkey=Hotkey.FIXATION_NEXT_PLAYER_HOTKEY(),
             label_font="pupil_icons",
         )
         self.next_fix_button.status_text = "Next Fixation"
@@ -412,7 +427,7 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
             setter=jump_prev_fixation,
             getter=lambda: False,
             label=chr(0xE045),
-            hotkey="F",
+            hotkey=Hotkey.FIXATION_PREV_PLAYER_HOTKEY(),
             label_font="pupil_icons",
         )
         self.prev_fix_button.status_text = "Previous Fixation"

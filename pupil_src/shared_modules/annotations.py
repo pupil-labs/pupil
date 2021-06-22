@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -21,6 +21,8 @@ import file_methods as fm
 import player_methods as pm
 import zmq_tools
 from plugin import Plugin
+from hotkey import Hotkey
+
 
 logger = logging.getLogger(__name__)
 
@@ -63,12 +65,14 @@ class AnnotationPlugin(Plugin, abc.ABC):
         self._annotation_list_menu = None
 
         if annotation_definitions is None:
-            annotation_definitions = [["My annotation", "E"]]
+            annotation_definitions = [
+                ["My annotation", Hotkey.ANNOTATION_EVENT_DEFAULT_HOTKEY()]
+            ]
         self._initial_annotation_definitions = annotation_definitions
         self._definition_to_buttons = {}
 
         self._new_annotation_label = "new annotation label"
-        self._new_annotation_hotkey = "E"
+        self._new_annotation_hotkey = Hotkey.ANNOTATION_EVENT_DEFAULT_HOTKEY()
 
     def get_init_dict(self):
         annotation_definitions = list(self._definition_to_buttons.keys())
@@ -217,9 +221,16 @@ class Annotation_Capture(AnnotationPlugin):
         while self.annotation_sub.new_data:
             topic, annotation_datum = self.annotation_sub.recv()
             ts = self.g_pool.get_timestamp()
-            logger.info("{} annotation @ {}".format(annotation_datum["label"], ts))
+            annotation_desc = self._annotation_description(
+                label=annotation_datum["label"], age=ts - annotation_datum["timestamp"]
+            )
+            logger.info(annotation_desc)
             recent_annotation_data.append(annotation_datum)
         events["annotation"] = recent_annotation_data
+
+    @staticmethod
+    def _annotation_description(label, age) -> str:
+        return f"{label} annotation ({age:.3f} seconds ago)"
 
 
 class Annotation_Player(AnnotationPlugin, Plugin):
@@ -271,8 +282,13 @@ class Annotation_Player(AnnotationPlugin, Plugin):
     def fire_annotation(self, annotation_label):
         if self.last_frame_ts is None:
             return
+        if self.last_frame_index < 0:
+            return
         ts = self.last_frame_ts
-        logger.info("{} annotation @ {}".format(annotation_label, ts))
+        annotation_desc = self._annotation_description(
+            label=annotation_label, world_index=self.last_frame_index
+        )
+        logger.info(annotation_desc)
         new_annotation = create_annotation(annotation_label, ts)
         new_annotation["added_in_player"] = True
         self.annotations.insert(
@@ -289,9 +305,10 @@ class Annotation_Player(AnnotationPlugin, Plugin):
             frame_window = pm.enclosing_window(self.g_pool.timestamps, frame.index)
             events = self.annotations.by_ts_window(frame_window)
             for event in events:
-                logger.info(
-                    "{} annotation @ {}".format(event["label"], event["timestamp"])
+                annotation_desc = self._annotation_description(
+                    label=event["label"], world_index=frame.index
                 )
+                logger.info(annotation_desc)
 
     def on_notify(self, notification):
         if notification["subject"] == "should_export":
@@ -335,3 +352,7 @@ class Annotation_Player(AnnotationPlugin, Plugin):
         # return tuple with system keys first and alphabetically sorted
         # user keys afterwards
         return csv_keys + tuple(sorted(user_keys))
+
+    @staticmethod
+    def _annotation_description(label, world_index) -> str:
+        return f"{label} annotation @ frame index {world_index}"

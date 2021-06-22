@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,15 +9,20 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import abc
+import functools
 import logging
 import typing as T
 
 import observable
 
+import numpy as np
+import OpenGL.GL as gl
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from pyglui.cygl.utils import draw_points
 from pyglui.cygl.utils import RGBA
+
+from gl_utils import draw_circle_filled_func_builder
 
 from .gui_monitor import GUIMonitor
 from .gui_window import GUIWindow
@@ -83,11 +88,6 @@ class MarkerWindowController(observable.Observable):
     _MARKER_CIRCLE_SIZE_INNER = 19
     _MARKER_CIRCLE_SIZE_FEEDBACK = 3
 
-    _MARKER_CIRCLE_SHARPNESS_OUTER = 0.9
-    _MARKER_CIRCLE_SHARPNESS_MIDDLE = 0.8
-    _MARKER_CIRCLE_SHARPNESS_INNER = 0.55
-    _MARKER_CIRCLE_SHARPNESS_FEEDBACK = 0.5
-
     def __init__(self, marker_scale: float):
         # Public properties
         self.marker_scale = marker_scale
@@ -103,6 +103,8 @@ class MarkerWindowController(observable.Observable):
         self.__glfont.set_size(32)
         self.__glfont.set_color_float((0.2, 0.5, 0.9, 1.0))
         self.__glfont.set_align_string(v_align="center")
+        # Private helper
+        self.__draw_circle_filled = draw_circle_filled_func_builder(cache_size=4)
 
     # Public - Marker Management
 
@@ -195,13 +197,7 @@ class MarkerWindowController(observable.Observable):
                 is_fullscreen=is_fullscreen,
                 size=window_size,
             )
-            # This makes it harder to accidentally tab out of fullscreen by clicking on
-            # some other window (e.g. when having two monitors). On the other hand you
-            # want a cursor to adjust the window size when not in fullscreen mode.
-            if is_fullscreen:
-                self.__window.cursor_disable()
-            else:
-                self.__window.cursor_hide()
+            self.__window.cursor_hide()
             self.__state = MarkerWindowStateIdle(
                 clicks_needed=self._CLICKS_NEEDED_TO_CLOSE
             )
@@ -279,10 +275,11 @@ class MarkerWindowController(observable.Observable):
                 return
 
             with self.__window.drawing_context() as gl_context:
-                self.__draw_circle_marker(
-                    position=marker_position, is_valid=is_valid, alpha=marker_alpha
-                )
-                self.__draw_status_text(clicks_needed=clicks_needed)
+                if gl_context:
+                    self.__draw_circle_marker(
+                        position=marker_position, is_valid=is_valid, alpha=marker_alpha
+                    )
+                    self.__draw_status_text(clicks_needed=clicks_needed)
 
         else:
             raise UnhandledMarkerWindowStateError(self.__state)
@@ -311,7 +308,7 @@ class MarkerWindowController(observable.Observable):
         if position is None:
             return
 
-        r2 = 2 * self.__marker_radius
+        radius = self.__marker_radius
         screen_point = self.__marker_position_on_screen(position)
 
         if is_valid:
@@ -319,29 +316,29 @@ class MarkerWindowController(observable.Observable):
         else:
             marker_circle_rgb_feedback = self._MARKER_CIRCLE_RGB_FEEDBACK_INVALID
 
-        draw_points(
-            [screen_point],
-            size=self._MARKER_CIRCLE_SIZE_OUTER * r2,
+        # TODO: adjust size such that they correspond to old marker sizes
+        # TODO: adjust num_points such that circles look smooth; smaller circles need less points
+        # TODO: compare runtimes with `draw_points`
+
+        self.__draw_circle_filled(
+            screen_point,
+            size=self._MARKER_CIRCLE_SIZE_OUTER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_OUTER, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_OUTER,
         )
-        draw_points(
-            [screen_point],
-            size=self._MARKER_CIRCLE_SIZE_MIDDLE * r2,
+        self.__draw_circle_filled(
+            screen_point,
+            size=self._MARKER_CIRCLE_SIZE_MIDDLE * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_MIDDLE, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_MIDDLE,
         )
-        draw_points(
-            [screen_point],
-            size=self._MARKER_CIRCLE_SIZE_INNER * r2,
+        self.__draw_circle_filled(
+            screen_point,
+            size=self._MARKER_CIRCLE_SIZE_INNER * radius,
             color=RGBA(*self._MARKER_CIRCLE_RGB_INNER, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_INNER,
         )
-        draw_points(
-            [screen_point],
-            size=self._MARKER_CIRCLE_SIZE_FEEDBACK * r2,
+        self.__draw_circle_filled(
+            screen_point,
+            size=self._MARKER_CIRCLE_SIZE_FEEDBACK * radius,
             color=RGBA(*marker_circle_rgb_feedback, alpha),
-            sharpness=self._MARKER_CIRCLE_SHARPNESS_FEEDBACK,
         )
 
     def __draw_status_text(self, clicks_needed: int):

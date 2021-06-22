@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -23,7 +23,6 @@ from .fixtures import (
     surface_pairs_v00_square,
     surface_pairs_v01_apriltag,
     surface_pairs_v01_square,
-
     surface_marker_aggregate_pairs_v00_square,
     surface_marker_aggregate_pairs_v01_apriltag,
     surface_marker_aggregate_pairs_v01_square,
@@ -51,7 +50,9 @@ def _test_surface_serializer_with_surfaces(serializer, surface_pairs):
         assert Surface.property_equality(deserialization_result, deserialized_surface)
 
 
-def _test_surface_serializer_with_surface_marker_aggregates(serializer, aggregate_pairs):
+def _test_surface_serializer_with_surface_marker_aggregates(
+    serializer, aggregate_pairs
+):
 
     assert isinstance(serializer, _Surface_Serializer_Base)
     assert len(aggregate_pairs) > 0
@@ -60,41 +61,42 @@ def _test_surface_serializer_with_surface_marker_aggregates(serializer, aggregat
         assert isinstance(deserialized_aggregate, Surface_Marker_Aggregate)
         assert isinstance(serialized_aggregate, dict)
 
-        serialization_result = serializer.dict_from_surface_marker_aggregate(deserialized_aggregate)
+        serialization_result = serializer.dict_from_surface_marker_aggregate(
+            deserialized_aggregate
+        )
         assert serialization_result == serialized_aggregate
 
-        deserialization_result = serializer.surface_marker_aggregate_from_dict(serialized_aggregate)
+        deserialization_result = serializer.surface_marker_aggregate_from_dict(
+            serialized_aggregate
+        )
         assert deserialization_result == deserialized_aggregate
 
 
 def test_surface_serializer_V00():
     _test_surface_serializer_with_surfaces(
-        serializer=_Surface_Serializer_V00(),
-        surface_pairs=surface_pairs_v00_square()
+        serializer=_Surface_Serializer_V00(), surface_pairs=surface_pairs_v00_square()
     )
     _test_surface_serializer_with_surface_marker_aggregates(
         serializer=_Surface_Serializer_V00(),
-        aggregate_pairs=surface_marker_aggregate_pairs_v00_square()
+        aggregate_pairs=surface_marker_aggregate_pairs_v00_square(),
     )
 
 
 def test_surface_serializer_V01_square():
     _test_surface_serializer_with_surfaces(
-        serializer=_Surface_Serializer_V01(),
-        surface_pairs=surface_pairs_v01_square()
+        serializer=_Surface_Serializer_V01(), surface_pairs=surface_pairs_v01_square()
     )
     _test_surface_serializer_with_surface_marker_aggregates(
         serializer=_Surface_Serializer_V01(),
-        aggregate_pairs=surface_marker_aggregate_pairs_v01_square()
+        aggregate_pairs=surface_marker_aggregate_pairs_v01_square(),
     )
 
 
 def test_surface_serializer_V01_apriltag():
     _test_surface_serializer_with_surfaces(
-        serializer=_Surface_Serializer_V01(),
-        surface_pairs=surface_pairs_v01_apriltag()
+        serializer=_Surface_Serializer_V01(), surface_pairs=surface_pairs_v01_apriltag()
     )
     _test_surface_serializer_with_surface_marker_aggregates(
         serializer=_Surface_Serializer_V01(),
-        aggregate_pairs=surface_marker_aggregate_pairs_v01_apriltag()
+        aggregate_pairs=surface_marker_aggregate_pairs_v01_apriltag(),
     )

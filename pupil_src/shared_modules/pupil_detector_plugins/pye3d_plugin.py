@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,8 +10,10 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
-from pye3d.detector_3d import Detector3D, CameraModel
+import pye3d
+from pye3d.detector_3d import Detector3D, CameraModel, DetectorMode
 from pyglui import ui
+from methods import normalize
 
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline, draw_ellipse
@@ -19,24 +21,65 @@ from .visualizer_pye3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
 
+version_installed = getattr(pye3d, "__version__", "0.0.1")
+version_supported = "0.0.7"
+
+if version_installed != version_supported:
+    logger.info(
+        f"Requires pye3d version {version_supported} "
+        f"(Installed: {version_installed})"
+    )
+    raise ImportError("Unsupported version found")
+
 
 class Pye3DPlugin(PupilDetectorPlugin):
-    uniqueness = "by_class"
-    icon_font = "pupil_icons"
-    icon_chr = chr(0xEC19)
+    pupil_detection_identifier = "3d"
+    # pupil_detection_method implemented as variable
 
     label = "Pye3D"
-    identifier = "3d"
+    icon_font = "pupil_icons"
+    icon_chr = chr(0xEC19)
     order = 0.101
 
-    def __init__(self, g_pool=None):
+    # Visualization
+    COLOR_ULTRA_LONG_TERM_MODEL = (0.5, 0, 0.5, 1)  # purple
+    COLOR_LONG_TERM_MODEL = (0, 0.9, 0.1, 1)  # green
+    COLOR_SHORT_TERM_MODEL = (0.8, 0.8, 0, 1)  # yellow
+
+    @property
+    def pupil_detector(self):
+        return self.detector
+
+    def __init__(
+        self,
+        g_pool=None,
+    ):
         super().__init__(g_pool=g_pool)
         self.camera = CameraModel(
             focal_length=self.g_pool.capture.intrinsics.focal_length,
             resolution=self.g_pool.capture.intrinsics.resolution,
         )
-        self.detector = Detector3D(camera=self.camera)
+        async_apps = ("capture", "service")
+        mode = (
+            DetectorMode.asynchronous
+            if g_pool.app in async_apps
+            else DetectorMode.blocking
+        )
+        logger.debug(f"Running {mode.name} in {g_pool.app}")
+        self.detector = Detector3D(camera=self.camera, long_term_mode=mode)
+
+        method_suffix = {
+            DetectorMode.asynchronous: "real-time",
+            DetectorMode.blocking: "post-hoc",
+        }
+        self.pupil_detection_method = f"pye3d {pye3d.__version__} {method_suffix[mode]}"
+
         self.debugVisualizer3D = Eye_Visualizer(self.g_pool, self.camera.focal_length)
+        self.__debug_window_button = None
+
+    def get_init_dict(self):
+        init_dict = super().get_init_dict()
+        return init_dict
 
     def _process_camera_changes(self):
         camera = CameraModel(
@@ -73,21 +116,33 @@ class Pye3DPlugin(PupilDetectorPlugin):
                 datum_2d = datum
                 break
         else:
-            # TODO: Should we handle this more gracefully? Can this even happen? What
-            # could we return in that case?
-            raise RuntimeError("No 2D detection result! Needed for pye3D!")
+            logger.warning(
+                "Required 2d pupil detection input not available. "
+                "Returning default pye3d datum."
+            )
+            return self.create_pupil_datum(
+                norm_pos=[0.5, 0.5],
+                diameter=0.0,
+                confidence=0.0,
+                timestamp=frame.timestamp,
+            )
 
         result = self.detector.update_and_detect(
             datum_2d, frame.gray, debug=self.is_debug_window_open
         )
 
-        eye_id = self.g_pool.eye_id
-        result["timestamp"] = frame.timestamp
-        result["topic"] = f"pupil.{eye_id}.{self.identifier}"
-        result["id"] = eye_id
-        result["method"] = "3d c++"
+        norm_pos = normalize(
+            result["location"], (frame.width, frame.height), flip_y=True
+        )
+        template = self.create_pupil_datum(
+            norm_pos=norm_pos,
+            diameter=result["diameter"],
+            confidence=result["confidence"],
+            timestamp=frame.timestamp,
+        )
+        template.update(result)
 
-        return result
+        return template
 
     def on_notify(self, notification):
         super().on_notify(notification)
@@ -109,43 +164,68 @@ class Pye3DPlugin(PupilDetectorPlugin):
         super().init_ui()
         self.menu.label = self.pretty_class_name
 
+        help_text = (
+            f"pye3d {pye3d.__version__} - a model-based 3d pupil detector with corneal "
+            "refraction correction. Read more about the detector in our docs website."
+        )
+        self.menu.append(ui.Info_Text(help_text))
+        help_text = (
+            "Visualizations: Green circle: eye model outline. Blue ellipse: 2d pupil "
+            "detection. Red ellipse: 3d pupil detection."
+        )
+        self.menu.append(ui.Info_Text(help_text))
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))
-        self.menu.append(ui.Button("Toggle debug window", self.debug_window_toggle))
+        self.__debug_window_button = ui.Button(
+            self.__debug_window_button_label, self.debug_window_toggle
+        )
 
-        # self.menu.append(
-        #     ui.Switch(TODO, label="Freeze model")
-        # )
+        help_text = (
+            "The 3d model automatically updates in the background. Freeze the model to "
+            "turn off automatic model updates. Refer to the docs website for details. "
+        )
+        self.menu.append(ui.Info_Text(help_text))
+        self.menu.append(
+            ui.Switch("is_long_term_model_frozen", self.detector, label="Freeze model")
+        )
+        self.menu.append(self.__debug_window_button)
 
     def gl_display(self):
         self.debug_window_update()
         result = self._recent_detection_result
+
         if result is not None:
             if not self.is_debug_window_open:
-                # normal drawing
+                # normal eyeball drawing
                 draw_eyeball_outline(result)
-                draw_pupil_outline(result)
 
             elif "debug_info" in result:
-                # debug drawing
+                # debug eyeball drawing
                 debug_info = result["debug_info"]
                 draw_ellipse(
                     ellipse=debug_info["projected_ultra_long_term"],
-                    rgba=(0.5, 0, 0, 1),
+                    rgba=self.COLOR_ULTRA_LONG_TERM_MODEL,
                     thickness=2,
                 )
                 draw_ellipse(
                     ellipse=debug_info["projected_long_term"],
-                    rgba=(0.8, 0.8, 0, 1),
+                    rgba=self.COLOR_LONG_TERM_MODEL,
                     thickness=2,
                 )
                 draw_ellipse(
                     ellipse=debug_info["projected_short_term"],
-                    rgba=(0, 1, 0, 1),
+                    rgba=self.COLOR_SHORT_TERM_MODEL,
                     thickness=2,
                 )
 
+            # always draw pupil
+            draw_pupil_outline(result)
+
+        if self.__debug_window_button:
+            self.__debug_window_button.label = self.__debug_window_button_label
+
     def cleanup(self):
-        self.debug_window_close()  # if we change detectors, be sure debug window is also closed
+        # if we change detectors, be sure debug window is also closed
+        self.debug_window_close()
 
     # Public
 
@@ -153,6 +233,13 @@ class Pye3DPlugin(PupilDetectorPlugin):
         self.detector.reset()
 
     # Debug window management
+
+    @property
+    def __debug_window_button_label(self) -> str:
+        if not self.is_debug_window_open:
+            return "Open debug window"
+        else:
+            return "Close debug window"
 
     @property
     def is_debug_window_open(self) -> bool:

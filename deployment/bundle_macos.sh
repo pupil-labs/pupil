@@ -1,8 +1,11 @@
-#!/bin/bash
+#!/usr/local/bin/zsh
 
 pl_codesign () {
     sign="Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
     codesign \
+        --all-architectures \
+        --force \
+        --strict=all \
         --options runtime \
         --entitlements entitlements.plist \
         --continue \
@@ -42,6 +45,7 @@ mv dist/*.$ext ../$release_dir
 cd ..
 
 printf "\n##########\nSigning applications\n##########\n"
+pl_codesign $release_dir/*.$ext/Contents/Resources/**/.dylibs/*.dylib
 pl_codesign $release_dir/*.$ext
 
 printf "\n##########\nCreating dmg file\n##########\n"

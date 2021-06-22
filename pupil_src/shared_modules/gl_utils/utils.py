@@ -1,26 +1,46 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import contextlib
 import logging
 import math
 import typing as T
 
-import numpy as np
-import OpenGL
-import OpenGL.error
-from OpenGL.GL import *
-from OpenGL.GLU import gluPerspective, gluErrorString
-
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
+import numpy as np
+import OpenGL.error
+from OpenGL.GL import (
+    GL_BLEND,
+    GL_COLOR_BUFFER_BIT,
+    GL_LINE_SMOOTH,
+    GL_MODELVIEW,
+    GL_NO_ERROR,
+    GL_ONE_MINUS_SRC_ALPHA,
+    GL_POINT_SPRITE,
+    GL_PROJECTION,
+    GL_SRC_ALPHA,
+    GL_VERTEX_PROGRAM_POINT_SIZE,
+    glBlendFunc,
+    glClear,
+    glClearColor,
+    glEnable,
+    glFlush,
+    glGetError,
+    glLoadIdentity,
+    glMatrixMode,
+    glOrtho,
+    glPopMatrix,
+    glPushMatrix,
+    glViewport,
+)
+from OpenGL.GLU import gluErrorString, gluPerspective
 
 # OpenGL.FULL_LOGGING = True
 OpenGL.ERROR_LOGGING = False
@@ -309,3 +329,68 @@ def get_window_title_bar_rect(window) -> _Rectangle:
     return _Rectangle(
         x=frame_rect.x, y=frame_rect.y, width=frame_rect.width, height=frame_edges.top
     )
+
+
+@contextlib.contextmanager
+def current_context(window):
+    prev_context = glfw.get_current_context()
+    glfw.make_context_current(window)
+    try:
+        yield
+    finally:
+        glfw.make_context_current(prev_context)
+
+
+_GLFWErrorReportingDict = T.Dict[T.Union[None, int], str]
+
+
+class GLFWErrorReporting:
+    @classmethod
+    @contextlib.contextmanager
+    def error_code_handling(
+        cls,
+        *_,
+        ignore: T.Optional[T.Tuple[int]] = None,
+        debug: T.Optional[T.Tuple[int]] = None,
+        warn: T.Optional[T.Tuple[int]] = None,
+        raise_: T.Optional[T.Tuple[int]] = None,
+    ):
+        old_reporting = glfw.ERROR_REPORTING
+
+        if isinstance(old_reporting, dict):
+            new_reporting: _GLFWErrorReportingDict = dict(old_reporting)
+        else:
+            new_reporting = cls.__default_error_reporting()
+
+        new_reporting.update({err_code: "ignore" for err_code in ignore or ()})
+        new_reporting.update({err_code: "log" for err_code in debug or ()})
+        new_reporting.update({err_code: "warn" for err_code in warn or ()})
+        new_reporting.update({err_code: "raise" for err_code in raise_ or ()})
+
+        glfw.ERROR_REPORTING = new_reporting
+
+        try:
+            yield
+        finally:
+            glfw.ERROR_REPORTING = old_reporting
+
+    @classmethod
+    def set_default(cls):
+        glfw.ERROR_REPORTING = cls.__default_error_reporting()
+
+    ### Private
+
+    @staticmethod
+    def __default_error_reporting() -> _GLFWErrorReportingDict:
+        ignore = [
+            # GLFWError: (65544) b'Cocoa: Failed to find service port for display'
+            # This happens on macOS Big Sur running on Apple Silicone hardware
+            65544,
+        ]
+        return {
+            None: "raise",
+            **{code: "log" for code in ignore},
+        }
+
+
+GLFWErrorReporting.set_default()

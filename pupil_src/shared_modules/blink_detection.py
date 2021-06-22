@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -28,6 +28,7 @@ import gl_utils
 import player_methods as pm
 from observable import Observable
 from plugin import Plugin
+from pupil_recording import PupilRecording, RecordingInfo
 
 logger = logging.getLogger(__name__)
 
@@ -160,9 +161,6 @@ class Blink_Detection(Plugin):
             blink_type = "offset"
 
         confidence = min(abs(filter_response), 1.0)  # clamp conf. value at 1.
-        logger.debug(
-            "Blink {} detected with confidence {:0.3f}".format(blink_type, confidence)
-        )
         # Add info to events
         blink_entry = {
             "topic": "blinks",
@@ -188,6 +186,19 @@ class Blink_Detection(Plugin):
 
 
 class Offline_Blink_Detection(Observable, Blink_Detection):
+    @classmethod
+    def is_available_within_context(cls, g_pool) -> bool:
+        if g_pool.app == "player":
+            recording = PupilRecording(rec_dir=g_pool.rec_dir)
+            meta_info = recording.meta_info
+            if (
+                meta_info.recording_software_name
+                == RecordingInfo.RECORDING_SOFTWARE_NAME_PUPIL_INVISIBLE
+            ):
+                # Disable blink detector in Player if Pupil Invisible recording
+                return False
+        return super().is_available_within_context(g_pool)
+
     def __init__(
         self,
         g_pool,

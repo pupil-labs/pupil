@@ -1,3 +1,13 @@
+"""
+(*)~---------------------------------------------------------------------------
+Pupil - eye tracking platform
+Copyright (C) 2012-2021 Pupil Labs
+
+Distributed under the terms of the GNU
+Lesser General Public License (LGPL v3.0).
+See COPYING and COPYING.LESSER for license details.
+---------------------------------------------------------------------------~(*)
+"""
 import collections
 import platform
 import typing as T
@@ -5,10 +15,10 @@ import contextlib
 
 import OpenGL.GL as gl
 import glfw
-
-glfw.ERROR_REPORTING = "raise"
-
 import gl_utils
+from gl_utils import GLFWErrorReporting
+
+GLFWErrorReporting.set_default()
 
 from pyglui.cygl.utils import draw_polyline
 
@@ -128,10 +138,12 @@ class GUIWindow(Observable):
     @contextlib.contextmanager
     def drawing_context(self):
         if self.__gl_handle is None:
+            yield None
             return
 
         if glfw.window_should_close(self.__gl_handle):
             self.close()
+            yield None
             return
 
         with self._switch_to_current_context():

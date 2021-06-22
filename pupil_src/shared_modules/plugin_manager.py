@@ -1,19 +1,23 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import logging
 
 from plugin import System_Plugin_Base
 from pyglui import ui
 from calibration_choreography import CalibrationChoreographyPlugin
 from gaze_mapping.gazer_base import GazerBase
 from video_capture import Base_Manager, Base_Source
+
+
+logger = logging.getLogger(__name__)
 
 
 class Plugin_Manager(System_Plugin_Base):
@@ -29,13 +33,23 @@ class Plugin_Manager(System_Plugin_Base):
             CalibrationChoreographyPlugin,
             GazerBase,
         )
-        self.user_plugins = [
-            p
-            for p in sorted(
-                g_pool.plugin_by_name.values(), key=lambda p: p.__name__.lower()
-            )
-            if not issubclass(p, non_user_plugins)
-        ]
+        all_available_plugins = sorted(
+            g_pool.plugin_by_name.values(), key=lambda p: p.__name__.lower()
+        )
+
+        available_and_supported_user_plugins = []
+
+        for plugin in all_available_plugins:
+            if issubclass(plugin, non_user_plugins):
+                continue
+            if not plugin.is_available_within_context(g_pool):
+                logger.debug(
+                    f"Plugin {plugin.__name__} not available; skip adding it to plugin list."
+                )
+                continue
+            available_and_supported_user_plugins.append(plugin)
+
+        self.user_plugins = available_and_supported_user_plugins
 
     def init_ui(self):
         self.add_menu()

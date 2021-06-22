@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,6 +15,7 @@ import logging
 from bisect import bisect_left as bisect
 from threading import Timer
 from time import monotonic
+import traceback
 
 import av
 import av.filter
@@ -25,6 +26,7 @@ from pyglui import ui
 
 import gl_utils
 from audio_utils import Audio_Viz_Transform, NoAudioLoadedError, load_audio
+from methods import make_change_loglevel_fn
 from plugin import System_Plugin_Base
 from version_utils import parse_version
 
@@ -34,6 +36,9 @@ assert parse_version(av.__version__) >= parse_version("0.4.4")
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logger.DEBUG)
+
+av_logger = logging.getLogger("libav.aac")
+av_logger.addFilter(make_change_loglevel_fn(logging.DEBUG))
 
 # av.logging.set_level(av.logging.DEBUG)
 # logging.getLogger('libav').setLevel(logging.DEBUG)
@@ -123,17 +128,10 @@ class Audio_Playback(System_Plugin_Base):
         self.audio_paused = False
 
         self.audio.stream.seek(0)
-        first_frame = next(self.audio_frame_iterator)
-        self.audio_pts_rate = first_frame.samples
-        self.audio_start_pts = first_frame.pts
-
-        logger.debug(
-            "audio_pts_rate = {} start_pts = {}".format(
-                self.audio_pts_rate, self.audio_start_pts
-            )
-        )
-        self.check_ts_consistency(reference_frame=first_frame)
-        self.seek_to_audio_frame(0)
+        if self.should_check_ts_consistency:
+            first_frame = next(self.audio_frame_iterator)
+            self.check_ts_consistency(reference_frame=first_frame)
+            self.seek_to_audio_frame(0)
 
         logger.debug(
             "Audio file format {} chans {} rate {} framesize {}".format(
@@ -166,6 +164,12 @@ class Audio_Playback(System_Plugin_Base):
 
         except ValueError:
             self.pa_stream = None
+        except OSError:
+            self.pa_stream = None
+            import traceback
+
+            logger.warning("Audio found, but playback failed (#2103)")
+            logger.debug(traceback.format_exc())
 
     def _setup_audio_vis(self):
         self.audio_timeline = None
@@ -249,18 +253,19 @@ class Audio_Playback(System_Plugin_Base):
 
     def get_audio_frame_iterator(self):
         for packet in self.audio.container.demux(self.audio.stream):
-            for frame in packet.decode():
-                if frame:
-                    yield frame
+            try:
+                for frame in packet.decode():
+                    if frame:
+                        yield frame
+            except av.AVError:
+                logger.debug(traceback.format_exc())
 
     def audio_idx_to_pts(self, idx):
-        return idx * self.audio_pts_rate
+        return self.audio.pts[idx]
 
     def seek_to_audio_frame(self, seek_pos):
         try:
-            self.audio.stream.seek(
-                self.audio_start_pts + self.audio_idx_to_pts(seek_pos)
-            )
+            self.audio.stream.seek(self.audio_idx_to_pts(seek_pos))
         except av.AVError:
             raise FileSeekError()
         else:
@@ -273,10 +278,13 @@ class Audio_Playback(System_Plugin_Base):
             self.seek_to_audio_frame(audio_idx)
 
     def on_notify(self, notification):
-        if notification["subject"] == "seek_control.was_seeking":
-            if self.pa_stream is not None and not self.pa_stream.is_stopped():
-                self.pa_stream.stop_stream()
-                self.play = False
+        if (
+            notification["subject"] == "seek_control.was_seeking"
+            and self.pa_stream is not None
+            and not self.pa_stream.is_stopped()
+        ):
+            self.pa_stream.stop_stream()
+            self.play = False
 
     def recent_events(self, events):
         self.update_audio_viz()
@@ -321,7 +329,7 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_viz_data, finished = self.audio_viz_trans.get_data(
                 log_scale=self.log_scale
             )
-            if not finished:
+            if not finished and self.audio_timeline:
                 self.audio_timeline.refresh()
 
     def setup_pyaudio_output_if_necessary(self):

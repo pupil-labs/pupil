@@ -38,16 +38,16 @@ export PYTHONPATH=/usr/local/lib/python3.6/site-packages:$PYTHONPATH
 Let's get started! Its time to put **brew** to work! Just copy paste commands into your terminal and listen to your machine purr.
 
 ```sh
+brew install cmake
 brew install pkg-config
 brew install libjpeg-turbo
 brew install libusb
 brew install portaudio
-# opencv will install ffmpeg, numpy, and opencv-contributions automatically
+brew install ffmpeg
+# opencv will install numpy, and opencv-contributions automatically
 # tbb is included by default with https://github.com/Homebrew/homebrew-core/pull/20101
 brew install opencv
 brew install glew
-# dependencies for 2d_3d c++ detector
-brew install ceres-solver
 ```
 
 ## libuvc

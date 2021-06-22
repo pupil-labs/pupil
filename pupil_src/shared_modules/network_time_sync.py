@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,11 +9,12 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import functools
 from time import sleep
 from uvc import get_time_monotonic
 import socket
+import socketserver
 import threading
-import asyncore
 import struct
 from random import random
 
@@ -36,49 +37,45 @@ Time synchonization scheme:
 """
 
 
-class Time_Echo(asyncore.dispatcher_with_send):
+class Time_Echo(socketserver.BaseRequestHandler):
     """
     Subclass do not use directly!
     reply to request with timestamp
     """
 
-    def __init__(self, sock, time_fn):
+    def __init__(self, *args, time_fn, **kwargs):
         self.time_fn = time_fn
-        asyncore.dispatcher_with_send.__init__(self, sock)
+        super().__init__(*args, **kwargs)
 
-    def handle_read(self):
-        # expecting `sync` message
-        data = self.recv(4)
-        if data:
-            self.send(struct.pack("<d", self.time_fn()))
+    def handle(self):
+        while True:
+            # expecting `sync` message
+            data = self.request.recv(4)
+            if not data:
+                break
+            if data.decode("utf-8") == "sync":
+                self.request.send(struct.pack("<d", self.time_fn()))
 
-    def __del__(self):
-        pass
-        # print 'goodbye'
 
-
-class Time_Echo_Server(asyncore.dispatcher):
+class Time_Echo_Server(socketserver.ThreadingTCPServer):
     """
     Subclass do not use directly!
     bind at next open port and listen for time sync requests.
     """
 
-    def __init__(self, time_fn, socket_map, host=""):
-        asyncore.dispatcher.__init__(self, socket_map)
-        self.time_fn = time_fn
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.set_reuse_addr()
-        self.bind((host, 0))
-        self.port = self.socket.getsockname()[1]
-        self.listen(5)
+    def __init__(self, *, time_fn, host="", **kwargs):
+        handler_class = functools.partial(Time_Echo, time_fn=time_fn)
+        super().__init__((host, 0), handler_class, **kwargs)
+        self.allow_reuse_address = True
         logger.debug("Timer Server ready on port: {}".format(self.port))
 
-    def handle_accept(self):
-        pair = self.accept()
-        if pair is not None:
-            sock, addr = pair
-            logger.debug("syching with %s" % str(addr))
-            Time_Echo(sock, self.time_fn)
+    @property
+    def host(self) -> str:
+        return self.server_address[0]
+
+    @property
+    def port(self) -> int:
+        return self.server_address[1]
 
     def __del__(self):
         logger.debug("Server closed")
@@ -92,20 +89,15 @@ class Clock_Sync_Master(threading.Thread):
 
     def __init__(self, time_fn):
         threading.Thread.__init__(self)
-        self.socket_map = {}
-        self.server = Time_Echo_Server(time_fn, self.socket_map)
+        self.server = Time_Echo_Server(time_fn=time_fn)
         self.start()
 
     def run(self):
-        asyncore.loop(use_poll=True, timeout=1)
+        self.server.serve_forever()
 
     def stop(self):
-        # we dont use server.close() as this raises a bad file decritoor exception in loop
-        self.server.connected = False
-        self.server.accepting = False
-        self.server.del_channel()
+        self.server.shutdown()
         self.join()
-        self.server.socket.close()
         logger.debug("Server Thread closed")
 
     def terminate(self):
@@ -211,20 +203,19 @@ class Clock_Sync_Follower(threading.Thread):
 
     def _get_offset(self):
         try:
-            server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            server_socket.settimeout(1.0)
-            server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            server_socket.connect((self.host, self.port))
-            times = []
-            for request in range(60):
-                t0 = self.get_time()
-                server_socket.send(b"sync")
-                message = server_socket.recv(8)
-                t2 = self.get_time()
-                t1 = struct.unpack("<d", message)[0]
-                times.append((t0, t1, t2))
-
-            server_socket.close()
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
+                server_socket.settimeout(1.0)
+                server_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+                server_socket.connect((self.host, self.port))
+                times = []
+                for request in range(60):
+                    t0 = self.get_time()
+                    server_socket.send(b"sync")
+                    message = server_socket.recv(8)
+                    t2 = self.get_time()
+                    if message:
+                        t1 = struct.unpack("<d", message)[0]
+                        times.append((t0, t1, t2))
 
             times.sort(key=lambda t: t[2] - t[0])
             times = times[: int(len(times) * 0.69)]

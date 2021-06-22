@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -65,6 +65,7 @@ def eye(
     hide_ui=False,
     debug=False,
     pub_socket_hwm=None,
+    parent_application="capture",
 ):
     """reads eye video and detects the pupil.
 
@@ -121,13 +122,15 @@ def eye(
         import numpy as np
         import cv2
 
+        from OpenGL.GL import GL_COLOR_BUFFER_BIT
+
         # display
         import glfw
+        from gl_utils import GLFWErrorReporting
 
-        glfw.ERROR_REPORTING = "raise"
+        GLFWErrorReporting.set_default()
 
         from pyglui import ui, graph, cygl
-        from pyglui.cygl.utils import draw_points, RGBA, draw_polyline
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
         from gl_utils import basic_gl_setup, adjust_gl_view, clear_gl_screen
@@ -188,13 +191,17 @@ def eye(
         g_pool.debug = debug
         g_pool.user_dir = user_dir
         g_pool.version = version
-        g_pool.app = "capture"
+        g_pool.app = parent_application
         g_pool.eye_id = eye_id
         g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
         g_pool.camera_render_size = None
 
+        g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_socket
+        g_pool.ipc_pub_url = ipc_pub_url
+        g_pool.ipc_sub_url = ipc_sub_url
+        g_pool.ipc_push_url = ipc_push_url
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value
@@ -202,8 +209,30 @@ def eye(
         g_pool.get_timestamp = get_timestamp
         g_pool.get_now = get_time_monotonic
 
-        default_2d, default_3d, available_detectors = available_detector_plugins()
-        plugins = manager_classes + source_classes + available_detectors + [Roi]
+        def load_runtime_pupil_detection_plugins():
+            from plugin import import_runtime_plugins
+            from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
+
+            plugins_path = os.path.join(g_pool.user_dir, "plugins")
+
+            for plugin in import_runtime_plugins(plugins_path):
+                if not isinstance(plugin, type):
+                    continue
+                if not issubclass(plugin, PupilDetectorPlugin):
+                    continue
+                if plugin is PupilDetectorPlugin:
+                    continue
+                yield plugin
+
+        available_detectors = available_detector_plugins()
+        runtime_detectors = list(load_runtime_pupil_detection_plugins())
+        plugins = (
+            manager_classes
+            + source_classes
+            + available_detectors
+            + runtime_detectors
+            + [Roi]
+        )
         g_pool.plugin_by_name = {p.__name__: p for p in plugins}
 
         preferred_names = [
@@ -225,13 +254,10 @@ def eye(
             # TODO: extend with plugins
             (default_capture_name, default_capture_settings),
             ("UVC_Manager", {}),
-            # Detectors needs to be loaded first to set `g_pool.pupil_detector`
-            (default_2d.__name__, {}),
-            (default_3d.__name__, {}),
+            *[(p.__name__, {}) for p in available_detectors],
             ("NDSI_Manager", {}),
             ("HMD_Streaming_Manager", {}),
             ("File_Manager", {}),
-            ("PupilDetectorManager", {}),
             ("Roi", {}),
         ]
 
@@ -301,7 +327,7 @@ def eye(
 
             # Always clear buffers on resize to make sure that there are no overlapping
             # artifacts from previous frames.
-            gl_utils.glClear(gl_utils.GL_COLOR_BUFFER_BIT)
+            gl_utils.glClear(GL_COLOR_BUFFER_BIT)
             gl_utils.glClearColor(0, 0, 0, 1)
 
             active_window = glfw.get_current_context()
@@ -511,6 +537,14 @@ def eye(
             # with incorrect settings that were loaded from session settings.
             plugins_to_load.append(overwrite_cap_settings)
 
+        # Add runtime plugins to the list of plugins to load with default arguments,
+        # if not already restored from session settings
+        plugins_to_load_names = set(name for name, _ in plugins_to_load)
+        for runtime_detector in runtime_detectors:
+            runtime_name = runtime_detector.__name__
+            if runtime_name not in plugins_to_load_names:
+                plugins_to_load.append((runtime_name, {}))
+
         g_pool.plugins = Plugin_List(g_pool, plugins_to_load)
 
         if not g_pool.capture:
@@ -588,7 +622,8 @@ def eye(
             glfw.swap_interval(0)
 
         # Event loop
-        while not glfw.window_should_close(main_window):
+        window_should_close = False
+        while not window_should_close:
 
             if notify_sub.new_data:
                 t, notification = notify_sub.recv()
@@ -662,7 +697,7 @@ def eye(
                     try:
                         plugin_to_stop = g_pool.plugin_by_name[notification["name"]]
                     except KeyError as err:
-                        logger.error(f"Attempt to stop unknown plugin: {err}")
+                        logger.error(f"Attempt to load unknown plugin: {err}")
                     else:
                         plugin_to_stop.alive = False
                         g_pool.plugins.clean()
@@ -733,13 +768,13 @@ def eye(
                 for result in event.get(EVENT_KEY, ()):
                     pupil_socket.send(result)
 
-            cpu_graph.update()
-
             # GL drawing
             if window_should_update():
+                cpu_graph.update()
                 if is_window_visible(main_window):
                     consume_events_and_render_buffer()
                 glfw.poll_events()
+                window_should_close = glfw.window_should_close(main_window)
 
         # END while running
 
@@ -777,10 +812,10 @@ def eye(
             plugin.alive = False
         g_pool.plugins.clean()
 
-        glfw.destroy_window(main_window)
-        g_pool.gui.terminate()
-        glfw.terminate()
-        logger.info("Process shutting down.")
+    glfw.destroy_window(main_window)
+    g_pool.gui.terminate()
+    glfw.terminate()
+    logger.info("Process shutting down.")
 
 
 def eye_profiled(
@@ -796,6 +831,7 @@ def eye_profiled(
     hide_ui=False,
     debug=False,
     pub_socket_hwm=None,
+    parent_application="capture",
 ):
     import cProfile
     import subprocess
@@ -803,7 +839,23 @@ def eye_profiled(
     from .eye import eye
 
     cProfile.runctx(
-        "eye(timebase, is_alive_flag,ipc_pub_url,ipc_sub_url,ipc_push_url, user_dir, version, eye_id, overwrite_cap_settings, hide_ui, debug)",
+        (
+            "eye("
+            "timebase, "
+            "is_alive_flag, "
+            "ipc_pub_url, "
+            "ipc_sub_url, "
+            "ipc_push_url, "
+            "user_dir, "
+            "version, "
+            "eye_id, "
+            "overwrite_cap_settings, "
+            "hide_ui, "
+            "debug, "
+            "pub_socket_hwm, "
+            "parent_application, "
+            ")"
+        ),
         {
             "timebase": timebase,
             "is_alive_flag": is_alive_flag,
@@ -817,6 +869,7 @@ def eye_profiled(
             "hide_ui": hide_ui,
             "debug": debug,
             "pub_socket_hwm": pub_socket_hwm,
+            "parent_application": parent_application,
         },
         locals(),
         "eye{}.pstats".format(eye_id),

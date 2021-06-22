@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -128,6 +128,7 @@ def service(
         g_pool = SimpleNamespace()
         g_pool.debug = debug
         g_pool.app = "service"
+        g_pool.process = "service"
         g_pool.user_dir = user_dir
         g_pool.version = version
         g_pool.get_now = get_time_monotonic

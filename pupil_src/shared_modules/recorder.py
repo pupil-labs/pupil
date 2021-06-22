@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -37,6 +37,8 @@ from gaze_mapping.notifications import (
 
 # from scipy.interpolate import UnivariateSpline
 from plugin import System_Plugin_Base
+
+from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +187,11 @@ class Recorder(System_Plugin_Base):
             )
         )
         self.button = ui.Thumb(
-            "running", self, setter=self.toggle, label="R", hotkey="r"
+            "running",
+            self,
+            setter=self.toggle,
+            label="R",
+            hotkey=Hotkey.RECORDER_RUNNING_TOGGLE_CAPTURE_HOTKEY(),
         )
         self.button.on_color[:] = (1, 0.0, 0.0, 0.8)
         self.g_pool.quickbar.insert(2, self.button)

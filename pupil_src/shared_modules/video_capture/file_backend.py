@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,13 +16,14 @@ import os.path
 import typing as T
 from abc import ABC, abstractmethod
 from multiprocessing import cpu_count
-from time import sleep
+from time import sleep, monotonic
 
 import av
 import numpy as np
 from pyglui import ui
 
 from camera_models import Camera_Model
+from methods import make_change_loglevel_fn, iter_catch, container_decode
 from pupil_recording import PupilRecording
 
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
@@ -32,6 +33,10 @@ logger = logging.getLogger(__name__)
 av.logging.set_level(av.logging.ERROR)
 logging.getLogger("libav").setLevel(logging.ERROR)
 logging.getLogger("av.buffered_decoder").setLevel(logging.WARNING)
+
+# convert 2h64 decoding errors to debug messages
+av_logger = logging.getLogger("libav.h264")
+av_logger.addFilter(make_change_loglevel_fn(logging.DEBUG))
 
 assert av.__version__ >= "0.4.5", "pyav is out-of-date, please update"
 
@@ -185,10 +190,11 @@ class OnDemandDecoder(Decoder):
         self.video_stream.seek(pts_position)
 
     def get_frame_iterator(self):
-        for packet in self.container.demux(self.video_stream):
-            for frame in packet.decode():
-                if frame:
-                    yield frame
+        frames = container_decode(self.container, self.video_stream)
+        frames = iter_catch(frames, av.AVError)
+        for frame in frames:
+            if frame:
+                yield frame
 
 
 # NOTE:Base_Source is included as base class for uniqueness:by_base_class to work
@@ -389,14 +395,13 @@ class File_Source(Playback_Source, Base_Source):
             self._setup_video(target_entry.container_idx)
 
         # advance frame iterator until we hit the target frame
+        av_frame = None
         for av_frame in self.frame_iterator:
             if not av_frame:
                 raise EndofVideoError
             if av_frame.pts == target_entry.pts:
                 break
-            elif av_frame.pts < target_entry.pts:
-                pass
-            else:
+            elif av_frame.pts > target_entry.pts:
                 # This should never happen, but just in case we should make sure
                 # that our current_frame_idx is actually correct afterwards!
                 logger.warn("Advancing frame iterator went past the target frame!")
@@ -412,6 +417,8 @@ class File_Source(Playback_Source, Base_Source):
                     raise EndofVideoError
                 self.target_frame_idx = pts_indices[0]
                 break
+        if av_frame is None:
+            return self._get_fake_frame_and_advance(target_entry)
 
         # update indices, we know that we advanced until target_frame_index!
         self.current_frame_idx = self.target_frame_idx
@@ -489,6 +496,36 @@ class File_Source(Playback_Source, Base_Source):
                 self.wait(frame.timestamp)
             self._recent_frame = frame
             events["frame"] = frame
+
+        if self.timing is None:
+            self._notify_current_index(min_time_diff_sec=1.0)
+
+    def _notify_current_index(self, min_time_diff_sec: float):
+        timestamp_now = monotonic()
+        current_index = self.get_frame_index()
+
+        try:
+            timestamp_last = self.__last_current_index_notification_timestamp
+            last_index = self.__last_current_index_notification_index
+        except AttributeError:
+            should_send_notification = True
+        else:
+            should_send_notification = True
+            should_send_notification &= (
+                timestamp_now - timestamp_last
+            ) >= min_time_diff_sec
+            should_send_notification &= current_index != last_index
+
+        if should_send_notification:
+            self.notify_all(
+                {
+                    "subject": "file_source.current_frame_index",
+                    "index": current_index,
+                    "source_path": self.source_path,
+                }
+            )
+            self.__last_current_index_notification_timestamp = timestamp_now
+            self.__last_current_index_notification_index = current_index
 
     def seek_to_frame(self, seek_pos):
         try:

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -59,7 +59,9 @@ def surface_definition_v01_after_update_dir() -> str:
 ##### PRIVATE
 
 
-def _create_dir_with_surface_definition_file(file_name: str, serialized_surfaces: typing.Collection[dict]) -> str:
+def _create_dir_with_surface_definition_file(
+    file_name: str, serialized_surfaces: typing.Collection[dict]
+) -> str:
     root_dir = os.path.join(tempfile.gettempdir(), str(uuid.uuid4()))
     file_path = os.path.join(root_dir, file_name)
 

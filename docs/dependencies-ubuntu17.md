@@ -119,35 +119,7 @@ sudo udevadm trigger
 
 ## 3D Eye Model Dependencies
 ```sh
-sudo apt install -y libgoogle-glog-dev libatlas-base-dev libeigen3-dev
-```
-
-## Ceres
-
-You will need to build Ceres from source:
-```sh
-sudo add-apt-repository ppa:bzindovic/suitesparse-bugfix-1319687
-sudo apt-get update
-sudo apt-get install libsuitesparse-dev
-```
-
-If `add-apt-repository` is not found, install the following package first:
-```sh
-sudo apt-get install software-properties-common
-```
-
-The build and install the Ceres solver:
-```sh
-git clone https://ceres-solver.googlesource.com/ceres-solver
-cd ceres-solver
-git checkout 1.14.0
-mkdir build && cd build
-cmake .. -DBUILD_SHARED_LIBS=ON
-make -j3
-make test
-sudo make install
-sudo sh -c 'echo "/usr/local/lib" > /etc/ld.so.conf.d/ceres.conf'
-sudo ldconfig
+sudo apt install -y libeigen3-dev
 ```
 
 ### Install Python Libraries
