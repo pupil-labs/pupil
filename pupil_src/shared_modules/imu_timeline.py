@@ -14,6 +14,7 @@ import os
 import typing
 import logging
 import numpy as np
+import time
 import typing as T
 
 import OpenGL.GL as gl
@@ -447,6 +448,9 @@ class IMUTimeline(Plugin):
 
     def recent_events(self, events):
         if self.bg_task:
+            start_time = time.perf_counter()
+            did_timeout = False
+
             for progress, task_data in self.bg_task.fetch():
                 self.status = progress
                 if task_data:
@@ -454,8 +458,11 @@ class IMUTimeline(Plugin):
                     self.menu_icon.indicator_stop = current_progress
                     self.data_orient["pitch"][task_data[1]] = task_data[0][0]
                     self.data_orient["roll"][task_data[1]] = task_data[0][1]
+                if time.perf_counter() - start_time > 1 / 50:
+                    did_timeout = True
+                    break
 
-            if self.bg_task.completed:
+            if self.bg_task.completed and not did_timeout:
                 self.status = "{} imu data fused"
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.0
