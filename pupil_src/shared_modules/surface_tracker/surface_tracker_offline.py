@@ -97,6 +97,8 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
             "on_data_changed", self._on_gaze_positions_changed
         )
 
+        self.__surface_location_context = {}
+
     @property
     def Surface_Class(self):
         return Surface_Offline
@@ -232,6 +234,7 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
         if self.cache_filler is not None:
             self.cache_filler.cancel()
 
+        self.__surface_location_context = {}
         self.cache_filler = background_tasks.background_video_processor(
             self.g_pool.capture.source_path,
             offline_utils.marker_detection_callable.from_detector(
@@ -340,7 +343,10 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
 
                 for surface in self.surfaces:
                     surface.update_location_cache(
-                        frame_index, self.marker_cache, self.camera_model
+                        frame_index,
+                        self.marker_cache,
+                        self.camera_model,
+                        context=self.__surface_location_context,
                     )
             if time.perf_counter() - start_time > 1 / 50:
                 did_timeout = True
