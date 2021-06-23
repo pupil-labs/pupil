@@ -69,10 +69,10 @@ pip install -r requirements.txt
 
 ### OpenCV Troubleshooting
 `ImportError: No module named 'cv2'`
-  
+
 When you see this error, Python cannot find the bindings from your OpenCV installation.
 
-**We do NOT (!) recommend to install `opencv-python` via pip in that case!** 
+**We do NOT (!) recommend to install `opencv-python` via pip in that case!**
 
 Installing `opencv-python` will install another full (potentially different) version of opencv to your machine, so we are not recommending this setup.
 When you install opencv with `sudo apt install -y python3-opencv libopencv-dev` as we advise above, you should have the `cv2` package available for import in Python as this will install compatible Python bindings already.
