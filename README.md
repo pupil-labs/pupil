@@ -1,11 +1,11 @@
 # Pupil
-<a 
+<a
 href="https://pupil-labs.com"
 rel="noopener"
 target="_blank">
 	<p align="center">
-		<img 
-		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_repo_banner.jpg" 
+		<img
+		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_repo_banner.jpg"
 		alt="Pupil Labs - Pupil Core software: open source eye tracking platform."/>
 	</p>
 </a>
@@ -19,27 +19,27 @@ Our vision is to create tools for a diverse group of people interested in learni
 Chat with us on [Discord](https://pupil-labs.com/chat "Pupil Server on Discord").
 
 ## Users
-<a 
+<a
 href="https://github.com/pupil-labs/pupil/releases/latest#user-content-downloads"
 rel="noopener"
 target="_blank">
 	<p align="center">
-		<img 
-		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_app_download_banner.png" 
+		<img
+		src="https://raw.githubusercontent.com/wiki/pupil-labs/pupil/media/images/pupil_labs_pupil_core_app_download_banner.png"
 		alt="Download the latest Pupil Core Apps: Pupil Capture, Pupil Player, Pupil Service"/>
 	</p>
 </a>
 
 
-You don't need to know how to write code to _use_ Pupil. [Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest#user-content-downloads "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")! 
+You don't need to know how to write code to _use_ Pupil. [Download the latest apps](https://github.com/pupil-labs/pupil/releases/latest#user-content-downloads "Download Pupil Capture, Pupil Player, and Pupil Service application bundles")!
 
-Read the [Pupil Core user guide](https://docs.pupil-labs.com/core/ "Pupil Core user guide"). 
+Read the [Pupil Core user guide](https://docs.pupil-labs.com/core/ "Pupil Core user guide").
 
 ## Developers
 There are a number of ways you can interact with Pupil Core software as a developer:
 
-- [Use the API](https://docs.pupil-labs.com/developer/core/network-api/): Use the network based real-time API to communicate with Pupil over the network and integrate with your application. 
-- [Develop a Plugin](https://docs.pupil-labs.com/developer/core/plugin-api/): Plugins are loaded at runtime from the app bundle. Note: if your plugin requires Python libraries that are not included in the application bundle, then you will need to run from source. 
+- [Use the API](https://docs.pupil-labs.com/developer/core/network-api/): Use the network based real-time API to communicate with Pupil over the network and integrate with your application.
+- [Develop a Plugin](https://docs.pupil-labs.com/developer/core/plugin-api/): Plugins are loaded at runtime from the app bundle. Note: if your plugin requires Python libraries that are not included in the application bundle, then you will need to run from source.
 - [Run from Source](#installing-dependencies): Can't do what you need to do with the network based api or plugin? Then get ready to dive into the inner workings of Pupil and run from source!
 
 All setup and dependency installation instructions are contained in this repo. All other developer documentation is [here](https://docs.pupil-labs.com/developer/core/overview/ "Pupil Core developer docs").
