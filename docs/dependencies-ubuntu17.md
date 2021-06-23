@@ -53,15 +53,15 @@ The following errors were commonly reported:
 * `ImportError: No module named 'cv2'`
 
   When you see this error, Python cannot find the bindings from your OpenCV installation.
-  
-  **We do NOT (!) recommend to install `opencv-python` via pip in that case!** 
-  
+
+  **We do NOT (!) recommend to install `opencv-python` via pip in that case!**
+
   Installing `opencv-python` will install another full (potentially different) version of opencv to your machine, so we are not recommending this setup.
   When you compile opencv with `-DBUILD_opencv_python3=ON` as we advise above, you should have the `cv2` package available for import in Python as this will install compatible Python bindings already.
 
   However, you might run into these problems when using a virtual environment, as your virtual environment cannot by default access Python packages that were installed from `apt`.
   In that case there are 2 options:
-  
+
   1. Symlink or copy the Python bindings into your virtualenv. See e.g. [step 4 of this stackoverflow post](https://stackoverflow.com/a/37190408) for reference.
   2. Create your virtualenv with the [`--system-site-packages`](https://virtualenv.pypa.io/en/latest/userguide/#the-system-site-packages-option) option, which will enable access to system-installed Python packages.
 
@@ -69,7 +69,7 @@ The following errors were commonly reported:
 
 
 * `ImportError: */detector_2d.*.so: undefined symbol: *ellipse*InputOutputArray*RotatedRect*Scalar*`
-  
+
   This error appears if opencv has been installed previously via **apt-get**.
   * Remove all opencv installations that were installed via **apt-get**.
   * Delete the __*.so__ files as well as the **build** dirctory within the **pupil_detectors** directory.

@@ -253,7 +253,7 @@ template = f"""
             <Publish Dialog="MaintenanceTypeDlg" Control="Back" Event="NewDialog" Value="MaintenanceWelcomeDlg">1</Publish>
         </UI>
         <UIRef Id="WixUI_Common" />
-    
+
 
     </Product>
 </Wix>
