@@ -17,12 +17,14 @@ logger = logging.getLogger(__name__)
 
 ROTATION_HEADER = tuple("rotation_" + dim for dim in "xyz")
 TRANSLATION_HEADER = tuple("translation_" + dim for dim in "xyz")
+ORIENTATION_HEADER = tuple("orientation_" + dim for dim in "xyz")
+POSITION_HEADER = tuple("position_" + dim for dim in "xyz")
 VERTICES_HEADER = tuple(
     "vert_{}_{}".format(idx, dim) for idx in range(4) for dim in "xyz"
 )
 
 MODEL_HEADER = ("marker_id",) + VERTICES_HEADER
-POSES_HEADER = ("timestamp",) + ROTATION_HEADER + TRANSLATION_HEADER
+POSES_HEADER = ("timestamp",) + ROTATION_HEADER + TRANSLATION_HEADER + ORIENTATION_HEADER + POSITION_HEADER
 
 
 def export_routine(rec_dir, model, poses):
@@ -32,14 +34,14 @@ def export_routine(rec_dir, model, poses):
 
 def _export_model(rec_dir, model):
     logger.info("Exporting head pose model to {}".format(rec_dir))
-    model_path = os.path.join(rec_dir, "head_pose_tacker_model.csv")
+    model_path = os.path.join(rec_dir, "head_pose_tracker_model.csv")
     _write_csv(model_path, MODEL_HEADER, model)
 
 
 def _export_poses(rec_dir, poses):
     logger.info("Exporting {} head poses to {}".format(len(poses), rec_dir))
-    poses_path = os.path.join(rec_dir, "head_pose_tacker_poses.csv")
-    poses_flat = [(p["timestamp"], *p["camera_poses"]) for p in poses]
+    poses_path = os.path.join(rec_dir, "head_pose_tracker_poses.csv")
+    poses_flat = [(p["timestamp"], *p["camera_poses"], *p["camera_orientation"], *p["camera_trace"]) for p in poses]
     _write_csv(poses_path, POSES_HEADER, poses_flat)
 
 

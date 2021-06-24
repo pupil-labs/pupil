@@ -10,6 +10,11 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os, sys, platform
+sys.argv = [sys.argv[0], 'player', 'C:/Users/Neil Thomas/Desktop/Pupil Invisible example/invisible_surface_example/']
+# sys.argv = [sys.argv[0], 'player', 'C:/Users/Neil Thomas/Desktop/test/']
+# sys.argv = [sys.argv[0], 'player', 'D:/workPC_Backup/Current/Pupil labs work/Example recordings/Pupil VR example/']#
+# sys.argv = [sys.argv[0], 'player']
+
 
 running_from_bundle = getattr(sys, "frozen", False)
 if not running_from_bundle:

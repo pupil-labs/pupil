@@ -59,15 +59,29 @@ def convert_matrix_to_extrinsic(extrinsic_matrix):
     return merge_extrinsics(rotation, translation)
 
 
+def rod_to_euler(rotation_pose):
+    rot_mat = cv2.Rodrigues(rotation_pose)[0]
+    sin_y = np.sqrt(rot_mat[0, 0] * rot_mat[0, 0] + rot_mat[1, 0] * rot_mat[1, 0])
+    if not sin_y < 1e-6:
+        x = np.arctan2(rot_mat[2, 1], rot_mat[2, 2])
+        y = np.arctan2(-rot_mat[2, 0], sin_y)
+        z = np.arctan2(rot_mat[1, 0], rot_mat[0, 0])
+    else:
+        x = np.arctan2(-rot_mat[1, 2], rot_mat[1, 1])
+        y = np.arctan2(-rot_mat[2, 0], sin_y)
+        z = 0
+    return np.rad2deg([x, y, z])
+
+
 def get_camera_pose(camera_extrinsics):
     if camera_extrinsics is None:
         return get_none_camera_extrinsics()
-
     rotation_ext, translation_ext = split_extrinsics(camera_extrinsics)
     rotation_pose = -rotation_ext
     translation_pose = np.matmul(-cv2.Rodrigues(rotation_ext)[0].T, translation_ext)
     camera_pose = merge_extrinsics(rotation_pose, translation_pose)
-    return camera_pose
+    camera_orientation = rod_to_euler(rotation_pose)
+    return camera_pose, camera_orientation
 
 
 def convert_marker_extrinsics_to_points_3d(marker_extrinsics):
@@ -75,7 +89,6 @@ def convert_marker_extrinsics_to_points_3d(marker_extrinsics):
     marker_transformed_h = np.matmul(mat, get_marker_points_4d_origin().T)
     marker_points_3d = cv2.convertPointsFromHomogeneous(marker_transformed_h.T)
     marker_points_3d.shape = 4, 3
-
     return marker_points_3d
 
 
