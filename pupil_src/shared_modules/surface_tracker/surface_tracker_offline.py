@@ -572,7 +572,7 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
                 return
 
             if self.gaze_on_surf_buffer_filler is not None:
-                # TODO: Log error
+                logger.error("Surface gaze mapping not finished. No data will be exported.")
                 return
 
             # Create new marker cache temporary file
