@@ -566,6 +566,15 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
                     break
 
         elif notification["subject"] == "should_export":
+
+            if self.cache_filler is not None:
+                logger.error("Marker detection not finished. No data will be exported.")
+                return
+
+            if self.gaze_on_surf_buffer_filler is not None:
+                # TODO: Log error
+                return
+
             # Create new marker cache temporary file
             # Backgroud exporter is responsible of removing the temporary file when finished
             file_handle, marker_cache_path = tempfile.mkstemp()
