@@ -358,10 +358,12 @@ class Exporter:
         return gaze_on_surface, fixations_on_surface
 
     def _export_marker_detections(self):
+        export_slice = slice(*self.export_range)
+        world_indices = range(*self.export_range)
 
         # Load the temporary marker cache created by the offline surface tracker
         marker_cache = file_methods.Persistent_Dict(self.marker_cache_path)
-        marker_cache = marker_cache["marker_cache"]
+        marker_cache = marker_cache["marker_cache"][export_slice]
 
         incomplete_marker_cache_detected = False
 
@@ -384,7 +386,7 @@ class Exporter:
                         "corner_3_y",
                     )
                 )
-                for idx, serialized_markers in enumerate(marker_cache):
+                for world_index, serialized_markers in zip(world_indices, marker_cache):
                     if serialized_markers is None:
                         # set flag to break from outer loop
                         incomplete_marker_cache_detected = True
@@ -402,7 +404,7 @@ class Exporter:
                         assert len(flat_corners) == 8  # sanity check
                         csv_writer.writerow(
                             (
-                                idx,
+                                world_index,
                                 m.uid,
                                 *flat_corners,
                             )
