@@ -52,7 +52,7 @@ def draw_ellipse(
     if draw_center:
         _draw_circle_filled(
             tuple(ellipse["center"]),
-            size=20 / 2,
+            size=3,
             color=RGBA(*rgba),
         )
 
