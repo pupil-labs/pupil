@@ -219,6 +219,7 @@ class Fusion(object):
 
 
 class IMURecording:
+    NUMBER_SAMPLES_TIMELINE = 4000
     DTYPE_RAW = np.dtype(
         [
             ("gyro_x", "<f4"),
@@ -550,10 +551,16 @@ class IMUTimeline(Plugin):
         ts_min = self.g_pool.timestamps[0]
         ts_max = self.g_pool.timestamps[-1]
         data_raw = data[keys]
+        sub_samples = np.linspace(
+            0,
+            self.data_len - 1,
+            min(self.NUMBER_SAMPLES_TIMELINE, self.data_len),
+            dtype=int,
+        )
         with gl_utils.Coord_System(ts_min, ts_max, *y_limits):
             for key in keys:
                 data_keyed = data_raw[key]
-                points = list(zip(self.data_ts, data_keyed))
+                points = list(zip(self.data_ts[sub_samples], data_keyed[sub_samples]))
                 cygl_utils.draw_points(points, size=1.5 * scale, color=self.CMAP[key])
 
     def draw_legend_gyro(self, width, height, scale):
