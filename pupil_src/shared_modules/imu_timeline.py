@@ -287,7 +287,7 @@ class IMUTimeline(Plugin):
     }
     NUMBER_SAMPLES_TIMELINE = 4000
     TIMELINE_LINE_HEIGHT = 16
-    icon_chr = chr(0xE922)
+    icon_chr = chr(0xEC22)
     icon_font = "pupil_icons"
 
     DTYPE_ORIENT = np.dtype(
