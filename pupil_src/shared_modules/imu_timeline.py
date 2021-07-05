@@ -270,10 +270,6 @@ class IMUTimeline(Plugin):
     See Pupil docs for relevant coordinate systems
     """
 
-    gyro_error = 50
-    should_draw_raw = False
-    should_draw_orientation = False
-
     IMU_PATTERN_RAW = r"^extimu ps(\d+).raw"
 
     CMAP = {
@@ -335,9 +331,19 @@ class IMUTimeline(Plugin):
         )
         return [IMURecording(imu_file) for imu_file in imu_files]
 
-    def __init__(self, g_pool):
+    def __init__(
+        self,
+        g_pool,
+        gyro_error=50,
+        should_draw_raw=False,
+        should_draw_orientation=False,
+    ):
         super().__init__(g_pool)
         imu_recs = self._imu_recordings(g_pool)
+
+        self.gyro_error = gyro_error
+        self.should_draw_raw = should_draw_raw
+        self.should_draw_orientation = should_draw_orientation
 
         self.bg_task = None
 
@@ -356,6 +362,13 @@ class IMUTimeline(Plugin):
         self.gyro_keys = ["gyro_x", "gyro_y", "gyro_z"]
         self.accel_keys = ["accel_x", "accel_y", "accel_z"]
         self.orient_keys = ["pitch", "roll"]
+
+    def get_init_dict(self):
+        return {
+            "gyro_error": self.gyro_error,
+            "should_draw_raw": self.should_draw_raw,
+            "should_draw_orientation": self.should_draw_orientation,
+        }
 
     def init_ui(self):
         self.add_menu()
