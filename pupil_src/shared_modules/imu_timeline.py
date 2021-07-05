@@ -8,26 +8,26 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import pathlib
 import csv
-import os
-import typing
 import logging
-import numpy as np
+import os
+import pathlib
 import time
+import typing
 import typing as T
 
+import numpy as np
 import OpenGL.GL as gl
-from pyglui import ui, pyfontstash
+from pyglui import pyfontstash, ui
 from pyglui.cygl import utils as cygl_utils
 
 import background_helper as bh
+import csv_utils
 import gl_utils
+import player_methods as pm
 from plugin import Plugin
 from pupil_recording import PupilRecording, RecordingInfo
 from raw_data_exporter import _Base_Positions_Exporter
-import player_methods as pm
-import csv_utils
 
 logger = logging.getLogger(__name__)
 
