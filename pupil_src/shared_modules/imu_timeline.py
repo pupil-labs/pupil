@@ -395,7 +395,7 @@ class IMUTimeline(Plugin):
 
         def set_gyro_error(new_value):
             self.gyro_error = new_value
-            self.notify_all({"subject": "madgwick_fusion.should_fuse", "delay": 1.0})
+            self.notify_all({"subject": "madgwick_fusion.should_fuse", "delay": 0.3})
 
         self.menu.append(
             ui.Switch(
