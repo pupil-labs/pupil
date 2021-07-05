@@ -42,8 +42,8 @@ def glfont_generator():
 
 def get_limits(data, keys):
     return (
-        min([min(data[key]) for key in keys]),
-        max([max(data[key]) for key in keys]),
+        min([data[key].min() for key in keys]),
+        max([data[key].max() for key in keys]),
     )
 
 
