@@ -341,12 +341,16 @@ class IMUTimeline(Plugin):
         self,
         g_pool,
         gyro_error=50,
-        should_draw_raw=False,
-        should_draw_orientation=False,
+        should_draw_raw=True,
+        should_draw_orientation=True,
     ):
         super().__init__(g_pool)
         imu_recs = self._imu_recordings(g_pool)
 
+        # gyro_error settings priority
+        # 1. Loaded from cache (if available)
+        # 2. Loaded from session settings (if available)
+        # 3. Defaults to 50
         self.gyro_error = gyro_error
         self.should_draw_raw = should_draw_raw
         self.should_draw_orientation = should_draw_orientation
