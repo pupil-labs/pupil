@@ -92,6 +92,11 @@ class PupilRenderer(ImageManipulator):
             # TODO: Fix in detectors.
             return
 
+        model_confidence_threshold = 0.6
+        color = (26, 230, 0, pupil_position["model_confidence"])  # green
+        if pupil_position["model_confidence"] < model_confidence_threshold:
+            color = (31, 119, 180, 1.0)  # orange
+
         eye_ball = pupil_position.get("projected_sphere", None)
         if eye_ball is not None:
             try:
@@ -102,7 +107,7 @@ class PupilRenderer(ImageManipulator):
                     angle=int(eye_ball["angle"]),
                     startAngle=0,
                     endAngle=360,
-                    color=(26, 230, 0, 255 * pupil_position["model_confidence"]),
+                    color=color,
                     thickness=2,
                 )
             except Exception as e:

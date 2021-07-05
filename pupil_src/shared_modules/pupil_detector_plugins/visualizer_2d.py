@@ -57,16 +57,19 @@ def draw_ellipse(
         )
 
 
-def draw_eyeball_outline(pupil_detection_result_3d):
+def draw_eyeball_outline(pupil_detection_result_3d, model_confidence_threshold=0.6):
+    color = (0, 0.9, 0.1, pupil_detection_result_3d["model_confidence"])  # green
     if pupil_detection_result_3d["model_confidence"] <= 0.0:
         # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere' might
         # be 'nan', which will cause cv2.ellipse to crash.
         # TODO: Fix in detectors.
         return
+    elif pupil_detection_result_3d["model_confidence"] < model_confidence_threshold:
+        color = (0.70588, 0.46666, 0.12156, 1.0)  # orange
 
     draw_ellipse(
         ellipse=pupil_detection_result_3d["projected_sphere"],
-        rgba=(0, 0.9, 0.1, pupil_detection_result_3d["model_confidence"]),
+        rgba=color,
         thickness=2,
     )
 
