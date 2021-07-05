@@ -51,7 +51,6 @@ def get_limits(data, keys):
 def fuser(data_raw, gyro_error):
     yield "Fusing imu", ()
     fusion = Fusion(gyro_error, 0.00494)
-    logger.info("Starting IMU fusion using Madgwick's algorithm")
 
     for ind, datum in enumerate(data_raw):
         gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z = datum
@@ -465,7 +464,15 @@ class IMUTimeline(Plugin):
             self.gyro_error,
         )
 
+        self.data_orient = self.data_orient_empty_copy()
+        self._data_orient_fetched = np.empty_like(self.data_orient, shape=self.data_len)
+        if self.should_draw_orientation:
+            self.orient_timeline.refresh()
+        logger.info("Starting IMU fusion using Madgwick's algorithm")
         self.bg_task = bh.IPC_Logging_Task_Proxy("Fusion", fuser, args=generator_args)
+
+    def data_orient_empty_copy(self):
+        return np.empty([0], dtype=self.DTYPE_ORIENT).view(np.recarray)
 
     def recent_events(self, events):
         if self.bg_task:
@@ -477,8 +484,8 @@ class IMUTimeline(Plugin):
                 if task_data:
                     current_progress = task_data[1] / self.data_len
                     self.menu_icon.indicator_stop = current_progress
-                    self.data_orient["pitch"][task_data[1]] = task_data[0][0]
-                    self.data_orient["roll"][task_data[1]] = task_data[0][1]
+                    self._data_orient_fetched["pitch"][task_data[1]] = task_data[0][0]
+                    self._data_orient_fetched["roll"][task_data[1]] = task_data[0][1]
                 if time.perf_counter() - start_time > 1 / 50:
                     did_timeout = True
                     break
@@ -487,6 +494,9 @@ class IMUTimeline(Plugin):
                 self.status = "{} imu data fused"
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.0
+                # swap orientation data buffers
+                self.data_orient = self._data_orient_fetched
+                del self._data_orient_fetched
                 if self.should_draw_orientation:
                     # redraw new orientation data
                     self.orient_timeline.refresh()
@@ -501,11 +511,6 @@ class IMUTimeline(Plugin):
             self.remove_timeline_raw()
 
     def on_draw_orientation_toggled(self, new_value):
-        # check that data is fused
-        if self.bg_task:
-            logger.warning("Running Madgwick's algorithm")
-            return
-
         self.should_draw_orientation = new_value
         if self.should_draw_orientation:
             self.append_timeline_orientation()
@@ -581,6 +586,8 @@ class IMUTimeline(Plugin):
         with gl_utils.Coord_System(ts_min, ts_max, *y_limits):
             for key in keys:
                 data_keyed = data_raw[key]
+                if data_keyed.shape[0] == 0:
+                    continue
                 points = list(zip(self.data_ts[sub_samples], data_keyed[sub_samples]))
                 cygl_utils.draw_points(points, size=1.5 * scale, color=self.CMAP[key])
 
