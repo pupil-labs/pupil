@@ -23,6 +23,7 @@ from pyglui.cygl import utils as cygl_utils
 
 import background_helper as bh
 import csv_utils
+import file_methods as fm
 import gl_utils
 import player_methods as pm
 from plugin import Plugin
@@ -219,7 +220,6 @@ class Fusion(object):
 
 
 class IMURecording:
-    NUMBER_SAMPLES_TIMELINE = 4000
     DTYPE_RAW = np.dtype(
         [
             ("gyro_x", "<f4"),
@@ -293,6 +293,7 @@ class IMUTimeline(Plugin):
             ("roll", "<f4"),
         ]
     )
+    CACHE_VERSION = 1
 
     @classmethod
     def parse_pretty_class_name(cls) -> str:
@@ -359,6 +360,9 @@ class IMUTimeline(Plugin):
         self.data_orient = np.empty([self.data_len], dtype=self.DTYPE_ORIENT).view(
             np.recarray
         )
+        if not self.read_orientation_cache():
+            logger.info("Starting Madgwick's fusion")
+            self._fuse()
         self.gyro_keys = ["gyro_x", "gyro_y", "gyro_z"]
         self.accel_keys = ["accel_x", "accel_y", "accel_z"]
         self.orient_keys = ["pitch", "roll"]
@@ -424,7 +428,10 @@ class IMUTimeline(Plugin):
                 setter=set_gyro_error,
             )
         )
-        self._fuse()
+        if self.should_draw_raw:
+            self.append_timeline_raw()
+        if self.should_draw_orientation:
+            self.append_timeline_orientation()
 
     def deinit_ui(self):
         if self.should_draw_raw:
@@ -483,6 +490,8 @@ class IMUTimeline(Plugin):
                 if self.should_draw_orientation:
                     # redraw new orientation data
                     self.orient_timeline.refresh()
+                self.write_orientation_cache()
+                logger.info("Madgwick's fusion completed")
 
     def on_draw_raw_toggled(self, new_value):
         self.should_draw_raw = new_value
@@ -626,6 +635,32 @@ class IMUTimeline(Plugin):
             export_window=export_window,
             export_dir=export_dir,
         )
+
+    def write_orientation_cache(self):
+        rec_dir = pathlib.Path(self.g_pool.rec_dir)
+        offline_data = rec_dir / "offline_data"
+        if not offline_data.exists():
+            offline_data.mkdir()
+        path_cache = offline_data / "orientation.cache"
+        path_meta = offline_data / "orientation.meta"
+        np.save(path_cache, self.data_orient)
+        fm.save_object(
+            {"version": self.CACHE_VERSION, "gyro_error": self.gyro_error}, path_meta
+        )
+
+    def read_orientation_cache(self) -> bool:
+        rec_dir = pathlib.Path(self.g_pool.rec_dir)
+        offline_data = rec_dir / "offline_data"
+        path_cache = offline_data / "orientation.cache.npy"
+        path_meta = offline_data / "orientation.meta"
+        if not (path_cache.exists() and path_meta.exists()):
+            return False
+        meta = fm.load_object(path_meta)
+        if meta["version"] != self.CACHE_VERSION:
+            return False
+        self.gyro_error = meta["gyro_error"]
+        self.data_orient = np.load(path_cache).view(np.recarray)
+        return True
 
 
 class Imu_Bisector(pm.Bisector):
