@@ -357,12 +357,8 @@ class IMUTimeline(Plugin):
         self.data_raw = np.concatenate([rec.raw for rec in imu_recs])
         self.data_ts = np.concatenate([rec.ts for rec in imu_recs])
         self.data_len = len(self.data_raw)
-        self.data_orient = np.empty([self.data_len], dtype=self.DTYPE_ORIENT).view(
-            np.recarray
-        )
-        if not self.read_orientation_cache():
-            logger.info("Starting Madgwick's fusion")
-            self._fuse()
+        self.data_orient = self.data_orient_empty_copy()
+        self.read_orientation_cache()
         self.gyro_keys = ["gyro_x", "gyro_y", "gyro_z"]
         self.accel_keys = ["accel_x", "accel_y", "accel_z"]
         self.orient_keys = ["pitch", "roll"]
@@ -432,6 +428,10 @@ class IMUTimeline(Plugin):
             self.append_timeline_raw()
         if self.should_draw_orientation:
             self.append_timeline_orientation()
+
+        if self.data_orient.shape[0] == 0:
+            # Start fusion after setting up timelines
+            self._fuse()
 
     def deinit_ui(self):
         if self.should_draw_raw:
