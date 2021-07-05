@@ -482,15 +482,14 @@ class IMUTimeline(Plugin):
                 self.menu_icon.indicator_stop = 0.0
                 if self.should_draw_orientation:
                     # redraw new orientation data
-                    self.remove_orientation()
-                    self.draw_orientation()
+                    self.orient_timeline.refresh()
 
     def on_draw_raw_toggled(self, new_value):
         self.should_draw_raw = new_value
         if self.should_draw_raw:
-            self.draw_raw()
+            self.append_timeline_raw()
         else:
-            self.remove_raw()
+            self.remove_timeline_raw()
 
     def on_draw_orientation_toggled(self, new_value):
         # check that data is fused
@@ -500,11 +499,11 @@ class IMUTimeline(Plugin):
 
         self.should_draw_orientation = new_value
         if self.should_draw_orientation:
-            self.draw_orientation()
+            self.append_timeline_orientation()
         else:
-            self.remove_orientation()
+            self.remove_timeline_orientation()
 
-    def draw_raw(self):
+    def append_timeline_raw(self):
         self.gyro_timeline = ui.Timeline(
             "gyro",
             self.draw_raw_gyro,
@@ -521,7 +520,7 @@ class IMUTimeline(Plugin):
         self.g_pool.user_timelines.append(self.accel_timeline)
         self.glfont_raw = glfont_generator()
 
-    def draw_orientation(self):
+    def append_timeline_orientation(self):
         self.orient_timeline = ui.Timeline(
             "orientation",
             self.draw_orient,
@@ -531,14 +530,14 @@ class IMUTimeline(Plugin):
         self.g_pool.user_timelines.append(self.orient_timeline)
         self.glfont_orient = glfont_generator()
 
-    def remove_raw(self):
+    def remove_timeline_raw(self):
         self.g_pool.user_timelines.remove(self.gyro_timeline)
         self.g_pool.user_timelines.remove(self.accel_timeline)
         del self.gyro_timeline
         del self.accel_timeline
         del self.glfont_raw
 
-    def remove_orientation(self):
+    def remove_timeline_orientation(self):
         self.g_pool.user_timelines.remove(self.orient_timeline)
         del self.glfont_orient
 
