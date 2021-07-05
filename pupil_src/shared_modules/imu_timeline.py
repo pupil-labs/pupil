@@ -42,10 +42,16 @@ def glfont_generator():
 
 
 def get_limits(data, keys):
-    return (
-        min([data[key].min() for key in keys]),
-        max([data[key].max() for key in keys]),
+    limits = (
+        min(data[key].min() if data[key].shape[0] else 0 for key in keys),
+        max(data[key].max() if data[key].shape[0] else 1 for key in keys),
     )
+    # If the difference between the lower and upper bound is too small,
+    # OpenGL will start throwing errors.
+    limit_min_diff = 0.001
+    if limits[1] - limits[0] < limit_min_diff:
+        limits = limits[0] - limit_min_diff / 2, limits[0] + limit_min_diff / 2
+    return limits
 
 
 def fuser(data_raw, gyro_error):
