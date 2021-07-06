@@ -382,22 +382,21 @@ class IMUTimeline(Plugin):
     def init_ui(self):
         self.add_menu()
         self.menu.label = "IMU Timeline"
-        self.menu.append(ui.Info_Text("View IMU data and export into .csv file"))
+        self.menu.append(ui.Info_Text("Visualize IMU data and export to .csv file"))
         self.menu.append(
             ui.Info_Text(
-                "Use this Plugin to view the IMU data timeline. When enabled, "
-                " IMU data will also be exported into a .csv file after running the Raw "
-                " Data Exporter Plugin. "
+                "This plugin visualizes accelerometer, gyroscope and "
+                " orientation data from Pupil Invisible recordings. Results are "
+                " exported in 'imu_timeline.csv' "
             )
         )
         self.menu.append(
             ui.Info_Text(
                 "Orientation is estimated using Madgwick's algorithm. "
                 " Madgwick implements a beta value which is related with the "
-                " error of the gyroscope. The beta value does not have an "
-                " intuitive optimal magnitude. Increasing the beta leads to "
-                " faster corrections but with more sensitivity to lateral "
-                " accelerations. Read more about Madgwick's algorithm here: "
+                " error of the gyroscope. Increasing the beta leads to faster "
+                " corrections but with more sensitivity to lateral accelerations. "
+                " Read more about Madgwick's algorithm here: "
                 " https://www.x-io.co.uk/res/doc/madgwick_internal_report.pdf "
             )
         )
