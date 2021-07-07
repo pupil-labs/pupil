@@ -18,12 +18,11 @@ from pathlib import Path
 from shutil import copy2
 
 import av
-import numpy as np
-from scipy.interpolate import interp1d
-
 import csv_utils
 import file_methods as fm
+import numpy as np
 from camera_models import Camera_Model
+from scipy.interpolate import interp1d
 from version_utils import parse_version
 
 from ..info import RecordingInfoFile
