@@ -152,15 +152,18 @@ class PupilTopic:
 
     _FORMAT_STRING_V1 = "pupil.{eye_id}"
     _FORMAT_STRING_V2 = "pupil.{eye_id}.{detector_tag}"
+    _FORMAT_STRING_LEGACY = "pupil_positions.{eye_id}"
 
     _MATCH_FORMAT_STRING_V1 = r"^pupil\.(?P<eye_id>{eye_id})$"
     _MATCH_FORMAT_STRING_V2 = (
         r"^pupil\.(?P<eye_id>{eye_id})\.(?P<detector_tag>{detector_tag})$"
     )
+    _MATCH_FORMAT_STRING_LEGACY = r"^pupil_positions\.(?P<eye_id>{eye_id})$"
 
     _legacy_method_to_detector_tag = {
         "2d c++": "2d",
         "3d c++": "3d",
+        "2d python": "2d",  # pre v0.7 format
     }
 
     @staticmethod
@@ -182,7 +185,19 @@ class PupilTopic:
                 eye_id=match_v2.group("eye_id"),
                 detector_tag=match_v2.group("detector_tag"),
             )
-        raise ValueError(f'Invalid pupil topic: "{topic}"')
+
+        regex_legacy = PupilTopic._match_regex_legacy()
+        match_legacy = re.match(regex_legacy, topic)
+        if match_legacy:
+            detector_tag = pupil_datum["method"]
+            if detector_tag in PupilTopic._legacy_method_to_detector_tag:
+                detector_tag = PupilTopic._legacy_method_to_detector_tag[detector_tag]
+            return PupilTopic._FORMAT_STRING_V2.format(
+                eye_id=match_legacy.group("eye_id"),
+                detector_tag=detector_tag,
+            )
+
+        raise ValueError(f'Invalid pupil topic: "{topic}" datum={pupil_datum}')
 
     @staticmethod
     def match(topic: str, eye_id=None, detector_tag=None):
@@ -227,6 +242,18 @@ class PupilTopic:
             eye_id = "[01]"
 
         pattern = PupilTopic._MATCH_FORMAT_STRING_V1.format(
+            eye_id=eye_id,
+        )
+
+        return re.compile(pattern)
+
+    @staticmethod
+    @functools.lru_cache(32)
+    def _match_regex_legacy(eye_id: T.Optional[str] = None):
+        if eye_id is None:
+            eye_id = "[01]"
+
+        pattern = PupilTopic._MATCH_FORMAT_STRING_LEGACY.format(
             eye_id=eye_id,
         )
 
