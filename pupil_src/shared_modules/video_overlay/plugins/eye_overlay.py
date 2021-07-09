@@ -9,19 +9,14 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
-import glob
-
 import player_methods as pm
-from plugin import Plugin
 from observable import Observable
-
-from video_overlay.workers.overlay_renderer import EyeOverlayRenderer
+from plugin import Plugin
+from pupil_recording import PupilRecording
 from video_overlay.models.config import Configuration
 from video_overlay.ui.management import UIManagementEyes
-from video_overlay.utils.constraints import ConstraintedValue, BooleanConstraint
-
-from pupil_recording import PupilRecording
+from video_overlay.utils.constraints import BooleanConstraint, ConstraintedValue
+from video_overlay.workers.overlay_renderer import EyeOverlayRenderer
 
 
 class Eye_Overlay(Observable, Plugin):
