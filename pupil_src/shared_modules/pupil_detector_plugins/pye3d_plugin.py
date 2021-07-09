@@ -184,6 +184,35 @@ class Pye3DPlugin(PupilDetectorPlugin):
             ui.Switch("is_long_term_model_frozen", self.detector, label="Freeze model")
         )
         self.menu.append(self.__debug_window_button)
+        self.menu.append(ui.Info_Text("Color Legend - Default"))
+        self.menu.append(
+            ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_3D.as_float, "3D pupil ellipse")
+        )
+        self.menu.append(
+            ui.Color_Legend(
+                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_OUT.as_float,
+                "Long-term model outline (out-of-bounds)",
+            )
+        )
+        self.menu.append(
+            ui.Color_Legend(
+                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_IN.as_float,
+                "Long-term model outline (within bounds)",
+            )
+        )
+        self.menu.append(ui.Info_Text("Color Legend - Debug"))
+        self.menu.append(
+            ui.Color_Legend(
+                color_scheme.EYE_MODEL_OUTLINE_SHORT_TERM_DEBUG.as_float,
+                "Short-term model outline",
+            )
+        )
+        self.menu.append(
+            ui.Color_Legend(
+                color_scheme.EYE_MODEL_OUTLINE_ULTRA_LONG_TERM_DEBUG.as_float,
+                "Ultra-long-term model outline",
+            )
+        )
 
     def gl_display(self):
         self.debug_window_update()

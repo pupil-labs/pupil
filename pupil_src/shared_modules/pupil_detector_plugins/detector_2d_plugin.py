@@ -135,6 +135,10 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 step=1,
             )
         )
+        self.menu.append(ui.Info_Text("Color Legend"))
+        self.menu.append(
+            ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_2D.as_float, "2D pupil ellipse")
+        )
 
     def gl_display(self):
         if self._recent_detection_result:
