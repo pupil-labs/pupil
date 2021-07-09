@@ -15,6 +15,7 @@ from pye3d.detector_3d import Detector3D, CameraModel, DetectorMode
 from pyglui import ui
 from methods import normalize
 
+from . import color_scheme
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline, draw_ellipse
 from .visualizer_pye3d import Eye_Visualizer
@@ -40,11 +41,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
     icon_font = "pupil_icons"
     icon_chr = chr(0xEC19)
     order = 0.101
-
-    # Visualization
-    COLOR_ULTRA_LONG_TERM_MODEL = (0.5, 0, 0.5, 1)  # purple
-    COLOR_LONG_TERM_MODEL = (0, 0.9, 0.1, 1)  # green
-    COLOR_SHORT_TERM_MODEL = (0.8, 0.8, 0, 1)  # yellow
 
     @property
     def pupil_detector(self):
@@ -194,31 +190,26 @@ class Pye3DPlugin(PupilDetectorPlugin):
         result = self._recent_detection_result
 
         if result is not None:
-            if not self.is_debug_window_open:
-                # normal eyeball drawing
-                draw_eyeball_outline(result)
 
-            elif "debug_info" in result:
+            # normal eyeball drawing
+            draw_eyeball_outline(result)
+
+            if self.is_debug_window_open and "debug_info" in result:
                 # debug eyeball drawing
                 debug_info = result["debug_info"]
                 draw_ellipse(
                     ellipse=debug_info["projected_ultra_long_term"],
-                    rgba=self.COLOR_ULTRA_LONG_TERM_MODEL,
-                    thickness=2,
-                )
-                draw_ellipse(
-                    ellipse=debug_info["projected_long_term"],
-                    rgba=self.COLOR_LONG_TERM_MODEL,
+                    rgba=color_scheme.EYE_MODEL_OUTLINE_ULTRA_LONG_TERM_DEBUG.as_float,
                     thickness=2,
                 )
                 draw_ellipse(
                     ellipse=debug_info["projected_short_term"],
-                    rgba=self.COLOR_SHORT_TERM_MODEL,
+                    rgba=color_scheme.EYE_MODEL_OUTLINE_SHORT_TERM_DEBUG.as_float,
                     thickness=2,
                 )
 
             # always draw pupil
-            draw_pupil_outline(result)
+            draw_pupil_outline(result, color_rgb=color_scheme.PUPIL_ELLIPSE_3D.as_float)
 
         if self.__debug_window_button:
             self.__debug_window_button.label = self.__debug_window_button_label
