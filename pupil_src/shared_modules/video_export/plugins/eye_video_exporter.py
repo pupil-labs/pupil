@@ -47,14 +47,14 @@ class Eye_Video_Exporter(IsolatedFrameExporter):
         )
         self.menu.append(
             ui.Color_Legend(
-                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_OUT.as_float,
-                "Long-term model outline (out-of-bounds)",
+                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_IN.as_float,
+                "Long-term model outline (within bounds)",
             )
         )
         self.menu.append(
             ui.Color_Legend(
-                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_IN.as_float,
-                "Long-term model outline (within bounds)",
+                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_OUT.as_float,
+                "Long-term model outline (out-of-bounds)",
             )
         )
         self.menu.append(ui.Separator())
