@@ -35,4 +35,4 @@ uvc @ https://github.com/pupil-labs/pyuvc/releases/download/v0.14/uvc-0.14-cp36-
 
 # pupil-labs/pyglui v1.30.0
 pyglui @ git+https://github.com/pupil-labs/pyglui@v1.30.0 ; platform_system != "Windows"
-pyglui @ https://github.com/pupil-labs/pyglui/releases/download/v1.30.0/pyglui-v1.30.0-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
+pyglui @ https://github.com/pupil-labs/pyglui/releases/download/v1.30.0/pyglui-1.30.0-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
