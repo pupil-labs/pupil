@@ -12,10 +12,10 @@ See COPYING and COPYING.LESSER for license details.
 import functools
 import typing as T
 
-ComponentType = T.TypeVar("ComponentType", int, float)
+ComponentType = T.Union[int, float]
 
 
-class Color(T.Generic[ComponentType], T.NamedTuple):
+class Color(T.NamedTuple):
     """Three-component color class"""
 
     c0: ComponentType
@@ -23,7 +23,7 @@ class Color(T.Generic[ComponentType], T.NamedTuple):
     c2: ComponentType
 
     @classmethod
-    def from_hex(cls, hex: str) -> "Color[int]":
+    def from_hex(cls, hex: str) -> "Color":
         # find: rgb tuple from hex string
         # example: 00ff00 -> (0, 255, 0)
         c0, c1, c2 = [int(hex[i : i + 2], 16) for i in range(0, 5, 2)]
@@ -31,20 +31,20 @@ class Color(T.Generic[ComponentType], T.NamedTuple):
 
     @property
     @functools.lru_cache(maxsize=1)
-    def flip_c0_c2(self) -> "Color[ComponentType]":
+    def flip_c0_c2(self) -> "Color":
         """Converts RGB->BGR and vice versa."""
-        return (self.c2, self.c1, self.c0)
+        return type(self)(self.c2, self.c1, self.c0)
 
     @property
     @functools.lru_cache(maxsize=1)
-    def as_int(self) -> "Color[int]":
+    def as_int(self) -> "Color":
         if isinstance(self.c0, int):
             return self
         return Color(int(self.c0 * 255), int(self.c1 * 255), int(self.c2 * 255))
 
     @property
     @functools.lru_cache(maxsize=1)
-    def as_float(self) -> "Color[float]":
+    def as_float(self) -> "Color":
         if isinstance(self.c0, float):
             return self
         return Color(self.c0 / 255, self.c1 / 255, self.c2 / 255)
