@@ -15,6 +15,8 @@ import cv2
 from pyglui.cygl.utils import RGBA, draw_polyline
 from gl_utils import draw_circle_filled_func_builder
 
+from pupil_detector_plugins import color_scheme
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,21 +59,26 @@ def draw_ellipse(
         )
 
 
-def draw_eyeball_outline(pupil_detection_result_3d):
+def draw_eyeball_outline(pupil_detection_result_3d, model_confidence_threshold=0.6):
+    color = color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_IN.as_float
     if pupil_detection_result_3d["model_confidence"] <= 0.0:
         # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere' might
         # be 'nan', which will cause cv2.ellipse to crash.
         # TODO: Fix in detectors.
         return
+    elif pupil_detection_result_3d["model_confidence"] < model_confidence_threshold:
+        color = color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_OUT.as_float
 
     draw_ellipse(
         ellipse=pupil_detection_result_3d["projected_sphere"],
-        rgba=(0, 0.9, 0.1, pupil_detection_result_3d["model_confidence"]),
+        rgba=color,
         thickness=2,
     )
 
 
-def draw_pupil_outline(pupil_detection_result_2d, color_rgb=(1.0, 0.0, 0.0)):
+def draw_pupil_outline(
+    pupil_detection_result_2d, color_rgb=color_scheme.PUPIL_ELLIPSE_2D.as_float
+):
     if pupil_detection_result_2d["confidence"] <= 0.0:
         return
 

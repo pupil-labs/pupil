@@ -15,6 +15,8 @@ import logging
 import cv2
 import numpy as np
 
+from pupil_detector_plugins import color_scheme
+
 logger = logging.getLogger(__name__)
 
 
@@ -75,7 +77,9 @@ class PupilRenderer(ImageManipulator):
         conf = float_to_int(conf)
 
         if conf > 0:
-            self.render_ellipse(image, el, color=(255, 127, 0, conf))
+            self.render_ellipse(
+                image, el, color=color_scheme.PUPIL_ELLIPSE_2D.flip_c0_c2
+            )
 
     def render_pupil_3d(self, image, pupil_position):
         el = pupil_position["ellipse"]
@@ -84,13 +88,20 @@ class PupilRenderer(ImageManipulator):
         conf = float_to_int(conf)
 
         if conf > 0:
-            self.render_ellipse(image, el, color=(0, 0, 255, conf))
+            self.render_ellipse(
+                image, el, color=color_scheme.PUPIL_ELLIPSE_3D.flip_c0_c2
+            )
 
         if pupil_position["model_confidence"] <= 0.0:
             # NOTE: if 'model_confidence' == 0, some values of the 'projected_sphere'
             # might be 'nan', which will cause cv2.ellipse to crash.
             # TODO: Fix in detectors.
             return
+
+        model_confidence_threshold = 0.6
+        color = color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_IN.flip_c0_c2
+        if pupil_position["model_confidence"] < model_confidence_threshold:
+            color = color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_OUT.flip_c0_c2
 
         eye_ball = pupil_position.get("projected_sphere", None)
         if eye_ball is not None:
@@ -102,7 +113,7 @@ class PupilRenderer(ImageManipulator):
                     angle=int(eye_ball["angle"]),
                     startAngle=0,
                     endAngle=360,
-                    color=(26, 230, 0, 255 * pupil_position["model_confidence"]),
+                    color=color,
                     thickness=2,
                 )
             except Exception as e:
