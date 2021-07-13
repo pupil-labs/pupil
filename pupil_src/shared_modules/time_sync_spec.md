@@ -123,4 +123,3 @@ the following manner:
 - Calculate _offset variance_
 - Use mean offset as _offset_ and clock variance as _offset jitter_
 - Adjust the follower's clock according to the offset and the offset jitter
-

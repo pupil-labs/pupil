@@ -123,6 +123,7 @@ def player(
         from gaze_producer.gaze_from_offline_calibration import (
             GazeFromOfflineCalibration,
         )
+        from imu_timeline import IMUTimeline
         from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
@@ -143,7 +144,7 @@ def player(
         )
 
         assert parse_version(pyglui_version) >= parse_version(
-            "1.29"
+            "1.30.0"
         ), "pyglui out of date, please upgrade to newest version"
 
         process_was_interrupted = False
@@ -194,6 +195,7 @@ def player(
             iMotions_Exporter,
             Eye_Video_Exporter,
             Offline_Head_Pose_Tracker,
+            IMUTimeline,
         ] + runtime_plugins
 
         plugins = system_plugins + user_plugins

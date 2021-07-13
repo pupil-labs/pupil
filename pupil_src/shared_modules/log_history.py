@@ -54,7 +54,7 @@ class Log_History(Plugin):
         )
         self.menu.append(ui.Info_Text(help_str))
 
-        with open(self.logfile, "r") as fh:
+        with open(self.logfile, "r", encoding="utf-8") as fh:
             for l in fh.readlines():
                 self.menu.insert(2, ui.Info_Text(l[26:-1]))
 

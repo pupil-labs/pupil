@@ -90,7 +90,7 @@ The following steps require you to store dynamic libraries in the `pupil_externa
 
 #### FFMPEG
 
-- [Download FFMPEG v4.3 Windows **shared LGPL** binaries](https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2021-03-31-12-39/ffmpeg-n4.3.2-162-g4bbcaf7559-win64-lgpl-shared-4.3.zip) 
+- [Download FFMPEG v4.3 Windows **shared LGPL** binaries](https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2021-03-31-12-39/ffmpeg-n4.3.2-162-g4bbcaf7559-win64-lgpl-shared-4.3.zip)
 - Unzip `ffmpeg-*-shared-4.3.zip` to your work dir
 - Copy the following 7 `.dll` files from `ffmpeg-*-lgpl-shared-4.3\bin` to `pupil_external`
     - `avcodec-58.dll`

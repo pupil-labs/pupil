@@ -131,7 +131,6 @@ def eye(
         GLFWErrorReporting.set_default()
 
         from pyglui import ui, graph, cygl
-        from pyglui.cygl.utils import draw_points, RGBA, draw_polyline
         from pyglui.cygl.utils import Named_Texture
         import gl_utils
         from gl_utils import basic_gl_setup, adjust_gl_view, clear_gl_screen

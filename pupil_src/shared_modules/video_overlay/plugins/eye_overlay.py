@@ -9,19 +9,16 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
-import glob
-
 import player_methods as pm
-from plugin import Plugin
 from observable import Observable
-
-from video_overlay.workers.overlay_renderer import EyeOverlayRenderer
+from plugin import Plugin
+from pupil_detector_plugins import color_scheme
+from pupil_recording import PupilRecording
+from pyglui import ui
 from video_overlay.models.config import Configuration
 from video_overlay.ui.management import UIManagementEyes
-from video_overlay.utils.constraints import ConstraintedValue, BooleanConstraint
-
-from pupil_recording import PupilRecording
+from video_overlay.utils.constraints import BooleanConstraint, ConstraintedValue
+from video_overlay.workers.overlay_renderer import EyeOverlayRenderer
 
 
 class Eye_Overlay(Observable, Plugin):
@@ -80,6 +77,25 @@ class Eye_Overlay(Observable, Plugin):
         self.add_menu()
         self.menu.label = "Eye Video Overlays"
         self.ui = UIManagementEyes(self, self.menu, (self.eye0, self.eye1))
+        self.menu.append(ui.Info_Text("Color Legend"))
+        self.menu.append(
+            ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_2D.as_float, "2D pupil ellipse")
+        )
+        self.menu.append(
+            ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_3D.as_float, "3D pupil ellipse")
+        )
+        self.menu.append(
+            ui.Color_Legend(
+                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_IN.as_float,
+                "Long-term model outline (within bounds)",
+            )
+        )
+        self.menu.append(
+            ui.Color_Legend(
+                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_OUT.as_float,
+                "Long-term model outline (out-of-bounds)",
+            )
+        )
 
     def deinit_ui(self):
         self.ui.teardown()

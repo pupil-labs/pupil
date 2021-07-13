@@ -155,8 +155,10 @@ class Surface_Offline(Surface):
                 self.location_cache_filler = None
                 self.on_surface_change(self)
 
-    def update_location_cache(self, frame_idx, marker_cache, camera_model):
-        """ Update a single entry in the location cache."""
+    def update_location_cache(
+        self, frame_idx, marker_cache, camera_model, context=None
+    ):
+        """Update a single entry in the location cache."""
 
         try:
             if not marker_cache[frame_idx]:
@@ -169,6 +171,7 @@ class Surface_Offline(Surface):
                     camera_model,
                     self.registered_markers_undist,
                     self.registered_markers_dist,
+                    context=context,
                 )
             self.location_cache.update(frame_idx, location, force=True)
         except (TypeError, AttributeError):

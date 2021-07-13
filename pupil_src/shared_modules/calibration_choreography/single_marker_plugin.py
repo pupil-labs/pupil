@@ -18,7 +18,7 @@ import numpy as np
 
 import audio
 from pyglui import ui
-from pyglui.cygl.utils import draw_points, draw_polyline, RGBA
+from pyglui.cygl.utils import draw_polyline, RGBA
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 from plugin import Plugin

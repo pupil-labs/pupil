@@ -288,8 +288,11 @@ class Surface(abc.ABC):
         camera_model,
         registered_markers_undist,
         registered_markers_dist,
+        context=None,
     ):
         """Computes a Surface_Location based on a list of visible markers."""
+        if context is None:
+            context = {}
 
         visible_registered_marker_ids = set(visible_markers.keys()) & set(
             registered_markers_undist.keys()
@@ -320,7 +323,9 @@ class Surface(abc.ABC):
         registered_verts_dist.shape = (-1, 2)
 
         homographies_dist = Surface._find_homographies(
-            registered_verts_dist, visible_verts_dist
+            registered_verts_dist,
+            visible_verts_dist,
+            context=context,
         )
         if any(matrix is None for matrix in homographies_dist):
             return Surface_Location(detected=False)
@@ -329,7 +334,9 @@ class Surface(abc.ABC):
             visible_verts_dist
         )
         homographies_undist = Surface._find_homographies(
-            registered_verts_undist, visible_verts_undist
+            registered_verts_undist,
+            visible_verts_undist,
+            context=context,
         )
         if any(matrix is None for matrix in homographies_undist):
             return Surface_Location(detected=False)
@@ -347,7 +354,10 @@ class Surface(abc.ABC):
         )
 
     @staticmethod
-    def _find_homographies(points_A, points_B):
+    def _find_homographies(points_A, points_B, context=None):
+        if context is None:
+            context = {}
+
         points_A = points_A.reshape((-1, 1, 2))
         points_B = points_B.reshape((-1, 1, 2))
 
@@ -361,33 +371,41 @@ class Surface(abc.ABC):
             A_to_B = np.linalg.inv(B_to_A)
             return A_to_B, B_to_A
         except np.linalg.LinAlgError as e:
-            pass
+            exception_msg = None
         except Exception as e:
             import traceback
 
             exception_msg = traceback.format_exc()
-            logger.error(exception_msg)
 
-        logger.debug(
-            "Failed to calculate inverse homography with np.inv()! "
-            "Trying with np.pinv() instead."
-        )
+        if "_find_homographies_inv_failed" not in context:
+            if exception_msg is not None:
+                logger.debug(exception_msg)
+            del exception_msg
+            logger.debug(
+                "Failed to calculate inverse homography with np.inv()! "
+                "Trying with np.pinv() instead."
+            )
+        context["_find_homographies_inv_failed"] = True
 
         try:
             A_to_B = np.linalg.pinv(B_to_A)
             return A_to_B, B_to_A
         except np.linalg.LinAlgError as e:
-            pass
+            exception_msg = None
         except Exception as e:
             import traceback
 
             exception_msg = traceback.format_exc()
-            logger.error(exception_msg)
 
-        logger.warning(
-            "Failed to calculate inverse homography with np.pinv()! "
-            "Falling back to inaccurate manual computation!"
-        )
+        if "_find_homographies_pinv_failed" not in context:
+            if exception_msg is not None:
+                logger.debug(exception_msg)
+            del exception_msg
+            logger.debug(
+                "Failed to calculate inverse homography with np.pinv()! "
+                "Falling back to inaccurate manual computation!"
+            )
+        context["_find_homographies_pinv_failed"] = True
 
         A_to_B, mask = cv2.findHomography(points_B, points_A)
         return A_to_B, B_to_A
