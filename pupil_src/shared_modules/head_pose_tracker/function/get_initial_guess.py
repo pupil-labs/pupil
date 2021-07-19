@@ -26,7 +26,7 @@ def calculate(
     key_markers,
     camera_intrinsics,
 ):
-    """ get marker and camera initial guess for bundle adjustment """
+    """get marker and camera initial guess for bundle adjustment"""
 
     marker_id_to_extrinsics_init = {
         marker_id: np.array(extrinsics)
@@ -82,7 +82,7 @@ def _get_frame_id_to_extrinsics_init(
     marker_id_to_extrinsics_init,
     frame_ids,
 ):
-    """ calculate camera extrinsics based on the known marker extrinsics """
+    """calculate camera extrinsics based on the known marker extrinsics"""
 
     frame_ids_not_computed = set(frame_ids) - set(frame_id_to_extrinsics_init.keys())
     for frame_id in frame_ids_not_computed:
@@ -109,7 +109,7 @@ def _get_marker_id_to_extrinsics_init(
     marker_id_to_extrinsics_init,
     marker_ids,
 ):
-    """ calculate marker extrinsics based on the known camera extrinsics """
+    """calculate marker extrinsics based on the known camera extrinsics"""
 
     marker_ids_not_computed = set(marker_ids) - set(marker_id_to_extrinsics_init.keys())
     for marker_id in marker_ids_not_computed:
