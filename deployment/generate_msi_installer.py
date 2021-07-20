@@ -165,7 +165,8 @@ template = f"""
 
         <Package Id='*' Keywords='Installer'
         Description="{package_description}" Manufacturer='{manufacturer}'
-        InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252' />
+        InstallerVersion='100' Languages='1033' Compressed='yes' SummaryCodepage='1252'
+        InstallScope='perMachine' />
 
         <Media Id='1' Cabinet='Cabinet.cab' EmbedCab='yes' DiskPrompt="CD-ROM #1" />
         <Property Id='DiskPrompt' Value="{package_description} Installer [1]" />
