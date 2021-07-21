@@ -490,6 +490,8 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                     "name": surface.name,
                     "surf_to_img_trans": surface.surf_to_img_trans.tolist(),
                     "img_to_surf_trans": surface.img_to_surf_trans.tolist(),
+                    "surf_to_dist_img_trans": surface.surf_to_dist_img_trans.tolist(),
+                    "dist_img_to_surf_trans": surface.dist_img_to_surf_trans.tolist(),
                     "gaze_on_surfaces": gaze_on_surf,
                     "fixations_on_surfaces": fixations_on_surf,
                     "timestamp": timestamp,
