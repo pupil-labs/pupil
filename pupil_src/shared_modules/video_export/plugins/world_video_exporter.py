@@ -209,11 +209,6 @@ def _export_world_video(
             )
         )
 
-        # setup of writer
-        writer = MPEG_Audio_Writer(
-            out_file_path, start_time_synced=trimmed_timestamps[0], audio_dir=rec_dir
-        )
-
         cap.seek_to_frame(start_frame)
 
         start_time = time()
@@ -242,38 +237,50 @@ def _export_world_video(
         # add plugins
         g_pool.plugins = Plugin_List(g_pool, plugin_initializers)
 
-        while frames_to_export > current_frame:
-            try:
-                frame = cap.get_frame()
-            except EndofVideoError:
-                break
+        try:
+            # setup of writer
+            writer = MPEG_Audio_Writer(
+                out_file_path,
+                start_time_synced=trimmed_timestamps[0],
+                audio_dir=rec_dir,
+            )
 
-            events = {"frame": frame}
-            # new positions and events
-            frame_window = pm.enclosing_window(g_pool.timestamps, frame.index)
-            events["gaze"] = g_pool.gaze_positions.by_ts_window(frame_window)
-            events["pupil"] = g_pool.pupil_positions.by_ts_window(frame_window)
+            while frames_to_export > current_frame:
+                try:
+                    frame = cap.get_frame()
+                except EndofVideoError:
+                    break
 
-            # publish delayed notifications when their time has come.
-            for n in list(g_pool.delayed_notifications.values()):
-                if n["_notify_time_"] < time():
-                    del n["_notify_time_"]
-                    del g_pool.delayed_notifications[n["subject"]]
-                    g_pool.notifications.append(n)
+                events = {"frame": frame}
+                # new positions and events
+                frame_window = pm.enclosing_window(g_pool.timestamps, frame.index)
+                events["gaze"] = g_pool.gaze_positions.by_ts_window(frame_window)
+                events["pupil"] = g_pool.pupil_positions.by_ts_window(frame_window)
 
-            # notify each plugin if there are new notifications:
-            while g_pool.notifications:
-                n = g_pool.notifications.pop(0)
+                # publish delayed notifications when their time has come.
+                for n in list(g_pool.delayed_notifications.values()):
+                    if n["_notify_time_"] < time():
+                        del n["_notify_time_"]
+                        del g_pool.delayed_notifications[n["subject"]]
+                        g_pool.notifications.append(n)
+
+                # notify each plugin if there are new notifications:
+                while g_pool.notifications:
+                    n = g_pool.notifications.pop(0)
+                    for p in g_pool.plugins:
+                        p.on_notify(n)
+
+                # allow each Plugin to do its work.
                 for p in g_pool.plugins:
-                    p.on_notify(n)
+                    p.recent_events(events)
 
-            # allow each Plugin to do its work.
-            for p in g_pool.plugins:
-                p.recent_events(events)
-
-            writer.write_video_frame(frame)
-            current_frame += 1
-            yield "Exporting with pid {}".format(PID), current_frame
+                writer.write_video_frame(frame)
+                current_frame += 1
+                yield "Exporting with pid {}".format(PID), current_frame
+        except GeneratorExit:
+            logger.warning("Video export with pid {} was canceled.".format(os.getpid()))
+            writer.close(timestamp_export_format=None, closed_suffix=".canceled")
+            return
 
         writer.close(timestamp_export_format="all")
 
