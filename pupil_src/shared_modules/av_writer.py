@@ -127,7 +127,9 @@ class AV_Writer(abc.ABC):
                 "Using a different container is risky!"
             )
 
-        self.container = av.open(output_file_path, "w")
+        # `ext` starts with a dot, so we need to remove it for the format to be
+        # recongnized by pyav
+        self.container = av.open(self.output_file_path_in_porgress, "w", format=ext[1:])
         logger.debug("Opened '{}' for writing.".format(output_file_path))
 
         self.configured = False
@@ -143,6 +145,13 @@ class AV_Writer(abc.ABC):
         self.video_stream.thread_count = max(1, mp.cpu_count() - 1)
 
         self.closed = False
+
+    @property
+    def output_file_path_in_porgress(self):
+        """
+        Return the output file path, with a suffix to indicate that writing is in progress.
+        """
+        return self.output_file_path + ".writing"
 
     def write_video_frame(self, input_frame):
         """
@@ -203,8 +212,11 @@ class AV_Writer(abc.ABC):
         self.last_video_pts = pts
         self.timestamps.append(ts)
 
-    def close(self, timestamp_export_format="npy"):
-        """Close writer, triggering stream and timestamp save."""
+    def close(self, timestamp_export_format="npy", closed_suffix=""):
+        """Close writer, triggering stream and timestamp save.
+
+        closed_suffix: Use to indicate a cancelled or failed write.
+        """
 
         if self.closed:
             logger.warning("Trying to close container multiple times!")
@@ -218,12 +230,13 @@ class AV_Writer(abc.ABC):
         self.container.close()
         self.closed = True
 
+        output_file_path = self.output_file_path + closed_suffix
+        os.rename(self.output_file_path_in_porgress, output_file_path)
+
         if self.configured and timestamp_export_format is not None:
             # Requires self.container to be closed since we extract pts
             # from the exported video file.
-            write_timestamps(
-                self.output_file_path, self.timestamps, timestamp_export_format
-            )
+            write_timestamps(output_file_path, self.timestamps, timestamp_export_format)
 
     def release(self):
         """Close writer, triggering stream and timestamp save."""
