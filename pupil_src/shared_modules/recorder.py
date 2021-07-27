@@ -117,15 +117,15 @@ class Recorder(System_Plugin_Base):
         self.check_space = lambda: next(check_timer)
 
     def get_init_dict(self):
-        d = {}
-        d["record_eye"] = self.record_eye
-        d["session_name"] = self.session_name
-        d["user_info"] = self.user_info
-        d["info_menu_conf"] = self.info_menu_conf
-        d["show_info_menu"] = self.show_info_menu
-        d["rec_root_dir"] = self.rec_root_dir
-        d["raw_jpeg"] = self.raw_jpeg
-        return d
+        return {
+            "record_eye": self.record_eye,
+            "session_name": self.session_name,
+            "user_info": self.user_info,
+            "info_menu_conf": self.info_menu_conf,
+            "show_info_menu": self.show_info_menu,
+            "rec_root_dir": self.rec_root_dir,
+            "raw_jpeg": self.raw_jpeg,
+        }
 
     def init_ui(self):
         self.add_menu()
