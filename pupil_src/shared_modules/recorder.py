@@ -183,7 +183,11 @@ class Recorder(System_Plugin_Base):
         )
         self.menu.append(
             ui.Switch(
-                "record_eye", self, on_val=True, off_val=False, label="Record eye"
+                "record_eye",
+                self,
+                on_val=True,
+                off_val=False,
+                label="Record eye videos",
             )
         )
         self.button = ui.Thumb(
