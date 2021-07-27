@@ -362,18 +362,19 @@ class Recorder(System_Plugin_Base):
         self.meta_info.recording_uuid = recording_uuid
         self.meta_info.system_info = get_system_info()
 
-        self.video_path = os.path.join(self.rec_path, "world.mp4")
-        if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.writer = JPEG_Writer(self.video_path, start_time_synced)
-        elif hasattr(self.g_pool.capture._recent_frame, "h264_buffer"):
-            self.writer = H264Writer(
-                self.video_path,
-                self.g_pool.capture.frame_size[0],
-                self.g_pool.capture.frame_size[1],
-                int(self.g_pool.capture.frame_rate),
-            )
-        else:
-            self.writer = MPEG_Writer(self.video_path, start_time_synced)
+        if self.record_world:
+            video_path = os.path.join(self.rec_path, "world.mp4")
+            if self.raw_jpeg and self.g_pool.capture.jpeg_support:
+                self.writer = JPEG_Writer(video_path, start_time_synced)
+            elif hasattr(self.g_pool.capture._recent_frame, "h264_buffer"):
+                self.writer = H264Writer(
+                    video_path,
+                    self.g_pool.capture.frame_size[0],
+                    self.g_pool.capture.frame_size[1],
+                    int(self.g_pool.capture.frame_rate),
+                )
+            else:
+                self.writer = MPEG_Writer(video_path, start_time_synced)
 
         calibration_data_notification_classes = [
             CalibrationSetupNotification,
@@ -468,7 +469,7 @@ class Recorder(System_Plugin_Base):
                         writer = PLData_Writer(self.rec_path, key)
                         self.pldata_writers[key] = writer
                     writer.extend(data)
-            if "frame" in events:
+            if self.record_world and "frame" in events:
                 frame = events["frame"]
                 try:
                     self.writer.write_video_frame(frame)
@@ -490,16 +491,17 @@ class Recorder(System_Plugin_Base):
     def stop(self):
         duration_s = self.g_pool.get_timestamp() - self.meta_info.start_time_synced_s
 
-        # explicit release of VideoWriter
-        try:
-            self.writer.release()
-        except RuntimeError:
-            logger.error("No world video recorded")
-        else:
-            logger.debug("Closed media container")
-            self.g_pool.capture.intrinsics.save(self.rec_path, custom_name="world")
-        finally:
-            self.writer = None
+        if self.record_world:
+            # explicit release of VideoWriter
+            try:
+                self.writer.release()
+            except RuntimeError:
+                logger.error("No world video recorded")
+            else:
+                logger.debug("Closed media container")
+                self.g_pool.capture.intrinsics.save(self.rec_path, custom_name="world")
+            finally:
+                self.writer = None
 
         for writer in self.pldata_writers.values():
             writer.close()
