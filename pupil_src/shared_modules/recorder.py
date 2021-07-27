@@ -69,6 +69,7 @@ class Recorder(System_Plugin_Base):
         user_info={"name": "", "additional_field": "change_me"},
         info_menu_conf={},
         show_info_menu=False,
+        record_world=True,
         record_eye=True,
         raw_jpeg=True,
     ):
@@ -101,6 +102,7 @@ class Recorder(System_Plugin_Base):
 
         self.raw_jpeg = raw_jpeg
         self.order = 0.9
+        self.record_world = record_world
         self.record_eye = record_eye
         self.session_name = session_name
         self.running = False
@@ -118,6 +120,7 @@ class Recorder(System_Plugin_Base):
 
     def get_init_dict(self):
         return {
+            "record_world": self.record_world,
             "record_eye": self.record_eye,
             "session_name": self.session_name,
             "user_info": self.user_info,
@@ -179,6 +182,15 @@ class Recorder(System_Plugin_Base):
         self.menu.append(
             ui.Info_Text(
                 "Recording the raw eye video is optional. We use it for debugging."
+            )
+        )
+        self.menu.append(
+            ui.Switch(
+                "record_world",
+                self,
+                on_val=True,
+                off_val=False,
+                label="Record world video",
             )
         )
         self.menu.append(
