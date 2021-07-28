@@ -69,6 +69,7 @@ class Recorder(System_Plugin_Base):
         user_info={"name": "", "additional_field": "change_me"},
         info_menu_conf={},
         show_info_menu=False,
+        record_world=True,
         record_eye=True,
         raw_jpeg=True,
     ):
@@ -101,6 +102,7 @@ class Recorder(System_Plugin_Base):
 
         self.raw_jpeg = raw_jpeg
         self.order = 0.9
+        self.record_world = record_world
         self.record_eye = record_eye
         self.session_name = session_name
         self.running = False
@@ -117,15 +119,16 @@ class Recorder(System_Plugin_Base):
         self.check_space = lambda: next(check_timer)
 
     def get_init_dict(self):
-        d = {}
-        d["record_eye"] = self.record_eye
-        d["session_name"] = self.session_name
-        d["user_info"] = self.user_info
-        d["info_menu_conf"] = self.info_menu_conf
-        d["show_info_menu"] = self.show_info_menu
-        d["rec_root_dir"] = self.rec_root_dir
-        d["raw_jpeg"] = self.raw_jpeg
-        return d
+        return {
+            "record_world": self.record_world,
+            "record_eye": self.record_eye,
+            "session_name": self.session_name,
+            "user_info": self.user_info,
+            "info_menu_conf": self.info_menu_conf,
+            "show_info_menu": self.show_info_menu,
+            "rec_root_dir": self.rec_root_dir,
+            "raw_jpeg": self.raw_jpeg,
+        }
 
     def init_ui(self):
         self.add_menu()
@@ -183,7 +186,20 @@ class Recorder(System_Plugin_Base):
         )
         self.menu.append(
             ui.Switch(
-                "record_eye", self, on_val=True, off_val=False, label="Record eye"
+                "record_world",
+                self,
+                on_val=True,
+                off_val=False,
+                label="Record world video",
+            )
+        )
+        self.menu.append(
+            ui.Switch(
+                "record_eye",
+                self,
+                on_val=True,
+                off_val=False,
+                label="Record eye videos",
             )
         )
         self.button = ui.Thumb(
@@ -346,18 +362,19 @@ class Recorder(System_Plugin_Base):
         self.meta_info.recording_uuid = recording_uuid
         self.meta_info.system_info = get_system_info()
 
-        self.video_path = os.path.join(self.rec_path, "world.mp4")
-        if self.raw_jpeg and self.g_pool.capture.jpeg_support:
-            self.writer = JPEG_Writer(self.video_path, start_time_synced)
-        elif hasattr(self.g_pool.capture._recent_frame, "h264_buffer"):
-            self.writer = H264Writer(
-                self.video_path,
-                self.g_pool.capture.frame_size[0],
-                self.g_pool.capture.frame_size[1],
-                int(self.g_pool.capture.frame_rate),
-            )
-        else:
-            self.writer = MPEG_Writer(self.video_path, start_time_synced)
+        if self.record_world:
+            video_path = os.path.join(self.rec_path, "world.mp4")
+            if self.raw_jpeg and self.g_pool.capture.jpeg_support:
+                self.writer = JPEG_Writer(video_path, start_time_synced)
+            elif hasattr(self.g_pool.capture._recent_frame, "h264_buffer"):
+                self.writer = H264Writer(
+                    video_path,
+                    self.g_pool.capture.frame_size[0],
+                    self.g_pool.capture.frame_size[1],
+                    int(self.g_pool.capture.frame_rate),
+                )
+            else:
+                self.writer = MPEG_Writer(video_path, start_time_synced)
 
         calibration_data_notification_classes = [
             CalibrationSetupNotification,
@@ -452,7 +469,7 @@ class Recorder(System_Plugin_Base):
                         writer = PLData_Writer(self.rec_path, key)
                         self.pldata_writers[key] = writer
                     writer.extend(data)
-            if "frame" in events:
+            if self.record_world and "frame" in events:
                 frame = events["frame"]
                 try:
                     self.writer.write_video_frame(frame)
@@ -474,16 +491,17 @@ class Recorder(System_Plugin_Base):
     def stop(self):
         duration_s = self.g_pool.get_timestamp() - self.meta_info.start_time_synced_s
 
-        # explicit release of VideoWriter
-        try:
-            self.writer.release()
-        except RuntimeError:
-            logger.error("No world video recorded")
-        else:
-            logger.debug("Closed media container")
-            self.g_pool.capture.intrinsics.save(self.rec_path, custom_name="world")
-        finally:
-            self.writer = None
+        if self.record_world:
+            # explicit release of VideoWriter
+            try:
+                self.writer.release()
+            except RuntimeError:
+                logger.error("No world video recorded")
+            else:
+                logger.debug("Closed media container")
+                self.g_pool.capture.intrinsics.save(self.rec_path, custom_name="world")
+            finally:
+                self.writer = None
 
         for writer in self.pldata_writers.values():
             writer.close()
