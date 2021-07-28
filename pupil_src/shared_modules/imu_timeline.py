@@ -210,9 +210,8 @@ class Fusion(object):
             )
             + 7
         )
-        # bring to range [-180. 180)
-        roll = ((roll + 180) % 360) - 180
-        self.roll = roll
+        # bring to range [-180, 180]
+        self.roll = ((roll + 180) % 360) - 180
 
         pitch = (
             np.degrees(
@@ -226,9 +225,8 @@ class Fusion(object):
             )
             + 90
         )
-        # bring to range [-180. 180)
-        pitch = ((pitch + 180) % 360) - 180
-        self.pitch = pitch
+        # bring to range [-180, 180]
+        self.pitch = ((pitch + 180) % 360) - 180
 
 
 class IMURecording:
