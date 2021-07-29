@@ -11,11 +11,10 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 
+from pupil_detector_plugins import color_scheme
 from pyglui import ui
-
 from video_export.plugin_base.isolated_frame_exporter import IsolatedFrameExporter
 from video_overlay.utils.image_manipulation import PupilRenderer
-
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +38,26 @@ class Eye_Video_Exporter(IsolatedFrameExporter):
         self.menu.append(
             ui.Switch("render_pupil", self, label="Visualize Pupil Detection")
         )
+        self.menu.append(ui.Info_Text("Color Legend"))
+        self.menu.append(
+            ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_2D.as_float, "2D pupil ellipse")
+        )
+        self.menu.append(
+            ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_3D.as_float, "3D pupil ellipse")
+        )
+        self.menu.append(
+            ui.Color_Legend(
+                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_IN.as_float,
+                "Long-term model outline (within bounds)",
+            )
+        )
+        self.menu.append(
+            ui.Color_Legend(
+                color_scheme.EYE_MODEL_OUTLINE_LONG_TERM_BOUNDS_OUT.as_float,
+                "Long-term model outline (out-of-bounds)",
+            )
+        )
+        self.menu.append(ui.Separator())
         super().customize_menu()
 
     def _export_eye_video(self, export_range, export_dir, eye_id):

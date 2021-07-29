@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import collections
+import datetime
 import glob
 import logging
 import os
@@ -18,14 +19,14 @@ from pathlib import Path
 from shutil import copy2
 
 import av
-import numpy as np
-from scipy.interpolate import interp1d
-
 import csv_utils
 import file_methods as fm
+import numpy as np
 from camera_models import Camera_Model
+from scipy.interpolate import interp1d
 from version_utils import parse_version
 
+from .. import PupilRecording
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as rec_info_utils
 from ..recording_utils import InvalidRecordingException
@@ -55,12 +56,21 @@ def _generate_pprf_2_0_info_file(rec_dir):
     # Get information about recording from info.csv
     try:
         recording_uuid = info_csv.get("Recording UUID", uuid.uuid4())
-        start_time_system_s = float(info_csv["Start Time (System)"])
-        start_time_synced_s = float(info_csv["Start Time (Synced)"])
-        duration_s = rec_info_utils.parse_duration_string(info_csv["Duration Time"])
         recording_software_name = info_csv.get(
             "Capture Software", RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
         )
+        start_time_system_s = float(
+            info_csv.get(
+                "Start Time (System)",
+                _infer_start_time_system_from_legacy(info_csv, recording_software_name),
+            )
+        )
+        start_time_synced_s = float(
+            info_csv.get(
+                "Start Time (Synced)", _infer_start_time_synced_from_legacy(rec_dir)
+            )
+        )
+        duration_s = rec_info_utils.parse_duration_string(info_csv["Duration Time"])
         recording_software_version = info_csv["Capture Software Version"]
         recording_name = info_csv.get(
             "Recording Name", rec_info_utils.default_recording_name(rec_dir)
@@ -71,8 +81,7 @@ def _generate_pprf_2_0_info_file(rec_dir):
     except KeyError as e:
         logger.debug(f"KeyError while parsing old-style info.csv: {str(e)}")
         raise InvalidRecordingException(
-            "This recording needs a data format update.\n"
-            "Open it once in Pupil Player v1.17 to perform the update."
+            "This recording is too old to be opened with this version of Player!"
         )
 
     # Create a recording info file with the new format,
@@ -737,3 +746,89 @@ def _read_rec_version_legacy(meta_info):
     )  # strip letters in case of legacy version format
     logger.debug(f"Recording version: {version_string}")
     return parse_version(version_string)
+
+
+def _infer_start_time_system_from_legacy(info_csv, recording_software_name):
+    _warn_imprecise_value_inference()
+    logger.warning(f"Missing meta info key: `Start Time (System)`.")
+
+    # Read date and time from info_csv
+    string_start_date = info_csv["Start Date"]
+    string_start_time = info_csv["Start Time"]
+
+    # Combine and parse to datetime.datetime
+    string_start_date_time = f"{string_start_date} {string_start_time}"
+    if (
+        recording_software_name
+        == RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_MOBILE
+    ):
+        format_date_time = "%d:%m:%Y %H:%M:%S"
+    elif (
+        recording_software_name
+        == RecordingInfoFile.RECORDING_SOFTWARE_NAME_PUPIL_CAPTURE
+    ):
+        format_date_time = "%d.%m.%Y %H:%M:%S"
+    else:
+        raise InvalidRecordingException(
+            "Could not infer missing `Start Time (System)` value.\nUnexpected recording"
+            f" software name: {recording_software_name}"
+        )
+    try:
+        date_time = datetime.datetime.strptime(string_start_date_time, format_date_time)
+    except ValueError as valerr:
+        raise InvalidRecordingException(
+            "Could not infer missing `Start Time (System)` value.\nUnexpected date time"
+            f" input format: {string_start_date_time}"
+        ) from valerr
+    # Convert to Unix timestamp
+    ts_start_date_time = date_time.timestamp()
+
+    logger.info(f"Using {date_time} as input for `Start Time (System)` inference.")
+    logger.info(f"Inferred `Start Time (System)`: {ts_start_date_time}")
+
+    return ts_start_date_time
+
+
+def _infer_start_time_synced_from_legacy(rec_dir):
+    _warn_imprecise_value_inference()
+    logger.warning(f"Missing meta info key: `Start Time (Synced)`.")
+
+    files = PupilRecording.FileFilter(rec_dir)
+    timestamp_files = files.core().timestamps()
+    first_ts_per_timestamp_file = []
+    for timestamp_file in timestamp_files:
+        timestamps = np.load(str(timestamp_file))
+        if timestamps.size == 0:
+            continue
+        first_ts_per_timestamp_file.append(timestamps[0])
+        logger.info(f"First timestamp in {timestamp_file.name}: {timestamps[0]}")
+    if not first_ts_per_timestamp_file:
+        raise InvalidRecordingException(
+            "Could not infer missing `Start Time (Synced)` value. No timestamps found."
+        )
+    inferred_start_time_synced = min(first_ts_per_timestamp_file)
+    logger.info(f"Inferred `Start Time (Synced)`: {inferred_start_time_synced}")
+    return inferred_start_time_synced
+
+
+# global variable to warn only once
+_SHOULD_WARN_IMPRECISE_VALUE_INFERRENCE = True
+
+
+def _warn_imprecise_value_inference():
+    global _SHOULD_WARN_IMPRECISE_VALUE_INFERRENCE
+    if not _SHOULD_WARN_IMPRECISE_VALUE_INFERRENCE:
+        return
+    logger.warning(
+        "\n\n!! Deprecation Warning !! Pupil Mobile recordings recorded with older"
+        " versions than r0.21.0, or Pupil Capture recordings recorded with older"
+        " versions than v1.3, are deprecated and will not be supported by future"
+        " Pupil Player versions!\n"
+    )
+    logger.warning(
+        "\n\n!! Imprecise Value Inference !! In order to upgrade a deprecated"
+        " recording, Pupil Player needs to infer missing meta data from the existing"
+        " recording. This inference is imprecise and might cause issues when converting"
+        " recorded Pupil time to wall clock time.\n"
+    )
+    _SHOULD_WARN_IMPRECISE_VALUE_INFERRENCE = False

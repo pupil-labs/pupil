@@ -8,26 +8,27 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import pathlib
 import csv
-import os
-import typing
 import logging
-import numpy as np
+import os
+import pathlib
 import time
+import typing
 import typing as T
 
+import numpy as np
 import OpenGL.GL as gl
-from pyglui import ui, pyfontstash
+from pyglui import pyfontstash, ui
 from pyglui.cygl import utils as cygl_utils
 
 import background_helper as bh
+import csv_utils
+import file_methods as fm
 import gl_utils
+import player_methods as pm
 from plugin import Plugin
 from pupil_recording import PupilRecording, RecordingInfo
 from raw_data_exporter import _Base_Positions_Exporter
-import player_methods as pm
-import csv_utils
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +42,21 @@ def glfont_generator():
 
 
 def get_limits(data, keys):
-    return (
-        min([min(data[key]) for key in keys]),
-        max([max(data[key]) for key in keys]),
+    limits = (
+        min(data[key].min() if data[key].shape[0] else 0 for key in keys),
+        max(data[key].max() if data[key].shape[0] else 1 for key in keys),
     )
+    # If the difference between the lower and upper bound is too small,
+    # OpenGL will start throwing errors.
+    limit_min_diff = 0.001
+    if limits[1] - limits[0] < limit_min_diff:
+        limits = limits[0] - limit_min_diff / 2, limits[0] + limit_min_diff / 2
+    return limits
 
 
 def fuser(data_raw, gyro_error):
     yield "Fusing imu", ()
     fusion = Fusion(gyro_error, 0.00494)
-    logger.info("Starting IMU fusion using Madgwick's algorithm")
 
     for ind, datum in enumerate(data_raw):
         gyro_x, gyro_y, gyro_z, accel_x, accel_y, accel_z = datum
@@ -198,13 +204,16 @@ class Fusion(object):
 
         # These are modified to account for Invisible IMU coordinate system and positioning of
         # the IMU within the invisible headset
-        self.roll = (
+        roll = (
             np.degrees(
                 -np.arcsin(2.0 * (self.q[1] * self.q[3] - self.q[0] * self.q[2]))
             )
             + 7
         )
-        self.pitch = (
+        # bring to range [-180, 180]
+        self.roll = ((roll + 180) % 360) - 180
+
+        pitch = (
             np.degrees(
                 np.arctan2(
                     2.0 * (self.q[0] * self.q[1] + self.q[2] * self.q[3]),
@@ -216,6 +225,8 @@ class Fusion(object):
             )
             + 90
         )
+        # bring to range [-180, 180]
+        self.pitch = ((pitch + 180) % 360) - 180
 
 
 class IMURecording:
@@ -269,10 +280,6 @@ class IMUTimeline(Plugin):
     See Pupil docs for relevant coordinate systems
     """
 
-    gyro_error = 50
-    should_draw_raw = False
-    should_draw_orientation = False
-
     IMU_PATTERN_RAW = r"^extimu ps(\d+).raw"
 
     CMAP = {
@@ -287,7 +294,7 @@ class IMUTimeline(Plugin):
     }
     NUMBER_SAMPLES_TIMELINE = 4000
     TIMELINE_LINE_HEIGHT = 16
-    icon_chr = chr(0xE922)
+    icon_chr = chr(0xEC22)
     icon_font = "pupil_icons"
 
     DTYPE_ORIENT = np.dtype(
@@ -296,6 +303,7 @@ class IMUTimeline(Plugin):
             ("roll", "<f4"),
         ]
     )
+    CACHE_VERSION = 1
 
     @classmethod
     def parse_pretty_class_name(cls) -> str:
@@ -334,9 +342,23 @@ class IMUTimeline(Plugin):
         )
         return [IMURecording(imu_file) for imu_file in imu_files]
 
-    def __init__(self, g_pool):
+    def __init__(
+        self,
+        g_pool,
+        gyro_error=50,
+        should_draw_raw=True,
+        should_draw_orientation=True,
+    ):
         super().__init__(g_pool)
         imu_recs = self._imu_recordings(g_pool)
+
+        # gyro_error settings priority
+        # 1. Loaded from cache (if available)
+        # 2. Loaded from session settings (if available)
+        # 3. Defaults to 50
+        self.gyro_error = gyro_error
+        self.should_draw_raw = should_draw_raw
+        self.should_draw_orientation = should_draw_orientation
 
         self.bg_task = None
 
@@ -349,39 +371,44 @@ class IMUTimeline(Plugin):
         self.data_raw = np.concatenate([rec.raw for rec in imu_recs])
         self.data_ts = np.concatenate([rec.ts for rec in imu_recs])
         self.data_len = len(self.data_raw)
-        self.data_orient = np.empty([self.data_len], dtype=self.DTYPE_ORIENT).view(
-            np.recarray
-        )
+        self.data_orient = self.data_orient_empty_copy()
+        self.read_orientation_cache()
         self.gyro_keys = ["gyro_x", "gyro_y", "gyro_z"]
         self.accel_keys = ["accel_x", "accel_y", "accel_z"]
         self.orient_keys = ["pitch", "roll"]
 
+    def get_init_dict(self):
+        return {
+            "gyro_error": self.gyro_error,
+            "should_draw_raw": self.should_draw_raw,
+            "should_draw_orientation": self.should_draw_orientation,
+        }
+
     def init_ui(self):
         self.add_menu()
         self.menu.label = "IMU Timeline"
-        self.menu.append(ui.Info_Text("View IMU data and export into .csv file"))
+        self.menu.append(ui.Info_Text("Visualize IMU data and export to .csv file"))
         self.menu.append(
             ui.Info_Text(
-                "Use this Plugin to view the IMU data timeline. When enabled, "
-                " IMU data will also be exported into a .csv file after running the Raw "
-                " Data Exporter Plugin. "
+                "This plugin visualizes accelerometer, gyroscope and "
+                " orientation data from Pupil Invisible recordings. Results are "
+                " exported in 'imu_timeline.csv' "
             )
         )
         self.menu.append(
             ui.Info_Text(
                 "Orientation is estimated using Madgwick's algorithm. "
                 " Madgwick implements a beta value which is related with the "
-                " error of the gyroscope. The beta value does not have an "
-                " intuitive optimal magnitude. Increasing the beta leads to "
-                " faster corrections but with more sensitivity to lateral "
-                " accelerations. Read more about Madgwick's algorithm here: "
+                " error of the gyroscope. Increasing the beta leads to faster "
+                " corrections but with more sensitivity to lateral accelerations. "
+                " Read more about Madgwick's algorithm here: "
                 " https://www.x-io.co.uk/res/doc/madgwick_internal_report.pdf "
             )
         )
 
         def set_gyro_error(new_value):
             self.gyro_error = new_value
-            self.notify_all({"subject": "madgwick_fusion.should_fuse", "delay": 1.0})
+            self.notify_all({"subject": "madgwick_fusion.should_fuse", "delay": 0.3})
 
         self.menu.append(
             ui.Switch(
@@ -410,7 +437,14 @@ class IMUTimeline(Plugin):
                 setter=set_gyro_error,
             )
         )
-        self._fuse()
+        if self.should_draw_raw:
+            self.append_timeline_raw()
+        if self.should_draw_orientation:
+            self.append_timeline_orientation()
+
+        if self.data_orient.shape[0] == 0:
+            # Start fusion after setting up timelines
+            self._fuse()
 
     def deinit_ui(self):
         if self.should_draw_raw:
@@ -444,7 +478,15 @@ class IMUTimeline(Plugin):
             self.gyro_error,
         )
 
+        self.data_orient = self.data_orient_empty_copy()
+        self._data_orient_fetched = np.empty_like(self.data_orient, shape=self.data_len)
+        if self.should_draw_orientation:
+            self.orient_timeline.refresh()
+        logger.info("Starting IMU fusion using Madgwick's algorithm")
         self.bg_task = bh.IPC_Logging_Task_Proxy("Fusion", fuser, args=generator_args)
+
+    def data_orient_empty_copy(self):
+        return np.empty([0], dtype=self.DTYPE_ORIENT).view(np.recarray)
 
     def recent_events(self, events):
         if self.bg_task:
@@ -456,8 +498,8 @@ class IMUTimeline(Plugin):
                 if task_data:
                     current_progress = task_data[1] / self.data_len
                     self.menu_icon.indicator_stop = current_progress
-                    self.data_orient["pitch"][task_data[1]] = task_data[0][0]
-                    self.data_orient["roll"][task_data[1]] = task_data[0][1]
+                    self._data_orient_fetched["pitch"][task_data[1]] = task_data[0][0]
+                    self._data_orient_fetched["roll"][task_data[1]] = task_data[0][1]
                 if time.perf_counter() - start_time > 1 / 50:
                     did_timeout = True
                     break
@@ -466,31 +508,30 @@ class IMUTimeline(Plugin):
                 self.status = "{} imu data fused"
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.0
+                # swap orientation data buffers
+                self.data_orient = self._data_orient_fetched
+                del self._data_orient_fetched
                 if self.should_draw_orientation:
                     # redraw new orientation data
-                    self.remove_orientation()
-                    self.draw_orientation()
+                    self.orient_timeline.refresh()
+                self.write_orientation_cache()
+                logger.info("Madgwick's fusion completed")
 
     def on_draw_raw_toggled(self, new_value):
         self.should_draw_raw = new_value
         if self.should_draw_raw:
-            self.draw_raw()
+            self.append_timeline_raw()
         else:
-            self.remove_raw()
+            self.remove_timeline_raw()
 
     def on_draw_orientation_toggled(self, new_value):
-        # check that data is fused
-        if self.bg_task:
-            logger.warning("Running Madgwick's algorithm")
-            return
-
         self.should_draw_orientation = new_value
         if self.should_draw_orientation:
-            self.draw_orientation()
+            self.append_timeline_orientation()
         else:
-            self.remove_orientation()
+            self.remove_timeline_orientation()
 
-    def draw_raw(self):
+    def append_timeline_raw(self):
         self.gyro_timeline = ui.Timeline(
             "gyro",
             self.draw_raw_gyro,
@@ -507,7 +548,7 @@ class IMUTimeline(Plugin):
         self.g_pool.user_timelines.append(self.accel_timeline)
         self.glfont_raw = glfont_generator()
 
-    def draw_orientation(self):
+    def append_timeline_orientation(self):
         self.orient_timeline = ui.Timeline(
             "orientation",
             self.draw_orient,
@@ -517,14 +558,14 @@ class IMUTimeline(Plugin):
         self.g_pool.user_timelines.append(self.orient_timeline)
         self.glfont_orient = glfont_generator()
 
-    def remove_raw(self):
+    def remove_timeline_raw(self):
         self.g_pool.user_timelines.remove(self.gyro_timeline)
         self.g_pool.user_timelines.remove(self.accel_timeline)
         del self.gyro_timeline
         del self.accel_timeline
         del self.glfont_raw
 
-    def remove_orientation(self):
+    def remove_timeline_orientation(self):
         self.g_pool.user_timelines.remove(self.orient_timeline)
         del self.glfont_orient
 
@@ -550,10 +591,18 @@ class IMUTimeline(Plugin):
         ts_min = self.g_pool.timestamps[0]
         ts_max = self.g_pool.timestamps[-1]
         data_raw = data[keys]
+        sub_samples = np.linspace(
+            0,
+            self.data_len - 1,
+            min(self.NUMBER_SAMPLES_TIMELINE, self.data_len),
+            dtype=int,
+        )
         with gl_utils.Coord_System(ts_min, ts_max, *y_limits):
             for key in keys:
                 data_keyed = data_raw[key]
-                points = list(zip(self.data_ts, data_keyed))
+                if data_keyed.shape[0] == 0:
+                    continue
+                points = list(zip(self.data_ts[sub_samples], data_keyed[sub_samples]))
                 cygl_utils.draw_points(points, size=1.5 * scale, color=self.CMAP[key])
 
     def draw_legend_gyro(self, width, height, scale):
@@ -607,6 +656,32 @@ class IMUTimeline(Plugin):
             export_window=export_window,
             export_dir=export_dir,
         )
+
+    def write_orientation_cache(self):
+        rec_dir = pathlib.Path(self.g_pool.rec_dir)
+        offline_data = rec_dir / "offline_data"
+        if not offline_data.exists():
+            offline_data.mkdir()
+        path_cache = offline_data / "orientation.cache"
+        path_meta = offline_data / "orientation.meta"
+        np.save(path_cache, self.data_orient)
+        fm.save_object(
+            {"version": self.CACHE_VERSION, "gyro_error": self.gyro_error}, path_meta
+        )
+
+    def read_orientation_cache(self) -> bool:
+        rec_dir = pathlib.Path(self.g_pool.rec_dir)
+        offline_data = rec_dir / "offline_data"
+        path_cache = offline_data / "orientation.cache.npy"
+        path_meta = offline_data / "orientation.meta"
+        if not (path_cache.exists() and path_meta.exists()):
+            return False
+        meta = fm.load_object(path_meta)
+        if meta["version"] != self.CACHE_VERSION:
+            return False
+        self.gyro_error = meta["gyro_error"]
+        self.data_orient = np.load(path_cache).view(np.recarray)
+        return True
 
 
 class Imu_Bisector(pm.Bisector):

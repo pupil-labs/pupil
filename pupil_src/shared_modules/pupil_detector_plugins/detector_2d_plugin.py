@@ -30,6 +30,7 @@ GLFWErrorReporting.set_default()
 from methods import normalize
 from plugin import Plugin
 
+from . import color_scheme
 from .detector_base_plugin import PupilDetectorPlugin
 from .visualizer_2d import draw_pupil_outline
 
@@ -134,10 +135,17 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 step=1,
             )
         )
+        self.menu.append(ui.Info_Text("Color Legend"))
+        self.menu.append(
+            ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_2D.as_float, "2D pupil ellipse")
+        )
 
     def gl_display(self):
         if self._recent_detection_result:
-            draw_pupil_outline(self._recent_detection_result, color_rgb=(0, 0.5, 1))
+            draw_pupil_outline(
+                self._recent_detection_result,
+                color_rgb=color_scheme.PUPIL_ELLIPSE_2D.as_float,
+            )
 
     def on_resolution_change(self, old_size, new_size):
         properties = self.pupil_detector.get_properties()

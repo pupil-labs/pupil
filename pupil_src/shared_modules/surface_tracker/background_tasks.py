@@ -358,13 +358,18 @@ class Exporter:
         return gaze_on_surface, fixations_on_surface
 
     def _export_marker_detections(self):
+        export_slice = slice(*self.export_range)
+        world_indices = range(*self.export_range)
 
         # Load the temporary marker cache created by the offline surface tracker
         marker_cache = file_methods.Persistent_Dict(self.marker_cache_path)
-        marker_cache = marker_cache["marker_cache"]
+        marker_cache = marker_cache["marker_cache"][export_slice]
+
+        incomplete_marker_cache_detected = False
+
+        file_path = os.path.join(self.metrics_dir, "marker_detections.csv")
 
         try:
-            file_path = os.path.join(self.metrics_dir, "marker_detections.csv")
             with open(file_path, "w", encoding="utf-8", newline="") as csv_file:
                 csv_writer = csv.writer(csv_file, delimiter=",")
                 csv_writer.writerow(
@@ -381,18 +386,35 @@ class Exporter:
                         "corner_3_y",
                     )
                 )
-                for idx, serialized_markers in enumerate(marker_cache):
-                    for m in map(Surface_Marker.deserialize, serialized_markers):
+                for world_index, serialized_markers in zip(world_indices, marker_cache):
+                    if serialized_markers is None:
+                        # set flag to break from outer loop
+                        incomplete_marker_cache_detected = True
+
+                    if incomplete_marker_cache_detected:
+                        break  # outer loop
+
+                    for sm in serialized_markers:
+                        if sm is None:
+                            # set flag to break from outer loop
+                            incomplete_marker_cache_detected = True
+                            break  # inner loop
+                        m = Surface_Marker.deserialize(sm)
                         flat_corners = [x for c in m.verts_px for x in c[0]]
                         assert len(flat_corners) == 8  # sanity check
                         csv_writer.writerow(
                             (
-                                idx,
+                                world_index,
                                 m.uid,
                                 *flat_corners,
                             )
                         )
         finally:
+            if incomplete_marker_cache_detected:
+                logger.error("Marker detection not finished. No data will be exported.")
+                # Delete incomplete marker cache export file
+                os.remove(file_path)
+
             # Delete the temporary marker cache created by the offline surface tracker
             os.remove(self.marker_cache_path)
             self.marker_cache_path = None

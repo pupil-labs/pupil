@@ -183,6 +183,9 @@ class LeGrandEye(BasicEye):
         draw_cornea=True,
         draw_gaze=True,
         alpha=1.0,
+        color_gaze=(1.0, 1.0, 1.0),
+        color_eyeball=(0.6, 0.6, 1.0),
+        color_cornea=(1.0, 1.0, 1.0),
     ):
 
         glPushMatrix()
@@ -199,7 +202,7 @@ class LeGrandEye(BasicEye):
 
         if draw_gaze:
             glLineWidth(2.0)
-            glColor4f(1, 1, 1, 1.0 * alpha)
+            glColor4f(*color_gaze, 1.0 * alpha)
             glBegin(GL_LINES)
             glVertex3f(*[0, 0, 0])
             glVertex3f(*[0, 0, 600])
@@ -209,7 +212,7 @@ class LeGrandEye(BasicEye):
         if draw_eyeball:
 
             # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
-            glColor4f(0.6, 0.6, 1.0, 1.0 * alpha)
+            glColor4f(*color_eyeball, 1.0 * alpha)
             glLineWidth(1.0)
 
             glPushMatrix()
@@ -262,7 +265,7 @@ class LeGrandEye(BasicEye):
         if draw_cornea:
 
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
-            glColor4f(1, 1, 1, 0.3 * alpha)
+            glColor4f(*color_cornea, 0.3 * alpha)
             glLineWidth(1.0)
 
             glPushMatrix()
