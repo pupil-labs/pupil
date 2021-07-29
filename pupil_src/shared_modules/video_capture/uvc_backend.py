@@ -18,12 +18,11 @@ import tempfile
 import time
 from pathlib import Path
 
-import numpy as np
-from pyglui import cygl, ui
-
 import gl_utils
+import numpy as np
 import uvc
 from camera_models import Camera_Model
+from pyglui import cygl, ui
 from version_utils import parse_version
 
 from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
