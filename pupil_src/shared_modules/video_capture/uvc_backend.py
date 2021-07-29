@@ -16,6 +16,7 @@ import re
 import sys
 import tempfile
 import time
+import traceback
 from pathlib import Path
 
 import gl_utils
@@ -245,7 +246,7 @@ class UVC_Source(Base_Source):
                         print(elevation_cmd)
                         logger.debug(elevation_cmd)
                         subprocess.Popen(elevation_cmd).wait()
-                except PermissionError as e:
+                except PermissionError:
                     # This can be raised when cleaning up the TemporaryDirectory, if the
                     # process was started from a non-admin shell for a non-admin user
                     # and has only been elevated for the powershell commands. The files
@@ -255,7 +256,13 @@ class UVC_Source(Base_Source):
                         "Pupil was not run as administrator. If the drivers do not "
                         "work, please try running as administrator again!"
                     )
-                    logger.debug(e)
+                    logger.debug(traceback.format_exc())
+                except Exception:
+                    logger.error(
+                        "An error was encountered during the automatic driver "
+                        "installation. Please consider installing them manually."
+                    )
+                    logger.debug(traceback.format_exc())
 
             logger.warning("Done updating drivers!")
 
