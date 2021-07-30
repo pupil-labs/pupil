@@ -182,3 +182,15 @@ class GazerHMD3D(Gazer3D):
             **super().get_init_dict(),
             "eye_translations": self.__eye_translations,
         }
+
+
+class PosthocGazerHMD3D(Gazer3D):
+    label = "Post-hoc HMD 3D"
+
+    eye0_hardcoded_translation = 33.35, 0, 0
+    eye1_hardcoded_translation = -33.35, 0, 0
+    ref_depth_hardcoded = 20
+
+    @classmethod
+    def _gazer_description_text(cls) -> str:
+        return "Gaze mapping built specifically for HMD-Eyes."
