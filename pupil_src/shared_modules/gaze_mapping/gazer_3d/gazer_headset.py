@@ -62,7 +62,7 @@ class Model3D(Model):
     def _predict_single(self, x):
         pass
 
-    def __init__(self, *, intrinsics: T.Optional[T.Any], initial_depth=500):
+    def __init__(self, *, intrinsics: T.Optional[T.Any], initial_depth: float):
         self.intrinsics = intrinsics
         self.initial_depth = initial_depth
         self._is_fitted = False
@@ -98,6 +98,10 @@ class Model3D_Monocular(Model3D):
     # optional access to binocular_model.last_gaze_distance
     binocular_model: "Model3D_Binocular" = None
 
+    def __init__(self, *, initial_eye_translation, **kwargs):
+        super().__init__(**kwargs)
+        self._initial_eye_translation = np.array(initial_eye_translation)
+
     @property
     def gaze_distance(self):
         if self.binocular_model is not None and self.binocular_model.is_fitted:
@@ -113,7 +117,11 @@ class Model3D_Monocular(Model3D):
         sphere_pos = X[-1, _MONOCULAR_SPHERE_CENTER]  # last pupil sphere center
 
         result = calibrate_monocular(
-            unprojected_ref_points, pupil_normals, pupil_id, self.initial_depth
+            unprojected_ref_points,
+            pupil_normals,
+            pupil_id,
+            self.initial_depth,
+            initial_translation=self._initial_eye_translation,
         )
         success, poses_in_world, gaze_targets_in_world = result
         if not success:
@@ -187,6 +195,11 @@ class Model3D_Monocular(Model3D):
 
 
 class Model3D_Binocular(Model3D):
+    def __init__(self, *, initial_eye_translation0, initial_eye_translation1, **kwargs):
+        super().__init__(**kwargs)
+        self._initial_eye_translation0 = np.array(initial_eye_translation0)
+        self._initial_eye_translation1 = np.array(initial_eye_translation1)
+
     def _fit(self, X, Y):
         assert X.shape[1] == _BINOCULAR_FEATURE_COUNT, X
         unprojected_ref_points = Y
@@ -205,7 +218,12 @@ class Model3D_Binocular(Model3D):
         assert sphere_pos0.shape == (3,), sphere_pos0
 
         res = calibrate_binocular(
-            unprojected_ref_points, pupil0_normals, pupil1_normals, self.initial_depth
+            unprojected_ref_points,
+            pupil0_normals,
+            pupil1_normals,
+            self.initial_depth,
+            initial_translation0=self._initial_eye_translation0,
+            initial_translation1=self._initial_eye_translation1,
         )
         success, poses_in_world, gaze_targets_in_world = res
         if not success:
@@ -327,18 +345,35 @@ class Model3D_Binocular(Model3D):
 class Gazer3D(GazerBase):
     label = "3D"
 
+    eye0_hardcoded_translation = 20, 15, -20
+    eye1_hardcoded_translation = -40, 15, -20
+    ref_depth_hardcoded = 500
+
     @classmethod
     def _gazer_description_text(cls) -> str:
         return "3D gaze mapping: default method; able to compensate for small movements of the headset (slippage); uses 3d eye model as input."
 
     def _init_left_model(self) -> Model:
-        return Model3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
+        return Model3D_Monocular(
+            intrinsics=self.g_pool.capture.intrinsics,
+            initial_depth=self.ref_depth_hardcoded,
+            initial_eye_translation=self.eye1_hardcoded_translation,
+        )
 
     def _init_right_model(self) -> Model:
-        return Model3D_Monocular(intrinsics=self.g_pool.capture.intrinsics)
+        return Model3D_Monocular(
+            intrinsics=self.g_pool.capture.intrinsics,
+            initial_depth=self.ref_depth_hardcoded,
+            initial_eye_translation=self.eye0_hardcoded_translation,
+        )
 
     def _init_binocular_model(self) -> Model:
-        return Model3D_Binocular(intrinsics=self.g_pool.capture.intrinsics)
+        return Model3D_Binocular(
+            intrinsics=self.g_pool.capture.intrinsics,
+            initial_depth=self.ref_depth_hardcoded,
+            initial_eye_translation0=self.eye0_hardcoded_translation,
+            initial_eye_translation1=self.eye1_hardcoded_translation,
+        )
 
     def fit_on_calib_data(self, calib_data):
         super().fit_on_calib_data(calib_data)

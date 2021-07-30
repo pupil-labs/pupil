@@ -33,7 +33,12 @@ class SphericalCamera:
 
 
 def calibrate_binocular(
-    unprojected_ref_points, pupil0_normals, pupil1_normals, initial_depth
+    unprojected_ref_points,
+    pupil0_normals,
+    pupil1_normals,
+    initial_depth,
+    initial_translation0,
+    initial_translation1,
 ):
     """Determine the poses of the eyes and 3d gaze points by solving a specific
     least-squares minimization
@@ -57,8 +62,6 @@ def calibrate_binocular(
     initial_rotation1 = utils.get_initial_eye_camera_rotation(
         pupil1_normals, unprojected_ref_points
     )
-    initial_translation0 = eye0_hardcoded_translation
-    initial_translation1 = eye1_hardcoded_translation
 
     # world cam and eyes are viewed as spherical cameras of unit radius
     world = SphericalCamera(
@@ -95,7 +98,9 @@ def calibrate_binocular(
     return success, poses_in_world, gaze_targets_in_world
 
 
-def calibrate_monocular(unprojected_ref_points, pupil_normals, pupil_id, initial_depth):
+def calibrate_monocular(
+    unprojected_ref_points, pupil_normals, pupil_id, initial_depth, initial_translation
+):
     """Determine the poses of the eyes and 3d gaze points by solving a specific
     least-squares minimization
 
@@ -115,11 +120,8 @@ def calibrate_monocular(unprojected_ref_points, pupil_normals, pupil_id, initial
     initial_rotation_matrix, _ = utils.find_rigid_transform(
         unprojected_ref_points, pupil_normals
     )
-    hardcoded_translation = (
-        eye0_hardcoded_translation if pupil_id == 0 else eye1_hardcoded_translation
-    )
     initial_rotation = cv2.Rodrigues(initial_rotation_matrix)[0].ravel()
-    initial_translation = -np.dot(initial_rotation_matrix, hardcoded_translation)
+    initial_translation = -np.dot(initial_rotation_matrix, initial_translation)
 
     # world cam and eye are viewed as spherical cameras of unit radius
     world = SphericalCamera(
