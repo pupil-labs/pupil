@@ -60,7 +60,16 @@ def convert_matrix_to_extrinsic(extrinsic_matrix):
 
 
 def rod_to_euler(rotation_pose):
-    rot_mat = cv2.Rodrigues(rotation_pose)[0]
+    # convert Rodrigues rotation vector to matrix
+    rot = cv2.Rodrigues(rotation_pose)[0]
+
+    # rotate 180 degrees in x-axis (corresponds to pitch)
+    rot_180 = np.array([[1, 0, 0],
+                        [0, -1, 0],
+                        [0, 0, -1]])
+    rot_mat = np.matmul(rot, rot_180)
+
+    # convert to euler angles
     sin_y = np.sqrt(rot_mat[0, 0] * rot_mat[0, 0] + rot_mat[1, 0] * rot_mat[1, 0])
     if not sin_y < 1e-6:
         x = np.arctan2(rot_mat[2, 1], rot_mat[2, 2])
@@ -76,6 +85,7 @@ def rod_to_euler(rotation_pose):
 def get_camera_pose(camera_extrinsics):
     if camera_extrinsics is None:
         return get_none_camera_extrinsics()
+
     rotation_ext, translation_ext = split_extrinsics(camera_extrinsics)
     rotation_pose = -rotation_ext
     translation_pose = np.matmul(-cv2.Rodrigues(rotation_ext)[0].T, translation_ext)
@@ -89,6 +99,7 @@ def convert_marker_extrinsics_to_points_3d(marker_extrinsics):
     marker_transformed_h = np.matmul(mat, get_marker_points_4d_origin().T)
     marker_points_3d = cv2.convertPointsFromHomogeneous(marker_transformed_h.T)
     marker_points_3d.shape = 4, 3
+
     return marker_points_3d
 
 
