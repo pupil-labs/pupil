@@ -60,25 +60,31 @@ def convert_matrix_to_extrinsic(extrinsic_matrix):
 
 
 def rod_to_euler(rotation_pose):
+    """
+    :param rotation_pose: Compact Rodrigues rotation vector, representing
+    the rotation axis with its length encoding the angle in radians to rotate
+    :return: x,y,z: Orientation in the Pitch, Roll and Yaw axes as Euler angles
+    according to 'right hand' convention
+    """
     # convert Rodrigues rotation vector to matrix
     rot = cv2.Rodrigues(rotation_pose)[0]
 
-    # rotate 180 degrees in x-axis (corresponds to pitch)
-    rot_180 = np.array([[1, 0, 0],
-                        [0, -1, 0],
-                        [0, 0, -1]])
-    rot_mat = np.matmul(rot, rot_180)
+    # rotate 180 degrees in y- and z-axes (corresponds to yaw and roll) to align
+    # with right hand rule (relative to the coordinate system of the origin marker
+    rot_mat = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+    rot = np.matmul(rot, rot_mat)
 
     # convert to euler angles
-    sin_y = np.sqrt(rot_mat[0, 0] * rot_mat[0, 0] + rot_mat[1, 0] * rot_mat[1, 0])
+    sin_y = np.sqrt(rot[0, 0] * rot[0, 0] + rot[1, 0] * rot[1, 0])
     if not sin_y < 1e-6:
-        x = np.arctan2(rot_mat[2, 1], rot_mat[2, 2])
-        y = np.arctan2(-rot_mat[2, 0], sin_y)
-        z = np.arctan2(rot_mat[1, 0], rot_mat[0, 0])
+        x = np.arctan2(rot[2, 1], rot[2, 2])
+        y = -np.arctan2(-rot[2, 0], sin_y)
+        z = -np.arctan2(rot[1, 0], rot[0, 0])
     else:
-        x = np.arctan2(-rot_mat[1, 2], rot_mat[1, 1])
-        y = np.arctan2(-rot_mat[2, 0], sin_y)
+        x = np.arctan2(-rot[1, 2], rot[1, 1])
+        y = -np.arctan2(-rot[2, 0], sin_y)
         z = 0
+
     return np.rad2deg([x, y, z])
 
 

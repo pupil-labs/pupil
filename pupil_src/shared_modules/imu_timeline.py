@@ -204,7 +204,7 @@ class Fusion(object):
 
         # These are modified to account for Invisible IMU coordinate system and positioning of
         # the IMU within the invisible headset
-        roll = -(
+        roll = (
             np.degrees(
                 -np.arcsin(2.0 * (self.q[1] * self.q[3] - self.q[0] * self.q[2]))
             )
