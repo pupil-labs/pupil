@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import os, sys, platform
+
 running_from_bundle = getattr(sys, "frozen", False)
 if not running_from_bundle:
     pupil_base_dir = os.path.abspath(__file__).rsplit("pupil_src", 1)[0]
