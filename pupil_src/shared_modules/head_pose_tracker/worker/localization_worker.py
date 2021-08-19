@@ -18,14 +18,14 @@ from head_pose_tracker.function import solvepnp, utils
 
 def get_pose_data(extrinsics, timestamp):
     if extrinsics is not None:
-        camera_poses, camera_orientation = utils.get_camera_pose(extrinsics)
+        camera_poses, euler_orientation = utils.get_camera_pose(extrinsics)
         camera_pose_matrix = utils.convert_extrinsic_to_matrix(camera_poses)
         return {
             "camera_extrinsics": extrinsics.tolist(),
             "camera_poses": camera_poses.tolist(),
             "camera_trace": camera_poses[3:6].tolist(),
             "camera_pose_matrix": camera_pose_matrix.tolist(),
-            "camera_orientation": camera_orientation.tolist(),
+            "euler_orientation": euler_orientation.tolist(),
             "timestamp": timestamp,
         }
     else:
@@ -34,7 +34,7 @@ def get_pose_data(extrinsics, timestamp):
             "camera_poses": [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
             "camera_trace": [np.nan, np.nan, np.nan],
             "camera_pose_matrix": None,
-            "camera_orientation": [np.nan, np.nan, np.nan],
+            "euler_orientation": [np.nan, np.nan, np.nan],
             "timestamp": timestamp,
         }
 

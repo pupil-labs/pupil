@@ -43,7 +43,7 @@ def _export_poses(rec_dir, poses):
     logger.info("Exporting {} head poses to {}".format(len(poses), rec_dir))
     poses_path = os.path.join(rec_dir, "head_pose_tracker_poses.csv")
     poses_flat = [
-        (p["timestamp"], *p["camera_poses"], *p["camera_orientation"]) for p in poses
+        (p["timestamp"], *p["camera_poses"], *p["euler_orientation"]) for p in poses
     ]
     _write_csv(poses_path, POSES_HEADER, poses_flat)
 

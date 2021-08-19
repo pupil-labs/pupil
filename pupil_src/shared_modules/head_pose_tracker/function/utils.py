@@ -96,8 +96,8 @@ def get_camera_pose(camera_extrinsics):
     rotation_pose = -rotation_ext
     translation_pose = np.matmul(-cv2.Rodrigues(rotation_ext)[0].T, translation_ext)
     camera_pose = merge_extrinsics(rotation_pose, translation_pose)
-    camera_orientation = rod_to_euler(rotation_pose)
-    return camera_pose, camera_orientation
+    euler_orientation = rod_to_euler(rotation_pose)
+    return camera_pose, euler_orientation
 
 
 def convert_marker_extrinsics_to_points_3d(marker_extrinsics):
