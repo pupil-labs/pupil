@@ -32,13 +32,13 @@ def export_routine(rec_dir, model, poses):
 
 def _export_model(rec_dir, model):
     logger.info("Exporting head pose model to {}".format(rec_dir))
-    model_path = os.path.join(rec_dir, "head_pose_tacker_model.csv")
+    model_path = os.path.join(rec_dir, "head_pose_tracker_model.csv")
     _write_csv(model_path, MODEL_HEADER, model)
 
 
 def _export_poses(rec_dir, poses):
     logger.info("Exporting {} head poses to {}".format(len(poses), rec_dir))
-    poses_path = os.path.join(rec_dir, "head_pose_tacker_poses.csv")
+    poses_path = os.path.join(rec_dir, "head_pose_tracker_poses.csv")
     poses_flat = [(p["timestamp"], *p["camera_poses"]) for p in poses]
     _write_csv(poses_path, POSES_HEADER, poses_flat)
 
