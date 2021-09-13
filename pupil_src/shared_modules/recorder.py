@@ -495,8 +495,8 @@ class Recorder(System_Plugin_Base):
             # explicit release of VideoWriter
             try:
                 self.writer.release()
-            except RuntimeError:
-                logger.error("No world video recorded")
+            except (RuntimeError, FileNotFoundError):
+                logger.warning("No world video recorded")
             else:
                 logger.debug("Closed media container")
                 self.g_pool.capture.intrinsics.save(self.rec_path, custom_name="world")
