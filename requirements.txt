@@ -12,6 +12,7 @@ scikit-learn
 scipy
 glfw>=2.0.0
 ndsi==1.4.*
+zeromq-pyre>=0.3.4  # Gracefully handle https://github.com/pupil-labs/pupil/issues/2174
 
 cysignals ; platform_system != "Windows"
 
