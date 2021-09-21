@@ -124,7 +124,14 @@ class System_Graphs(System_Plugin_Base):
                 if p["topic"] == "pupil.0.2d":
                     assert p["id"] == 0  # sanity check
                     self.conf0_graph.add(p["confidence"])
-                if p["topic"] == "pupil.1.2d":
+                elif p["topic"] == "pupil.1.2d":
+                    assert p["id"] == 1  # sanity check
+                    self.conf1_graph.add(p["confidence"])
+                # pre-2.0 recordings:
+                elif p["topic"] == "pupil.0":
+                    assert p["id"] == 0  # sanity check
+                    self.conf0_graph.add(p["confidence"])
+                elif p["topic"] == "pupil.1":
                     assert p["id"] == 1  # sanity check
                     self.conf1_graph.add(p["confidence"])
 
