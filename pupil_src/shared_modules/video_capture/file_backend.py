@@ -16,18 +16,17 @@ import os.path
 import typing as T
 from abc import ABC, abstractmethod
 from multiprocessing import cpu_count
-from time import sleep, monotonic
+from time import monotonic, sleep
 
 import av
 import numpy as np
+from camera_models import Camera_Model
+from methods import container_decode, iter_catch, make_change_loglevel_fn
+from pupil_recording import PupilRecording
 from pyglui import ui
 
-from camera_models import Camera_Model
-from methods import make_change_loglevel_fn, iter_catch, container_decode
-from pupil_recording import PupilRecording
-
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
-from .utils import VideoSet, InvalidContainerError
+from .utils import InvalidContainerError, VideoSet
 
 logger = logging.getLogger(__name__)
 av.logging.set_level(av.logging.ERROR)
