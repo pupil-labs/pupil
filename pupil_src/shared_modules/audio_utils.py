@@ -95,7 +95,7 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
 
 
 class Audio_Viz_Transform:
-    def __init__(self, rec_dir, sps_rate=60):
+    def __init__(self, rec_dir, log_scaling, sps_rate=60):
         self.audio_all = iter(load_audio(rec_dir))
         self._setup_next_audio_part()
         self._first_part_start = self.audio.timestamps[0]
@@ -106,7 +106,7 @@ class Audio_Viz_Transform:
         self.a_levels = None
         self.a_levels_log = None
         self.final_rescale = True
-        self.log_scaling = False
+        self.log_scaling = log_scaling
 
     def _setup_next_audio_part(self):
         self.audio = next(self.audio_all)

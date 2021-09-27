@@ -214,6 +214,10 @@ class Video:
 
     def _open_container(self):
         cont = av.open(self.path)
+        try:
+            cont.streams.video[0].thread_type = "AUTO"
+        except AttributeError:
+            pass
         return cont
 
     def load_ts(self):
@@ -228,6 +232,7 @@ class Video:
         packets = container.demux(video=0)
         # last pts is invalid
         self._pts = np.array([packet.pts for packet in packets][:-1])
+        self._pts.sort()
         return self._pts
 
     @property

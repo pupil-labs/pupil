@@ -356,13 +356,25 @@ def player(
         g_pool.camera_render_size = None
 
         video_path = recording.files().core().world().videos()[0].resolve()
-        File_Source(
-            g_pool,
-            timing="external",
-            source_path=video_path,
-            buffered_decoding=True,
-            fill_gaps=True,
-        )
+        try:
+            File_Source(
+                g_pool,
+                timing="external",
+                source_path=video_path,
+                buffered_decoding=True,
+                fill_gaps=True,
+            )
+        except AttributeError:
+            logger.warning(
+                "Buffered decoder not available. Falling back to on demand decoder."
+            )
+            File_Source(
+                g_pool,
+                timing="external",
+                source_path=video_path,
+                buffered_decoding=False,
+                fill_gaps=True,
+            )
 
         # load session persistent settings
         session_settings = Persistent_Dict(

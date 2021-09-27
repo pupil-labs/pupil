@@ -326,7 +326,10 @@ class File_Source(Playback_Source, Base_Source):
             return BrokenStream()
 
         logger.debug(f"loaded videostream: {str(video_stream)}")
-        video_stream.thread_count = cpu_count()
+        try:
+            video_stream.thread_count = cpu_count()
+        except RuntimeError:
+            pass
 
         if should_buffer:
             return BufferedDecoder(container, video_stream)
