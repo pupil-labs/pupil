@@ -46,12 +46,12 @@ from scipy.spatial.distance import pdist
 import background_helper as bh
 import data_changed
 import file_methods as fm
-from observable import Observable
 import player_methods as pm
+from hotkey import Hotkey
 from methods import denormalize
+from observable import Observable
 from plugin import Plugin
 from pupil_recording import PupilRecording, RecordingInfo
-from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
 
