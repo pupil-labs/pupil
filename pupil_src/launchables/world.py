@@ -140,8 +140,8 @@ def world(
         from methods import normalize, denormalize, delta_t, get_system_info, timer
         from uvc import get_time_monotonic
 
-        logger.info("Application Version: {}".format(version))
-        logger.info("System Info: {}".format(get_system_info()))
+        logger.debug("Application Version: {}".format(version))
+        logger.debug("System Info: {}".format(get_system_info()))
         logger.debug(f"Debug flag: {debug}")
 
         import audio
@@ -459,7 +459,7 @@ def world(
             os.path.join(g_pool.user_dir, "user_settings_world")
         )
         if parse_version(session_settings.get("version", "0.0")) != g_pool.version:
-            logger.info(
+            logger.debug(
                 "Session setting are from a different version of this app. I will not use those."
             )
             session_settings.clear()
@@ -716,7 +716,7 @@ def world(
             launch_eye_process(0, delay=0.3)
 
         ipc_pub.notify({"subject": "world_process.started"})
-        logger.warning("Process started.")
+        logger.debug("Process started.")
 
         if platform.system() == "Darwin":
             # On macOS, calls to glfw.swap_buffers() deliberately take longer in case of
@@ -866,7 +866,7 @@ def world(
         stop_eye_process(0)
         stop_eye_process(1)
 
-        logger.info("Process shutting down.")
+        logger.debug("Process shutting down.")
         ipc_pub.notify({"subject": "world_process.stopped"})
         sleep(1.0)
 

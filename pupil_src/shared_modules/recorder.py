@@ -288,7 +288,7 @@ class Recorder(System_Plugin_Base):
             if self.running:
                 self.stop()
             else:
-                logger.info("Recording already stopped!")
+                logger.debug("Recording already stopped!")
 
     def get_rec_time_str(self):
         rec_time = gmtime(time() - self.start_time)
@@ -517,10 +517,6 @@ class Recorder(System_Plugin_Base):
                 _, filename = os.path.split(source_path)
                 target_path = os.path.join(self.rec_path, filename)
                 copy2(source_path, target_path)
-        else:
-            logger.info(
-                "No surface_definitions data found. You may want this if you do marker tracking."
-            )
 
         self.meta_info.duration_s = duration_s
         self.meta_info.save_file()
