@@ -390,7 +390,10 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
             help_str = help_block.replace("\n", " ").replace("  ", "").strip()
             self.menu.append(ui.Info_Text(help_str))
         self.menu.append(
-            ui.Info_Text("Press the export button or type 'e' to start the export.")
+            ui.Info_Text(
+                "To start the export, wait until the detection has finished and press "
+                "the export button or type 'e'."
+            )
         )
 
         self.menu.append(
