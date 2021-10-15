@@ -25,7 +25,7 @@ opencv-python==3.* ; platform_system == "Windows"
 pupil-apriltags==1.0.4
 pupil-detectors==2.0.*
 pye3d==0.2.0
-pyglui>=1.30.0
+pyglui>=1.31.0
 
 # pupil-labs/PyAV 0.4.6
 av @ git+https://github.com/pupil-labs/PyAV@v0.4.6 ; platform_system != "Windows"
