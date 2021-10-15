@@ -395,6 +395,12 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
                 "the export button or type 'e'."
             )
         )
+        self.menu.append(
+            ui.Info_Text(
+                "Note: This plugin does not process fixations that have been calculated"
+                " and recorded in real time."
+            )
+        )
 
         self.menu.append(
             ui.Slider(
