@@ -58,7 +58,7 @@ python -m pip install --upgrade pip wheel
 pip install -r requirements.txt
 ```
 
-**NOTE:** `pyuvc` requires that you download Microsoft Visual C++ 2010 Redistributable from [microsoft](https://www.microsoft.com/en-us/download/details.aspx?id=14632). The `pthreadVC2` lib, which is used by libuvc, depends on `msvcr100.dll`.
+**NOTE:** `pyuvc` requires that you download Microsoft Visual C++ 2010 Redistributable from [microsoft](https://docs.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-160). The `pthreadVC2` lib, which is used by libuvc, depends on `msvcr100.dll`.
 
 ## Modifying Pupil to Work with Windows
 
