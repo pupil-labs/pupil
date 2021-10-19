@@ -9,15 +9,6 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 """
-(*)~---------------------------------------------------------------------------
-Pupil - eye tracking platform
-Copyright (C) 2012-2019 Pupil Labs
-
-Distributed under the terms of the GNU
-Lesser General Public License (LGPL v3.0).
-See COPYING and COPYING.LESSER for license details.
----------------------------------------------------------------------------~(*)
-
 Contains classes to announce available data between different plugins. Data (e.g.
 pupil positions or gaze) is produced by some plugins and consumed by others. Data
 consumers need to know if data producers provide new data or if the data producer

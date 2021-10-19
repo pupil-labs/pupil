@@ -140,7 +140,8 @@ class ValidationInput:
             and self.gazer_class_name != gazer_class_name
         ):
             logger.debug(
-                f'Overwriting gazer_class_name from "{self.gazer_class_name}" to "{gazer_class_name}" and resetting the input.'
+                f'Overwriting gazer_class_name from "{self.gazer_class_name}" to '
+                f'"{gazer_class_name}" and resetting the input.'
             )
             self.clear()
 
@@ -275,7 +276,8 @@ class Accuracy_Visualizer(Plugin):
                 self,
                 "Angular Accuracy",
                 setter=ignore,
-                getter=lambda: self.accuracy
+                getter=lambda: f"{self.accuracy.result:.3f} deg. Samples used: "
+                f"{self.accuracy.num_used} / {self.accuracy.num_total}"
                 if self.accuracy is not None
                 else "Not available",
             )
@@ -287,7 +289,8 @@ class Accuracy_Visualizer(Plugin):
                 self,
                 "Angular Precision",
                 setter=ignore,
-                getter=lambda: self.precision
+                getter=lambda: f"{self.precision.result:.3f} deg. Samples used: "
+                f"{self.precision.num_used} / {self.precision.num_total}"
                 if self.precision is not None
                 else "Not available",
             )
@@ -391,29 +394,23 @@ class Accuracy_Visualizer(Plugin):
             logger.warning(NOT_ENOUGH_DATA_COLLECTED_ERR_MSG)
             return
 
-        accuracy = results.accuracy.result
-        if np.isnan(accuracy):
+        if np.isnan(results.accuracy.result):
             self.accuracy = None
             logger.warning(
                 "Not enough data available for angular accuracy calculation."
             )
         else:
-            self.accuracy = accuracy
-            logger.info(
-                "Angular accuracy: {}. Used {} of {} samples.".format(*results[0])
-            )
+            self.accuracy = results.accuracy
+            logger.info(f"Angular accuracy: {results.accuracy.result:.3f} degrees")
 
-        precision = results.precision.result
-        if np.isnan(precision):
+        if np.isnan(results.precision.result):
             self.precision = None
             logger.warning(
                 "Not enough data available for angular precision calculation."
             )
         else:
-            self.precision = precision
-            logger.info(
-                "Angular precision: {}. Used {} of {} samples.".format(*results[1])
-            )
+            self.precision = results.precision
+            logger.info(f"Angular precision: {results.precision.result:.3f} degrees")
 
         self.error_lines = results.error_lines
         ref_locations = results.correlation.norm_space[1::2, :]
@@ -489,8 +486,8 @@ class Accuracy_Visualizer(Plugin):
             "ij,ij->i", undistorted_3d[:-1, 3:], undistorted_3d[1:, 3:]
         )
 
-        # if the ref distance is to big we must have moved to a new fixation or there is headmovement,
-        # if the gaze dis is to big we can assume human error
+        # if the ref distance is to big we must have moved to a new fixation or there is
+        # headmovement, if the gaze dis is to big we can assume human error
         # both times gaze data is not valid for this mesurement
         selected_indices = np.logical_and(
             succesive_distances_gaze > succession_threshold,
