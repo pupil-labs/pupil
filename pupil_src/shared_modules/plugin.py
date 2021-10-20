@@ -53,6 +53,13 @@ class Plugin(object):
     # or custom loaded font name
     icon_font = "roboto"
     icon_chr = "?"  # character shown in menu icon
+    # icon placement and sizing:
+    # icon_pos_delta: (x, y) offset relative to default position
+    # icon_size_delta: negative values decrease font size, positive values increase it
+    # icon_line_height: distance between lines, only relevant for multi-line labels
+    icon_pos_delta = (0, 0)
+    icon_size_delta = 0
+    icon_line_height = 1.0
 
     def __init__(self, g_pool):
         self.g_pool = g_pool
@@ -288,6 +295,10 @@ class Plugin(object):
             self.menu,
             label=self.icon_chr,
             label_font=self.icon_font,
+            label_offset_size=self.icon_size_delta,
+            label_offset_x=self.icon_pos_delta[0],
+            label_offset_y=self.icon_pos_delta[1],
+            label_line_height=self.icon_line_height,
             on_val=False,
             off_val=True,
             setter=toggle_menu,
