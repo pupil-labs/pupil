@@ -1,20 +1,44 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<svg width="272px" height="272px" viewBox="0 0 272 272" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:sketch="http://www.bohemiancoding.com/sketch/ns">
-    <!-- Generator: Sketch 3.4.4 (17249) - http://www.bohemiancoding.com/sketch -->
-    <title>pp-03</title>
-    <desc>Created with Sketch.</desc>
-    <defs>
-        <linearGradient x1="78.9520334%" y1="50%" x2="0%" y2="50%" id="linearGradient-1">
-            <stop stop-color="#A1DEF0" offset="0%"></stop>
-            <stop stop-color="#38EA92" offset="100%"></stop>
-        </linearGradient>
-    </defs>
-    <g id="Page-1" stroke="none" stroke-width="1" fill="none" fill-rule="evenodd" sketch:type="MSPage">
-        <g id="pp-03" sketch:type="MSArtboardGroup">
-            <g id="pp-iris-+-pp=pupil-copy-2" sketch:type="MSLayerGroup" transform="translate(17.000000, 11.000000)">
-                <path d="M87.350746,237.868321 C39.3066411,264.985687 0.197818548,242.086832 0.197818548,186.98187 L0.197818548,63.1746183 C0.197818548,8.06965649 39.3773589,-14.9532443 87.5046048,12.0124046 L200.632923,75.4503817 C248.762081,102.416031 248.881536,146.666031 200.838387,173.783397 L87.350746,237.868321 L87.350746,237.868321 Z" id="pp-iris" fill="url(#linearGradient-1)" sketch:type="MSShapeGroup"></path>
-                <path d="M64.6407944,199.189885 C55.3968387,199.189885 46.0687863,192.375954 46.0687863,177.15458 L46.0687863,73.0019084 C46.0687863,57.754771 55.428375,50.9293893 64.7048226,50.9293893 C68.9392863,50.9293893 73.3371653,52.245229 77.779004,54.8396947 L165.988875,106.377863 C173.766871,110.923664 178.232601,117.640267 178.244069,124.805344 C178.256492,131.971374 173.810831,138.700382 166.050992,143.26813 L77.7560685,195.237595 C73.2998952,197.858779 68.8876815,199.189885 64.6407944,199.189885 L64.6407944,199.189885 Z" id="pp-pupil" stroke="#FFFFFF" stroke-width="12" fill="#080707" sketch:type="MSShapeGroup"></path>
-            </g>
-        </g>
-    </g>
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generator: Adobe Illustrator 23.0.2, SVG Export Plug-In . SVG Version: 6.00 Build 0)  -->
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px"
+	 width="256px" height="256px" viewBox="0 0 256 256" style="enable-background:new 0 0 256 256;" xml:space="preserve">
+<style type="text/css">
+	.st0{fill:url(#SVGID_1_);}
+	.st1{fill:url(#SVGID_2_);}
+	.st2{fill:url(#SVGID_3_);}
+	.st3{fill:url(#SVGID_4_);}
+	.st4{fill:url(#SVGID_5_);}
+	.st5{fill:url(#SVGID_6_);}
+	.st6{fill:url(#SVGID_7_);}
+	.st7{fill:url(#SVGID_8_);}
+	.st8{fill:url(#SVGID_9_);}
+	.st9{fill:url(#SVGID_10_);}
+	.st10{fill:url(#SVGID_11_);}
+	.st11{fill:url(#SVGID_12_);}
+	.st12{fill:url(#SVGID_13_);}
+	.st13{fill:url(#SVGID_14_);}
+	.st14{fill:url(#SVGID_15_);}
+	.st15{fill:url(#SVGID_16_);}
+	.st16{fill:url(#SVGID_17_);}
+	.st17{fill:url(#SVGID_18_);}
+	.st18{fill:url(#SVGID_19_);}
+	.st19{fill:url(#SVGID_20_);}
+	.st20{fill:url(#SVGID_21_);}
+	.st21{fill:url(#SVGID_22_);}
+	.st22{fill:url(#SVGID_23_);}
+	.st23{fill:url(#SVGID_24_);}
+	.st24{fill:url(#SVGID_25_);}
+	.st25{fill:url(#SVGID_26_);}
+	.st26{fill:url(#SVGID_27_);}
+</style>
+<linearGradient id="SVGID_1_" gradientUnits="userSpaceOnUse" x1="-6.5249" y1="40.7617" x2="167.9517" y2="215.2383">
+	<stop  offset="0" style="stop-color:#6AC77C"/>
+	<stop  offset="0.163" style="stop-color:#61C385"/>
+	<stop  offset="0.4288" style="stop-color:#49B99D"/>
+	<stop  offset="0.7623" style="stop-color:#23A9C5"/>
+	<stop  offset="1" style="stop-color:#039BE5"/>
+</linearGradient>
+<path class="st0" d="M75.88,75.31L166.47,128l-90.59,52.69V75.31 M38.19,0.07c-5.05,0-9.69,4.03-9.69,9.66v236.54
+	c0,5.63,4.64,9.66,9.69,9.66c1.62,0,3.29-0.42,4.86-1.33l203.34-118.27c6.4-3.72,6.4-12.94,0-16.66L43.05,1.4
+	C41.48,0.49,39.81,0.07,38.19,0.07L38.19,0.07z"/>
 </svg>
