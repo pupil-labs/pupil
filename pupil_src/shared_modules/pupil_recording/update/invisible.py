@@ -363,32 +363,45 @@ def pi_gaze_items(root_dir):
     # - starts with "gaze ps"
     # - is followed by one or more digits
     # - ends with "_timestamps.npy"
-    pattern = r"^gaze ps[0-9]+_timestamps.npy$"
-    gaze_timestamp_paths = matched_files_by_name_pattern(root_dir, pattern)
+    timestamps_realtime_pattern = r"^gaze ps[0-9]+_timestamps.npy$"
+    timestamps_realtime_paths = matched_files_by_name_pattern(
+        root_dir, timestamps_realtime_pattern
+    )
     # Use 200hz data only if both gaze data and timestamps are available at 200hz
-    if _find_raw_200hz_path(root_dir) and _find_timestamps_200hz_path(root_dir):
-        yield from _pi_posthoc_200hz_gaze_items(root_dir, gaze_timestamp_paths)
+    raw_200hz_path = _find_raw_200hz_path(root_dir)
+    timestamps_200hz_path = _find_timestamps_200hz_path(root_dir)
+    if raw_200hz_path and timestamps_200hz_path:
+        worn_200hz_path = _find_worn_200hz_path(root_dir)
+        yield from _pi_posthoc_200hz_gaze_items(
+            raw_200hz_path,
+            timestamps_200hz_path,
+            worn_200hz_path,
+            timestamps_realtime_paths,
+        )
     else:
-        yield from _pi_realtime_recorded_gaze_items(gaze_timestamp_paths)
+        yield from _pi_realtime_recorded_gaze_items(timestamps_realtime_paths)
 
 
-def _pi_posthoc_200hz_gaze_items(root_dir: Path, gaze_timestamp_paths):
-    raw_data = _load_raw_data(_find_raw_200hz_path(root_dir))
-    timestamps = _load_timestamps_data(_find_timestamps_200hz_path(root_dir))
+def _pi_posthoc_200hz_gaze_items(
+    raw_200hz_path, timestamps_200hz_path, worn_200hz_path, timestamps_realtime_paths
+):
+    raw_data = _load_raw_data(raw_200hz_path)
+    timestamps = _load_timestamps_data(timestamps_200hz_path)
 
-    worn_200hz_path = _find_worn_200hz_path(root_dir)
     if worn_200hz_path is not None:
         conf_data = _load_worn_data(worn_200hz_path)
     else:
-        conf_data = _load_densified_worn_data(gaze_timestamp_paths)
+        conf_data = _find_and_load_densified_worn_data(
+            timestamps, timestamps_realtime_paths
+        )
 
     raw_data, timestamps = _equalize_length_if_necessary(raw_data, timestamps)
     conf_data = _validated_conf_data(conf_data, timestamps)
     yield from zip(raw_data, timestamps, conf_data)
 
 
-def _pi_realtime_recorded_gaze_items(gaze_timestamp_paths):
-    for timestamps_path in gaze_timestamp_paths:
+def _pi_realtime_recorded_gaze_items(timestamps_realtime_paths):
+    for timestamps_path in timestamps_realtime_paths:
         raw_data = _load_raw_data(_find_raw_path(timestamps_path))
         timestamps = _load_timestamps_data(timestamps_path)
         conf_data = _load_worn_data(_find_worn_path(timestamps_path))
@@ -460,26 +473,29 @@ def _load_worn_data(path: Path):
     return np.clip(confidences, 0.0, 1.0)
 
 
-def _load_densified_worn_data(root_dir: Path, gaze_timestamp_paths: T.List[Path]):
-    if not gaze_timestamp_paths:
+def _find_and_load_densified_worn_data(
+    timestamps_200hz, timestamps_realtime_paths: T.List[Path]
+):
+    if not timestamps_realtime_paths:
         return None
     # Load and densify confidence data when 200hz gaze is available, but only
     # non-200hz confidence is available
-    ts_200hz_ = _load_timestamps_data(_find_timestamps_200hz_path(root_dir))
-    conf_data, ts_ = _realtime_recorded_worn_data(gaze_timestamp_paths)
-    densification_idc = pm.find_closest(ts_, ts_200hz_)
+    conf_data, timestamps_realtime = _find_and_load_realtime_recorded_worn_data(
+        timestamps_realtime_paths
+    )
+    densification_idc = pm.find_closest(timestamps_realtime, timestamps_200hz)
     return conf_data[densification_idc]
 
 
-def _realtime_recorded_worn_data(gaze_timestamp_paths: T.List[Path]):
-    # assumes at least one path in `gaze_timestamp_paths`, otherwise np.concatenate will
-    # raise ValueError: need at least one array to concatenate
+def _find_and_load_realtime_recorded_worn_data(timestamps_realtime_paths: T.List[Path]):
+    # assumes at least one path in `timestamps_realtime_paths`, otherwise np.concatenate
+    # will raise ValueError: need at least one array to concatenate
     assert (
-        len(gaze_timestamp_paths) > 0
+        len(timestamps_realtime_paths) > 0
     ), "Requires at least one real-time recorded gaze timestamp path"
     conf_all = []
     ts_all = []
-    for timestamps_path in gaze_timestamp_paths:
+    for timestamps_path in timestamps_realtime_paths:
         ts = _load_timestamps_data(timestamps_path)
         conf_data = _load_worn_data(_find_worn_path(timestamps_path))
         conf_data = _validated_conf_data(conf_data, ts)
