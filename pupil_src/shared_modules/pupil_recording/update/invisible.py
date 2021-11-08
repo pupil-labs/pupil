@@ -380,7 +380,7 @@ def _pi_posthoc_200hz_gaze_items(root_dir: Path, gaze_timestamp_paths):
     if worn_200hz_path is not None:
         conf_data = _load_worn_data(worn_200hz_path)
     else:
-        conf_data = _load_densified_worn_data(gaze_timestamp_paths)
+        conf_data = _load_densified_worn_data(root_dir, gaze_timestamp_paths)
 
     raw_data, timestamps = _equalize_length_if_necessary(raw_data, timestamps)
     conf_data = _validated_conf_data(conf_data, timestamps)
