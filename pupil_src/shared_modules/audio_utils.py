@@ -96,6 +96,7 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
 
 class Audio_Viz_Transform:
     def __init__(self, rec_dir, sps_rate=60):
+        logger.debug("Audio_Viz_Transform.__init__: Loading audio")
         self.audio_all = iter(load_audio(rec_dir))
         self._setup_next_audio_part()
         self._first_part_start = self.audio.timestamps[0]
@@ -110,8 +111,14 @@ class Audio_Viz_Transform:
 
     def _setup_next_audio_part(self):
         self.audio = next(self.audio_all)
+        logger.debug(
+            f"Audio_Viz_Transform._setup_next_audio_part: Part {self.audio.container} {self.audio.stream}"
+        )
         self.audio_resampler = av.audio.resampler.AudioResampler(
             format=self.audio.stream.format, layout=self.audio.stream.layout, rate=60
+        )
+        logger.debug(
+            "Audio_Viz_Transform._setup_next_audio_part: Resampler initialized"
         )
         self.next_audio_frame = self._next_audio_frame()
         self.start_ts = self.audio.timestamps[0]
