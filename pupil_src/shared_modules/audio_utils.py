@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import collections
 import logging
 import traceback
+import typing as T
 
 import av
 import numpy as np
@@ -207,7 +208,7 @@ class Audio_Viz_Transform:
                 else:
                     scaled_samples = abs_samples
 
-            else:
+            elif self.a_levels is not None and self.all_abs_samples is not None:
                 new_ts = self.a_levels[::4]  # reconstruct correct ts
 
                 # self.all_abs_samples = np.log10(self.all_abs_samples)
@@ -229,7 +230,17 @@ class Audio_Viz_Transform:
                     self._setup_next_audio_part()
                 except StopIteration:
                     self.finished = True
-            if not self.finished or self.final_rescale:
+            else:
+                logger.debug(
+                    f"Audio_Viz_Transform.get_data: No audio found in {self.audio}"
+                )
+                new_ts = None
+                try:
+                    self._setup_next_audio_part()
+                except StopIteration:
+                    self.finished = True
+
+            if new_ts is not None and (not self.finished or self.final_rescale):
                 a_levels = self.get_verteces(new_ts, scaled_samples, height)
 
                 if self.a_levels is not None:
