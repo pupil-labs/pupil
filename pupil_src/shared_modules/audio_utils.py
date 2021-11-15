@@ -25,9 +25,19 @@ class NoAudioLoadedError(Exception):
     pass
 
 
-LoadedAudio = collections.namedtuple(
-    "LoadedAudio", ["container", "stream", "timestamps", "pts"]
-)
+class LoadedAudio(T.NamedTuple):
+    container: T.Any
+    stream: T.Any
+    timestamps: T.List[float]
+    pts: T.List[int]
+
+    def __str__(self):
+        return (
+            f"{type(self).__name__}(container={self.container}, stream={self.stream}, "
+            f"timestamps=(N={len(self.timestamps)}, [{self.timestamps[0]}, "
+            f"{self.timestamps[-1]}]), pts=(N={len(self.pts)}, [{self.pts[0]}, "
+            f"{self.pts[-1]}]))"
+        )
 
 
 def load_audio(rec_dir):
