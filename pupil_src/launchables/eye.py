@@ -66,6 +66,7 @@ def eye(
     debug=False,
     pub_socket_hwm=None,
     parent_application="capture",
+    skip_driver_installation=False,
 ):
     """reads eye video and detects the pupil.
 
@@ -196,6 +197,7 @@ def eye(
         g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
         g_pool.camera_render_size = None
+        g_pool.skip_driver_installation = skip_driver_installation
 
         g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_socket

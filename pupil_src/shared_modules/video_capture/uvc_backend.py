@@ -75,7 +75,10 @@ class UVC_Source(Base_Source):
         assert name or preferred_names or uid
 
         if platform.system() == "Windows":
-            self.verify_drivers()
+            if g_pool.skip_driver_installation:
+                logger.debug("Skipping driver installation")
+            else:
+                self.verify_drivers()
 
         self.devices = uvc.Device_List()
 
