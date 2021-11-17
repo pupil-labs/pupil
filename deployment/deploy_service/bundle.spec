@@ -129,7 +129,7 @@ elif platform.system() == "Linux":
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         glfw_binaries,
-        strip=True,
+        strip=False,
         upx=True,
         name="pupil_service",
     )

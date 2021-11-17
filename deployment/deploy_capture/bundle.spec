@@ -150,7 +150,7 @@ elif platform.system() == "Linux":
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         apriltag_libs,
         glfw_binaries,
-        strip=True,
+        strip=False,
         upx=True,
         name="pupil_capture",
     )
