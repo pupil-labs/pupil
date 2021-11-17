@@ -32,9 +32,13 @@ if not exist %release_dir% (
 	mkdir %release_dir%
 )
 
+echo Adding pupil_external to PATH
 set PATH=%PATH%;%~dp0..\pupil_external
-set PATH=%PATH%;C:\Python36\Lib\site-packages\scipy\.libs
-set PATH=%PATH%;C:\Python36\Lib\site-packages\zmq
+setlocal enabledelayedexpansion
+for /F "usebackq" %%s IN (`dir C:\Python36\Lib\site-packages\*.libs /S /B`) DO (
+echo Adding %%s to PATH
+set PATH=!PATH!;%%s
+)
 
 call :Bundle capture %current_tag%
 call :Bundle service %current_tag%
