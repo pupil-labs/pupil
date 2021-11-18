@@ -172,7 +172,14 @@ class Raw_Data_Exporter(Plugin):
             )
         )
         self.menu.append(
-            ui.Info_Text("Press the export button or type 'e' to start the export.")
+            ui.Info_Text(
+                'Pupil Core software assigns "confidence" values to its pupil '
+                "detections and gaze estimations. They indicate the quality of the "
+                "measurement. By default, the raw data export will only include data "
+                'above the "Minimum data confidence" threshold. It can be adjusted '
+                "in the general settings menu. To export all data, turn on the option "
+                "below."
+            )
         )
         self.menu.append(
             ui.Switch(
