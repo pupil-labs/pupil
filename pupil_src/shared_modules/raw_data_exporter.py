@@ -130,6 +130,14 @@ class Raw_Data_Exporter(Plugin):
         self.should_export_gaze_positions = should_export_gaze_positions
         self.should_include_low_confidence_data = should_include_low_confidence_data
 
+    def get_init_dict(self):
+        return {
+            "should_export_pupil_positions": self.should_export_pupil_positions,
+            "should_export_field_info": self.should_export_field_info,
+            "should_export_gaze_positions": self.should_export_gaze_positions,
+            "should_include_low_confidence_data": self.should_include_low_confidence_data,
+        }
+
     @property
     def _is_pupil_producer_avaiable(self) -> bool:
         producers = Pupil_Producer_Base.available_pupil_producer_plugins(self.g_pool)
