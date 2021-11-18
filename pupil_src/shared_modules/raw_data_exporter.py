@@ -172,7 +172,14 @@ class Raw_Data_Exporter(Plugin):
             )
         )
         self.menu.append(
-            ui.Info_Text("Press the export button or type 'e' to start the export.")
+            ui.Info_Text(
+                'Pupil Core software assigns "confidence" values to its pupil '
+                "detections and gaze estimations. They indicate the quality of the "
+                "measurement. By default, the raw data export will only include data "
+                'above the "Minimum data confidence" threshold. It can be adjusted '
+                "in the general settings menu. To export all data, turn on the option "
+                "below."
+            )
         )
         self.menu.append(
             ui.Switch(
@@ -200,6 +207,11 @@ class Raw_Data_Exporter(Plugin):
                 timestamps=self.g_pool.timestamps,
                 export_window=export_window,
                 export_dir=export_dir,
+                min_confidence_threshold=(
+                    0.0
+                    if self.should_include_low_confidence_data
+                    else self.g_pool.min_data_confidence
+                ),
             )
 
         if self.should_export_gaze_positions:
@@ -209,6 +221,11 @@ class Raw_Data_Exporter(Plugin):
                 timestamps=self.g_pool.timestamps,
                 export_window=export_window,
                 export_dir=export_dir,
+                min_confidence_threshold=(
+                    0.0
+                    if self.should_include_low_confidence_data
+                    else self.g_pool.min_data_confidence
+                ),
             )
 
         if self.should_export_field_info:
@@ -237,7 +254,12 @@ class _Base_Positions_Exporter(abc.ABC):
         pass
 
     def csv_export_write(
-        self, positions_bisector, timestamps, export_window, export_dir
+        self,
+        positions_bisector,
+        timestamps,
+        export_window,
+        export_dir,
+        min_confidence_threshold=0.0,
     ):
         export_file = type(self).csv_export_filename()
         export_path = os.path.join(export_dir, export_file)
@@ -251,10 +273,7 @@ class _Base_Positions_Exporter(abc.ABC):
             dict_writer.writeheader()
 
             for g, idx in zip(export_section["data"], export_world_idc):
-                if (
-                    not self.should_include_low_confidence_data
-                    and g["confidence"] < self.g_pool.min_data_confidence
-                ):
+                if g["confidence"] < min_confidence_threshold:
                     continue
                 dict_row = type(self).dict_export(raw_value=g, world_index=idx)
                 dict_writer.writerow(dict_row)
