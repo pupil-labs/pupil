@@ -117,7 +117,7 @@ class Raw_Data_Exporter(Plugin):
         should_export_pupil_positions=True,
         should_export_field_info=True,
         should_export_gaze_positions=True,
-        should_include_low_confidence_data=False,
+        should_include_low_confidence_data=True,
     ):
         super().__init__(g_pool)
 
@@ -175,10 +175,9 @@ class Raw_Data_Exporter(Plugin):
             ui.Info_Text(
                 'Pupil Core software assigns "confidence" values to its pupil '
                 "detections and gaze estimations. They indicate the quality of the "
-                "measurement. By default, the raw data export will only include data "
-                'above the "Minimum data confidence" threshold. It can be adjusted '
-                "in the general settings menu. To export all data, turn on the option "
-                "below."
+                "measurement. Disable the option below to only export data above the"
+                '"Minimum data confidence" threshold. It can be adjusted in the '
+                "general settings menu."
             )
         )
         self.menu.append(
