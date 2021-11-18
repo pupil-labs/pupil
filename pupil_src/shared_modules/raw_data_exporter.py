@@ -117,6 +117,7 @@ class Raw_Data_Exporter(Plugin):
         should_export_pupil_positions=True,
         should_export_field_info=True,
         should_export_gaze_positions=True,
+        should_include_low_confidence_data=False,
     ):
         super().__init__(g_pool)
 
@@ -127,6 +128,15 @@ class Raw_Data_Exporter(Plugin):
         self.should_export_pupil_positions = should_export_pupil_positions
         self.should_export_field_info = should_export_field_info
         self.should_export_gaze_positions = should_export_gaze_positions
+        self.should_include_low_confidence_data = should_include_low_confidence_data
+
+    def get_init_dict(self):
+        return {
+            "should_export_pupil_positions": self.should_export_pupil_positions,
+            "should_export_field_info": self.should_export_field_info,
+            "should_export_gaze_positions": self.should_export_gaze_positions,
+            "should_include_low_confidence_data": self.should_include_low_confidence_data,
+        }
 
     @property
     def _is_pupil_producer_avaiable(self) -> bool:
@@ -159,6 +169,16 @@ class Raw_Data_Exporter(Plugin):
         self.menu.append(
             ui.Switch(
                 "should_export_gaze_positions", self, label="Export Gaze Positions"
+            )
+        )
+        self.menu.append(
+            ui.Info_Text("Press the export button or type 'e' to start the export.")
+        )
+        self.menu.append(
+            ui.Switch(
+                "should_include_low_confidence_data",
+                self,
+                label="Include low confidence data",
             )
         )
         self.menu.append(
@@ -231,6 +251,11 @@ class _Base_Positions_Exporter(abc.ABC):
             dict_writer.writeheader()
 
             for g, idx in zip(export_section["data"], export_world_idc):
+                if (
+                    not self.should_include_low_confidence_data
+                    and g["confidence"] < self.g_pool.min_data_confidence
+                ):
+                    continue
                 dict_row = type(self).dict_export(raw_value=g, world_index=idx)
                 dict_writer.writerow(dict_row)
 
