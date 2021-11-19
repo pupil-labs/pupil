@@ -117,6 +117,7 @@ class Raw_Data_Exporter(Plugin):
         should_export_pupil_positions=True,
         should_export_field_info=True,
         should_export_gaze_positions=True,
+        should_include_low_confidence_data=True,
     ):
         super().__init__(g_pool)
 
@@ -127,6 +128,15 @@ class Raw_Data_Exporter(Plugin):
         self.should_export_pupil_positions = should_export_pupil_positions
         self.should_export_field_info = should_export_field_info
         self.should_export_gaze_positions = should_export_gaze_positions
+        self.should_include_low_confidence_data = should_include_low_confidence_data
+
+    def get_init_dict(self):
+        return {
+            "should_export_pupil_positions": self.should_export_pupil_positions,
+            "should_export_field_info": self.should_export_field_info,
+            "should_export_gaze_positions": self.should_export_gaze_positions,
+            "should_include_low_confidence_data": self.should_include_low_confidence_data,
+        }
 
     @property
     def _is_pupil_producer_avaiable(self) -> bool:
@@ -162,6 +172,22 @@ class Raw_Data_Exporter(Plugin):
             )
         )
         self.menu.append(
+            ui.Info_Text(
+                'Pupil Core software assigns "confidence" values to its pupil '
+                "detections and gaze estimations. They indicate the quality of the "
+                "measurement. Disable the option below to only export data above the"
+                '"Minimum data confidence" threshold. This threshold can be adjusted in the '
+                "general settings menu."
+            )
+        )
+        self.menu.append(
+            ui.Switch(
+                "should_include_low_confidence_data",
+                self,
+                label="Include low confidence data",
+            )
+        )
+        self.menu.append(
             ui.Info_Text("Press the export button or type 'e' to start the export.")
         )
 
@@ -180,6 +206,11 @@ class Raw_Data_Exporter(Plugin):
                 timestamps=self.g_pool.timestamps,
                 export_window=export_window,
                 export_dir=export_dir,
+                min_confidence_threshold=(
+                    0.0
+                    if self.should_include_low_confidence_data
+                    else self.g_pool.min_data_confidence
+                ),
             )
 
         if self.should_export_gaze_positions:
@@ -189,6 +220,11 @@ class Raw_Data_Exporter(Plugin):
                 timestamps=self.g_pool.timestamps,
                 export_window=export_window,
                 export_dir=export_dir,
+                min_confidence_threshold=(
+                    0.0
+                    if self.should_include_low_confidence_data
+                    else self.g_pool.min_data_confidence
+                ),
             )
 
         if self.should_export_field_info:
@@ -217,7 +253,12 @@ class _Base_Positions_Exporter(abc.ABC):
         pass
 
     def csv_export_write(
-        self, positions_bisector, timestamps, export_window, export_dir
+        self,
+        positions_bisector,
+        timestamps,
+        export_window,
+        export_dir,
+        min_confidence_threshold=0.0,
     ):
         export_file = type(self).csv_export_filename()
         export_path = os.path.join(export_dir, export_file)
@@ -231,6 +272,8 @@ class _Base_Positions_Exporter(abc.ABC):
             dict_writer.writeheader()
 
             for g, idx in zip(export_section["data"], export_world_idc):
+                if g["confidence"] < min_confidence_threshold:
+                    continue
                 dict_row = type(self).dict_export(raw_value=g, world_index=idx)
                 dict_writer.writerow(dict_row)
 
