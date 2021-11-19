@@ -181,7 +181,7 @@ class Recorder(System_Plugin_Base):
         )
         self.menu.append(
             ui.Info_Text(
-                "Recording the raw eye video is optional. We use it for debugging."
+                "Enable/disable recording of eye and world video with these toggles"
             )
         )
         self.menu.append(
