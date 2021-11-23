@@ -25,6 +25,7 @@ def world(
     preferred_remote_port,
     hide_ui,
     debug,
+    skip_driver_installation,
 ):
     """Reads world video and runs plugins.
 
@@ -234,6 +235,7 @@ def world(
         g_pool.ipc_push_url = ipc_push_url
         g_pool.eye_procs_alive = eye_procs_alive
         g_pool.preferred_remote_port = preferred_remote_port
+        g_pool.skip_driver_installation = skip_driver_installation
 
         def get_timestamp():
             return get_time_monotonic() - g_pool.timebase.value

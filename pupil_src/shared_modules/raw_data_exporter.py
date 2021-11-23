@@ -176,7 +176,7 @@ class Raw_Data_Exporter(Plugin):
                 'Pupil Core software assigns "confidence" values to its pupil '
                 "detections and gaze estimations. They indicate the quality of the "
                 "measurement. Disable the option below to only export data above the"
-                '"Minimum data confidence" threshold. It can be adjusted in the '
+                '"Minimum data confidence" threshold. This threshold can be adjusted in the '
                 "general settings menu."
             )
         )
