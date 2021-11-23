@@ -60,7 +60,12 @@ class Persistent_Dict(dict):
     def save(self):
         d = {}
         d.update(self)
-        save_object(d, self.file_path)
+        try:
+            save_object(d, self.file_path)
+        except PermissionError:
+            logger.warning(
+                f"Permission denied when trying to write to file: {self.file_path}"
+            )
 
     def close(self):
         self.save()
