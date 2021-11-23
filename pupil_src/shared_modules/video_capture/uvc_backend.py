@@ -16,14 +16,14 @@ import re
 import sys
 import tempfile
 import time
+import traceback
 from pathlib import Path
 
-import numpy as np
-from pyglui import cygl, ui
-
 import gl_utils
+import numpy as np
 import uvc
 from camera_models import Camera_Model
+from pyglui import cygl, ui
 from version_utils import parse_version
 
 from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
@@ -75,7 +75,10 @@ class UVC_Source(Base_Source):
         assert name or preferred_names or uid
 
         if platform.system() == "Windows":
-            self.verify_drivers()
+            if g_pool.skip_driver_installation:
+                logger.debug("Skipping driver installation")
+            else:
+                self.verify_drivers()
 
         self.devices = uvc.Device_List()
 
@@ -87,7 +90,7 @@ class UVC_Source(Base_Source):
                 self.uvc_capture = uvc.Capture(uid)
             except uvc.OpenError:
                 logger.warning(
-                    "No avalilable camera found that matched {}".format(preferred_names)
+                    f"Camera matching {preferred_names} found but not available"
                 )
             except uvc.InitError:
                 logger.error("Camera failed to initialize.")
@@ -246,7 +249,7 @@ class UVC_Source(Base_Source):
                         print(elevation_cmd)
                         logger.debug(elevation_cmd)
                         subprocess.Popen(elevation_cmd).wait()
-                except PermissionError as e:
+                except PermissionError:
                     # This can be raised when cleaning up the TemporaryDirectory, if the
                     # process was started from a non-admin shell for a non-admin user
                     # and has only been elevated for the powershell commands. The files
@@ -256,9 +259,15 @@ class UVC_Source(Base_Source):
                         "Pupil was not run as administrator. If the drivers do not "
                         "work, please try running as administrator again!"
                     )
-                    logger.debug(e)
+                    logger.debug(traceback.format_exc())
+                except Exception:
+                    logger.error(
+                        "An error was encountered during the automatic driver "
+                        "installation. Please consider installing them manually."
+                    )
+                    logger.debug(traceback.format_exc())
 
-            logger.warning("Done updating drivers!")
+            logger.info("Done updating drivers!")
 
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
@@ -279,10 +288,9 @@ class UVC_Source(Base_Source):
                 # use hardware timestamps
                 self.ts_offset = None
         else:
-            logger.info(
-                "Hardware timestamps not supported for {}. Using software timestamps.".format(
-                    self.uvc_capture.name
-                )
+            logger.debug(
+                f"Hardware timestamps not supported for {self.uvc_capture.name}. "
+                "Using software timestamps."
             )
             self.ts_offset = -0.1
 
@@ -436,9 +444,7 @@ class UVC_Source(Base_Source):
     def _restart_logic(self):
         if self._restart_in <= 0:
             if self.uvc_capture:
-                logger.warning(
-                    "Capture failed to provide frames. Attempting to reinit."
-                )
+                logger.warning("Camera disconnected. Reconnecting...")
                 self.name_backup = (self.uvc_capture.name,)
                 self.backup_uvc_controls = self._get_uvc_controls()
                 self.uvc_capture = None
@@ -475,7 +481,7 @@ class UVC_Source(Base_Source):
             if self.stripe_detector and self.stripe_detector.require_restart(frame):
                 # set the self.frame_rate in order to restart
                 self.frame_rate = self.frame_rate
-                logger.info("Stripes detected")
+                logger.debug("Stripes detected")
 
         except uvc.StreamError:
             self._recent_frame = None
@@ -726,9 +732,8 @@ class UVC_Source(Base_Source):
                     self.preferred_exposure_time = None
 
                 logger.info(
-                    "Exposure mode for camera {0} is now set to {1} mode".format(
-                        self.uvc_capture.name, exposure_mode
-                    )
+                    f"Exposure mode for camera {self.uvc_capture.name} is now set to "
+                    f"{exposure_mode} mode"
                 )
                 self.update_menu()
 
@@ -837,17 +842,13 @@ class UVC_Source(Base_Source):
                 self.enable_stripe_checks = enable_stripe_checks
                 if self.enable_stripe_checks:
                     self.stripe_detector = Check_Frame_Stripes()
-                    logger.info(
-                        "Check Stripes for camera {} is now on".format(
-                            self.uvc_capture.name
-                        )
+                    logger.debug(
+                        f"Check Stripes for camera {self.uvc_capture.name} is now on"
                     )
                 else:
                     self.stripe_detector = None
-                    logger.info(
-                        "Check Stripes for camera {} is now off".format(
-                            self.uvc_capture.name
-                        )
+                    logger.debug(
+                        f"Check Stripes for camera {self.uvc_capture.name} is now off"
                     )
 
             ui_elements.append(
@@ -949,6 +950,7 @@ class UVC_Manager(Base_Manager):
                 return
         except ValueError as ve:
             logger.error(str(ve))
+            logger.debug(traceback.format_exc())
             return
 
         settings = {

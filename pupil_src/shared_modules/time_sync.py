@@ -28,7 +28,7 @@ logger.setLevel(logging.DEBUG)
 try:
     from pyre import __version__
 
-    assert __version__ >= "0.3.1"
+    assert __version__ >= "0.3.4"
 except (ImportError, AssertionError):
     raise Exception("Pyre version is to old. Please upgrade")
 

@@ -18,6 +18,8 @@ https://github.com/pupil-labs/pupil-helpers/tree/master/pupil_remote
 """
 
 import logging
+import traceback
+
 import msgpack as serializer
 import zmq
 from zmq.utils.monitor import recv_monitor_message
@@ -49,7 +51,9 @@ class ZMQ_handler(logging.Handler):
             record_dict["msg"] = str(record_dict["msg"])
             # stringify `exc_info` since it includes unserializable objects
             if record_dict["exc_info"]:  # do not convert if it is None
-                record_dict["exc_info"] = str(record_dict["exc_info"])
+                exc_text = "".join(traceback.format_exception(*record_dict["exc_info"]))
+                record_dict["exc_info"] = exc_text
+                record_dict["exc_text"] = exc_text
             if record_dict["args"]:
                 # format message before sending to avoid serialization issues
                 record_dict["msg"] %= record_dict["args"]

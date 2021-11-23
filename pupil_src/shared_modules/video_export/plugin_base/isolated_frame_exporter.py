@@ -100,29 +100,34 @@ def _convert_video_file(
     #  the video weirdly in this case, but we rather want syncronization between the
     #  exported video!
     start_time = export_window[0]
-    writer = MPEG_Writer(output_file, start_time)
 
     input_source.seek_to_frame(export_from_index)
     next_update_idx = export_from_index + update_rate
-    while True:
-        try:
-            input_frame = input_source.get_frame()
-        except EndofVideoError:
-            break
-        if input_frame.index >= export_to_index:
-            break
 
-        output_img = process_frame(input_source, input_frame)
-        output_frame = input_frame
-        output_frame._img = output_img  # it's ._img because .img has no setter
-        writer.write_video_frame(output_frame)
+    try:
+        writer = MPEG_Writer(output_file, start_time)
+        while True:
+            try:
+                input_frame = input_source.get_frame()
+            except EndofVideoError:
+                break
+            if input_frame.index >= export_to_index:
+                break
 
-        if input_source.get_frame_index() >= next_update_idx:
-            progress = (input_source.get_frame_index() - export_from_index) / (
-                export_to_index - export_from_index
-            )
-            yield "Exporting video", progress * 100.0
-            next_update_idx += update_rate
+            output_img = process_frame(input_source, input_frame)
+            output_frame = input_frame
+            output_frame._img = output_img  # it's ._img because .img has no setter
+            writer.write_video_frame(output_frame)
+
+            if input_source.get_frame_index() >= next_update_idx:
+                progress = (input_source.get_frame_index() - export_from_index) / (
+                    export_to_index - export_from_index
+                )
+                yield "Exporting video", progress * 100.0
+                next_update_idx += update_rate
+    except GeneratorExit:
+        writer.close(timestamp_export_format=None, closed_suffix=".canceled")
+        return
 
     writer.close(timestamp_export_format)
     input_source.cleanup()

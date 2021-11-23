@@ -7,10 +7,13 @@ import os.path
 import pathlib
 import platform
 import sys
+import logging
 
 import numpy
 import pkg_resources
 from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+
+logger = logging.getLogger(__name__)
 
 hidden_imports = []
 hidden_imports += collect_submodules("av")
@@ -129,7 +132,7 @@ elif platform.system() == "Linux":
         [("pyglui/Roboto-Regular.ttf", ui.get_roboto_font_path(), "DATA")],
         [("pyglui/pupil_icons.ttf", ui.get_pupil_icons_font_path(), "DATA")],
         glfw_binaries,
-        strip=True,
+        strip=False,
         upx=True,
         name="pupil_service",
     )
@@ -183,6 +186,22 @@ elif platform.system() == "Windows":
         (lib.name, str(lib), "BINARY") for lib in vc_redist_path.glob("*.dll")
     ]
 
+    import site
+
+    delve_wheel_load_order_files = []
+    for site_pkgs in site.getsitepackages():
+        logger.info(f"Searching {site_pkgs} for .load-order files")
+        site_pkgs = pathlib.Path(site_pkgs)
+        for load_order in site_pkgs.glob("*\\.load-order-*"):
+            delve_wheel_load_order_files.append(
+                (
+                    str(load_order.relative_to(site_pkgs)),
+                    str(load_order),
+                    "DATA",
+                )
+            )
+    logger.debug(f"Found following load-order files: {delve_wheel_load_order_files}")
+
     coll = COLLECT(
         exe,
         a.binaries,
@@ -195,6 +214,7 @@ elif platform.system() == "Windows":
         glfw_binaries,
         np_dll_list,
         vc_redist_libs,
+        delve_wheel_load_order_files,
         strip=False,
         upx=True,
         name="Pupil Service",

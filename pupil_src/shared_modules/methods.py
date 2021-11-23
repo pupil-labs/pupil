@@ -22,7 +22,9 @@ import cv2
 import numpy as np
 
 try:
+    logging.getLogger("numexpr.utils").setLevel(logging.ERROR)
     import numexpr as ne
+
 except Exception:
     ne = None
 

@@ -508,7 +508,7 @@ class CalibrationChoreographyPlugin(Plugin):
 
         if note.action == ChoreographyAction.SHOULD_STOP:
             if not self.is_active:
-                logger.warning(f"{self.current_mode.label} already stopped.")
+                logger.debug(f"{self.current_mode.label} already stopped.")
             else:
                 self._perform_stop()
 

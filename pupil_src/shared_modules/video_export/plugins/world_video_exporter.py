@@ -110,8 +110,8 @@ def _export_world_video(
     import player_methods as pm
     from av_writer import MPEG_Audio_Writer
 
-    # we are not importing manual gaze correction. In Player corrections have already been applied.
-    # in batch exporter this plugin makes little sense.
+    # We are not importing manual gaze correction. In Player corrections have already
+    # been applied.
     from fixation_detector import Offline_Fixation_Detector
 
     # Plug-ins
@@ -125,8 +125,8 @@ def _export_world_video(
     from vis_watermark import Vis_Watermark
 
     PID = str(os.getpid())
-    logger = logging.getLogger(__name__ + " with pid: " + PID)
-    start_status = "Starting video export with pid: {}".format(PID)
+    logger = logging.getLogger(f"{__name__} with pid: {PID}")
+    start_status = f"Starting video export with pid: {PID}"
     logger.info(start_status)
     yield start_status, 0
 
@@ -197,21 +197,14 @@ def _export_world_video(
         if start_frame is None:
             start_frame = 0
 
-        # these two vars are shared with the launching process and give a job length and progress report.
+        # these two vars are shared with the launching process and
+        # give a job length and progress report.
         frames_to_export = len(trimmed_timestamps)
         current_frame = 0
-        exp_info = (
-            "Will export from frame {} to frame {}. This means I will export {} frames."
-        )
         logger.debug(
-            exp_info.format(
-                start_frame, start_frame + frames_to_export, frames_to_export
-            )
-        )
-
-        # setup of writer
-        writer = MPEG_Audio_Writer(
-            out_file_path, start_time_synced=trimmed_timestamps[0], audio_dir=rec_dir
+            f"Will export from frame {start_frame} to frame "
+            f"{start_frame + frames_to_export}. This means I will export "
+            f"{frames_to_export} frames."
         )
 
         cap.seek_to_frame(start_frame)
@@ -242,49 +235,62 @@ def _export_world_video(
         # add plugins
         g_pool.plugins = Plugin_List(g_pool, plugin_initializers)
 
-        while frames_to_export > current_frame:
-            try:
-                frame = cap.get_frame()
-            except EndofVideoError:
-                break
+        try:
+            # setup of writer
+            writer = MPEG_Audio_Writer(
+                out_file_path,
+                start_time_synced=trimmed_timestamps[0],
+                audio_dir=rec_dir,
+            )
 
-            events = {"frame": frame}
-            # new positions and events
-            frame_window = pm.enclosing_window(g_pool.timestamps, frame.index)
-            events["gaze"] = g_pool.gaze_positions.by_ts_window(frame_window)
-            events["pupil"] = g_pool.pupil_positions.by_ts_window(frame_window)
+            while frames_to_export > current_frame:
+                try:
+                    frame = cap.get_frame()
+                except EndofVideoError:
+                    break
 
-            # publish delayed notifications when their time has come.
-            for n in list(g_pool.delayed_notifications.values()):
-                if n["_notify_time_"] < time():
-                    del n["_notify_time_"]
-                    del g_pool.delayed_notifications[n["subject"]]
-                    g_pool.notifications.append(n)
+                events = {"frame": frame}
+                # new positions and events
+                frame_window = pm.enclosing_window(g_pool.timestamps, frame.index)
+                events["gaze"] = g_pool.gaze_positions.by_ts_window(frame_window)
+                events["pupil"] = g_pool.pupil_positions.by_ts_window(frame_window)
 
-            # notify each plugin if there are new notifications:
-            while g_pool.notifications:
-                n = g_pool.notifications.pop(0)
+                # publish delayed notifications when their time has come.
+                for n in list(g_pool.delayed_notifications.values()):
+                    if n["_notify_time_"] < time():
+                        del n["_notify_time_"]
+                        del g_pool.delayed_notifications[n["subject"]]
+                        g_pool.notifications.append(n)
+
+                # notify each plugin if there are new notifications:
+                while g_pool.notifications:
+                    n = g_pool.notifications.pop(0)
+                    for p in g_pool.plugins:
+                        p.on_notify(n)
+
+                # allow each Plugin to do its work.
                 for p in g_pool.plugins:
-                    p.on_notify(n)
+                    p.recent_events(events)
 
-            # allow each Plugin to do its work.
-            for p in g_pool.plugins:
-                p.recent_events(events)
-
-            writer.write_video_frame(frame)
-            current_frame += 1
-            yield "Exporting with pid {}".format(PID), current_frame
+                writer.write_video_frame(frame)
+                current_frame += 1
+                yield "Exporting with pid {}".format(PID), current_frame
+        except GeneratorExit:
+            logger.warning(f"Video export with pid {PID} was canceled.")
+            writer.close(timestamp_export_format=None, closed_suffix=".canceled")
+            return
 
         writer.close(timestamp_export_format="all")
 
         duration = time() - start_time
         effective_fps = float(current_frame) / duration
 
-        result = "Export done: Exported {} frames to {}. This took {} seconds. Exporter ran at {} frames per second."
         logger.info(
-            result.format(current_frame, out_file_path, duration, effective_fps)
+            f"Export done: Exported {current_frame} frames to {out_file_path}. "
+            f"This took {duration} seconds. "
+            f"Exporter ran at {effective_fps} frames per second."
         )
         yield "Export done. This took {:.0f} seconds.".format(duration), current_frame
 
     except GeneratorExit:
-        logger.warning("Video export with pid {} was canceled.".format(os.getpid()))
+        logger.warning(f"Video export with pid {PID} was canceled.")

@@ -66,6 +66,7 @@ def eye(
     debug=False,
     pub_socket_hwm=None,
     parent_application="capture",
+    skip_driver_installation=False,
 ):
     """reads eye video and detects the pupil.
 
@@ -196,6 +197,7 @@ def eye(
         g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
         g_pool.camera_render_size = None
+        g_pool.skip_driver_installation = skip_driver_installation
 
         g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_socket
@@ -402,7 +404,7 @@ def eye(
             os.path.join(g_pool.user_dir, "user_settings_eye{}".format(eye_id))
         )
         if parse_version(session_settings.get("version", "0.0")) != g_pool.version:
-            logger.info(
+            logger.debug(
                 "Session setting are from a different version of this app. I will not use those."
             )
             session_settings.clear()
@@ -607,7 +609,7 @@ def eye(
         def window_should_update():
             return next(window_update_timer)
 
-        logger.warning("Process started.")
+        logger.debug("Process started.")
 
         frame = None
 
@@ -636,7 +638,7 @@ def eye(
                         g_pool.rec_path = notification["rec_path"]
                         raw_mode = notification["compression"]
                         start_time_synced = notification["start_time_synced"]
-                        logger.info(f"Will save eye video to: {g_pool.rec_path}")
+                        logger.debug(f"Saving eye video to: {g_pool.rec_path}")
                         video_path = os.path.join(
                             g_pool.rec_path, "eye{}.mp4".format(eye_id)
                         )
@@ -653,11 +655,11 @@ def eye(
                             g_pool.writer = MPEG_Writer(video_path, start_time_synced)
                 elif subject == "recording.stopped":
                     if g_pool.writer:
-                        logger.info("Done recording.")
+                        logger.debug("Done recording.")
                         try:
                             g_pool.writer.release()
                         except RuntimeError:
-                            logger.error("No eye video recorded")
+                            logger.info("No eye video recorded")
                         else:
                             # TODO: wrap recording logic into plugin
                             g_pool.capture.intrinsics.save(
@@ -780,7 +782,7 @@ def eye(
 
         # in case eye recording was still runnnig: Save&close
         if g_pool.writer:
-            logger.info("Done recording eye.")
+            logger.debug("Done recording eye.")
             g_pool.writer.release()
             g_pool.writer = None
 
@@ -815,7 +817,7 @@ def eye(
     glfw.destroy_window(main_window)
     g_pool.gui.terminate()
     glfw.terminate()
-    logger.info("Process shutting down.")
+    logger.debug("Process shutting down.")
 
 
 def eye_profiled(

@@ -24,10 +24,17 @@ def _filter_pupil_list_by_confidence(pupil_list, threshold):
     pupil_list = [p for p in pupil_list if p["confidence"] >= threshold]
     len_post_filter = len(pupil_list)
     dismissed_percentage = 100 * (1.0 - len_post_filter / len_pre_filter)
-    logger.info(
+    logger.debug(
         f"Dismissing {dismissed_percentage:.2f}% pupil data due to "
         f"confidence < {threshold:.2f}"
     )
+    max_expected_percentage = 20.0
+    if dismissed_percentage >= max_expected_percentage:
+        logger.warning(
+            "An unexpectedly large amount of pupil data "
+            f"(> {max_expected_percentage:.0f}%) was dismissed due to low confidence. "
+            "Please check the pupil detection."
+        )
     return pupil_list
 
 

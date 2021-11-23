@@ -12,6 +12,7 @@ scikit-learn
 scipy
 glfw>=2.0.0
 ndsi==1.4.*
+zeromq-pyre>=0.3.4  # Gracefully handle https://github.com/pupil-labs/pupil/issues/2174
 
 cysignals ; platform_system != "Windows"
 
@@ -23,8 +24,8 @@ opencv-python==3.* ; platform_system == "Windows"
 ###
 pupil-apriltags==1.0.4
 pupil-detectors==2.0.*
-pye3d==0.1.1
-pyglui>=1.30.0
+pye3d==0.3.0
+pyglui>=1.31.0
 
 # pupil-labs/PyAV 0.4.6
 av @ git+https://github.com/pupil-labs/PyAV@v0.4.6 ; platform_system != "Windows"
