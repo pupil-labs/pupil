@@ -350,6 +350,15 @@ class Recorder(System_Plugin_Base):
                     "We dont want to overwrite data, incrementing counter & trying to make new data folder"
                 )
                 counter += 1
+            except PermissionError:
+                logger.error(
+                    "No sufficient permissions to create new recording at "
+                    f"{self.rec_path}"
+                )
+                self.running = False
+                self.menu.read_only = False
+
+                return
 
         self.meta_info = RecordingInfoFile.create_empty_file(self.rec_path)
         self.meta_info.recording_software_name = (
