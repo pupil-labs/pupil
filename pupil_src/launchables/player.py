@@ -944,6 +944,13 @@ def player_drop(
             glfont.set_color_float((1.0, 1.0, 1.0, 1.0))
             glfont.draw_text(x, y, string)
 
+        def display_multiline_string(string, font_size, top_y, split_chr="\n"):
+            for idx, line in enumerate(string.split(split_chr)):
+                center_y = top_y + font_size * idx * 1.2
+                display_string(line, font_size=font_size, center_y=center_y)
+            bottom_y = top_y + font_size * (idx + 1) * 1.2
+            return bottom_y
+
         while not glfw.window_should_close(window) and not process_was_interrupted:
 
             fb_size = glfw.get_framebuffer_size(window)
@@ -968,11 +975,8 @@ def player_drop(
 
             gl_utils.clear_gl_screen()
 
-            display_string(text, font_size=51, center_y=216)
-            for idx, line in enumerate(tip.split("\n")):
-                tip_font_size = 42
-                center_y = 288 + tip_font_size * idx * 1.2
-                display_string(line, font_size=tip_font_size, center_y=center_y)
+            top_y = display_multiline_string(text, font_size=51, top_y=216)
+            display_multiline_string(tip, font_size=42, top_y=top_y + 50)
 
             glfw.swap_buffers(window)
 
