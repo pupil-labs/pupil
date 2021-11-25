@@ -94,18 +94,18 @@ def assert_valid_rec_dir(rec_dir: str):
 
     if not rec_dir.exists():
         raise InvalidRecordingException(
-            reason=f"Target at path does not exist: {rec_dir}", recovery=""
+            reason=f"Target at path does not exist:\n{rec_dir}", recovery=""
         )
 
     if not rec_dir.is_dir():
         if is_video_file(rec_dir):
             raise InvalidRecordingException(
                 reason=f"The provided path is a video, not a recording directory",
-                recovery="Please provide a recording directory",
+                recovery="Please provide a recording directory.",
             )
         else:
             raise InvalidRecordingException(
-                reason=f"Target at path is not a directory: {rec_dir}", recovery=""
+                reason=f"Target at path is not a directory:\n{rec_dir}", recovery=""
             )
 
 
