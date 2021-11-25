@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import enum
+import os
 from pathlib import Path
 
 from .info import recording_info_utils
@@ -74,6 +75,7 @@ def assert_valid_rec_dir(rec_dir: str):
         - rec_dir does not exist
         - rec_dir points to a video file instead of the directory
         - rec_dir points to a file in general
+        - rec_dir is readable and writable
     """
     rec_dir = Path(rec_dir).resolve()
 
@@ -107,6 +109,12 @@ def assert_valid_rec_dir(rec_dir: str):
             raise InvalidRecordingException(
                 reason=f"Target at path is not a directory:\n{rec_dir}", recovery=""
             )
+
+    if not os.access(rec_dir, os.W_OK):
+        raise InvalidRecordingException(
+            reason=f"Player must be able to write files to\n{rec_dir}",
+            recovery="Please change the file permission accordingly.",
+        )
 
 
 # NOTE: The following functions are actually not correct given their name, only in the
