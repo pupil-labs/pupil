@@ -77,6 +77,12 @@ def assert_valid_rec_dir(rec_dir: str):
         - rec_dir points to a file in general
         - rec_dir is readable and writable
     """
+    if not os.access(rec_dir, os.R_OK):
+        raise InvalidRecordingException(
+            reason=f"Player does not have sufficient permissions to read the directory",
+            recovery="",
+        )
+
     rec_dir = Path(rec_dir).resolve()
 
     def normalize_extension(ext: str) -> str:
