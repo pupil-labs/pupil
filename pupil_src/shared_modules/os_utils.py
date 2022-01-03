@@ -40,7 +40,6 @@ if os_name == "Darwin" and mac_version >= min_version:
             # NOTE: Suppress KeyboardInterrupt
             return etype is KeyboardInterrupt
 
-
 else:
 
     class Prevent_Idle_Sleep(object):
