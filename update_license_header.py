@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,7 +15,7 @@ import re
 license_txt = """\
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -44,6 +44,7 @@ excludes = [
     ".gitignore",
     "version_utils.py",
     "update_license_header.py",
+    ".venv*",
 ]
 
 # transform glob patterns to regular expressions
@@ -105,7 +106,8 @@ if __name__ == "__main__":
 
     # Add a license/docstring header to selected files
     match_files = get_files(pupil_dir, includes, excludes)
-    print(len(match_files))
+    print(f"Number of files to check: {len(match_files)}")
 
     for f in match_files:
+        print(f"Checking {f}")
         write_header(f, license_txt)
