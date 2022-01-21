@@ -362,7 +362,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         if self._window:
             self.gl_display_in_window()
 
-        if self.show_undistortion:
+        if self.show_undistortion and self.undist_img is not None:
             gl.glPushMatrix()
             make_coord_system_norm_based()
             draw_gl_texture(self.undist_img)
