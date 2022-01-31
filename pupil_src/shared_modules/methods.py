@@ -79,7 +79,7 @@ def cart_to_spherical(vector):
     # convert to spherical coordinates
     # source: http://stackoverflow.com/questions/4116658/faster-numpy-cartesian-to-spherical-coordinate-conversion
     x, y, z = vector
-    r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    r = np.sqrt(x**2 + y**2 + z**2)
     theta = np.arccos(y / r)  # for elevation angle defined from Z-axis down
     psi = np.arctan2(z, x)
     return r, theta, psi
@@ -100,8 +100,8 @@ def bin_thresholding(image, image_lower=0, image_upper=256):
 
 def make_eye_kernel(inner_size, outer_size):
     offset = (outer_size - inner_size) / 2
-    inner_count = inner_size ** 2
-    outer_count = outer_size ** 2 - inner_count
+    inner_count = inner_size**2
+    outer_count = outer_size**2 - inner_count
     val_inner = -1.0 / inner_count
     val_outer = -val_inner * inner_count / outer_count
     inner = np.ones((inner_size, inner_size), np.float32) * val_inner

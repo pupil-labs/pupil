@@ -81,7 +81,7 @@ def rotate_v1_on_v2(v1, v2):
         I = np.eye(3)
         ux = np.asarray([[0, -u[2], u[1]], [u[2], 0, -u[0]], [-u[1], u[0], 0]])
 
-        R = I + ux + np.dot(ux, ux) * (1 - c) / s ** 2
+        R = I + ux + np.dot(ux, ux) * (1 - c) / s**2
 
     elif np.allclose(cos_angle, 1):
         R = np.eye(3)

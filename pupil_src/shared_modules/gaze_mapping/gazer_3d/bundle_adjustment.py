@@ -132,7 +132,7 @@ class BundleAdjustment:
             vectors = gaze_targets - translation
             norms = np.linalg.norm(vectors, axis=1)
             block = -np.einsum("ki,kj->kij", vectors, vectors)
-            block /= (norms ** 3)[:, np.newaxis, np.newaxis]
+            block /= (norms**3)[:, np.newaxis, np.newaxis]
             ones = np.eye(3)[np.newaxis] / norms[:, np.newaxis, np.newaxis]
             block += ones
             return block
