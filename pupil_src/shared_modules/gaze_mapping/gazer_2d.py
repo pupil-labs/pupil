@@ -115,8 +115,8 @@ class Model2D(Model):
         norm_x = norm_xy[:, :1]
         norm_y = norm_xy[:, 1:]
 
-        norm_x_squared = norm_x ** 2
-        norm_y_squared = norm_y ** 2
+        norm_x_squared = norm_x**2
+        norm_y_squared = norm_y**2
 
         return np.hstack(
             (
