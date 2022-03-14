@@ -65,7 +65,7 @@ class Frame:
     @property
     def img(self):
         if self._img is None:
-            self._img = self._av_frame.to_nd_array(format="bgr24")
+            self._img = self._av_frame.to_ndarray(format="bgr24")
         return self._img
 
     @property
@@ -186,7 +186,7 @@ class OnDemandDecoder(Decoder):
         self.video_stream = video_stream
 
     def seek(self, pts_position):
-        self.video_stream.seek(pts_position)
+        self.container.seek(pts_position)
 
     def get_frame_iterator(self):
         frames = container_decode(self.container, self.video_stream)
