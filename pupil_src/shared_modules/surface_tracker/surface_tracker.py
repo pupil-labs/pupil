@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -360,7 +360,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             val *= 3
             surface._heatmap_blur_factor = max((1 - val), 0)
             res_exponent = max(val, 0.35)
-            surface._heatmap_resolution = int(10 ** res_exponent)
+            surface._heatmap_resolution = int(10**res_exponent)
             self.notify_all(
                 {
                     "subject": "surface_tracker.heatmap_params_changed",
