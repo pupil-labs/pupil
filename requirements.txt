@@ -8,6 +8,7 @@ psutil
 pyaudio
 pyopengl
 pyzmq
+rich
 scikit-learn
 scipy
 glfw>=2.0.0
