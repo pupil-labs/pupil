@@ -335,7 +335,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
     def recalculate(self):
         import time
 
-        t0 = time.time()
+        t0 = time.perf_counter()
         all_pp = self._pupil_data()
         if not all_pp:
             self.filter_response = []
@@ -372,7 +372,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
 
         self.consolidate_classifications()
 
-        tm1 = time.time()
+        tm1 = time.perf_counter()
         logger.debug(
             "Recalculating took\n\t{:.4f}sec for {} pp\n\t{} pp/sec\n\tsize: {}".format(
                 tm1 - t0, len(all_pp), len(all_pp) / (tm1 - t0), filter_size
