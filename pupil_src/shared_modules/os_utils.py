@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -39,7 +39,6 @@ if os_name == "Darwin" and mac_version >= min_version:
             self.caffeine_process = None
             # NOTE: Suppress KeyboardInterrupt
             return etype is KeyboardInterrupt
-
 
 else:
 

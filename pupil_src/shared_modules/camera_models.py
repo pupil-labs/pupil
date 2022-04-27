@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -499,8 +499,8 @@ class Fisheye_Dist_Camera(Camera_Model):
         theta_d = np.linalg.norm(pw, ord=2, axis=1)
         theta = theta_d
         for j in range(10):
-            theta2 = theta ** 2
-            theta4 = theta2 ** 2
+            theta2 = theta**2
+            theta4 = theta2**2
             theta6 = theta4 * theta2
             theta8 = theta6 * theta2
             theta = theta_d / (

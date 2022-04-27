@@ -92,7 +92,7 @@ def fail(a, b):
     assert False
 
 
-tol = 2 ** -23
+tol = 2**-23
 
 
 def ratio(numerator, denominator):
@@ -2914,7 +2914,7 @@ class Theme:
         return 0.5 * math.sqrt(self.edge_penwidth(weight))
 
     def fontsize(self, weight):
-        return max(weight ** 2 * self.maxfontsize, self.minfontsize)
+        return max(weight**2 * self.maxfontsize, self.minfontsize)
 
     def color(self, weight):
         weight = min(max(weight, 0.0), 1.0)
@@ -2930,9 +2930,9 @@ class Theme:
             l = lmin + weight * (lmax - lmin)
         else:
             base = self.skew
-            h = hmin + ((hmax - hmin) * (-1.0 + (base ** weight)) / (base - 1.0))
-            s = smin + ((smax - smin) * (-1.0 + (base ** weight)) / (base - 1.0))
-            l = lmin + ((lmax - lmin) * (-1.0 + (base ** weight)) / (base - 1.0))
+            h = hmin + ((hmax - hmin) * (-1.0 + (base**weight)) / (base - 1.0))
+            s = smin + ((smax - smin) * (-1.0 + (base**weight)) / (base - 1.0))
+            l = lmin + ((lmax - lmin) * (-1.0 + (base**weight)) / (base - 1.0))
 
         return self.hsl_to_rgb(h, s, l)
 
