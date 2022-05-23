@@ -199,7 +199,7 @@ def launcher():
 
             ch = RichHandler(
                 level=logging.DEBUG if log_level_debug else logging.INFO,
-                rich_tracebacks=True,
+                rich_tracebacks=False,
             )
         except ImportError:
             ch = logging.StreamHandler()
