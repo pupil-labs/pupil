@@ -116,7 +116,8 @@ class Camera_Intrinsics_Estimation(Plugin):
 
         if self.monitor_idx not in get_monitors_idx_list()[0]:
             logger.warning(
-                "Monitor at index %s no longer availalbe using default" % idx
+                f"Monitor at index {self.monitor_idx} no longer availalbe. "
+                "Using default instead."
             )
             self.monitor_idx = 0
 
