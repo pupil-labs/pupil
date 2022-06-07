@@ -834,29 +834,34 @@ def eye_profiled(
     debug=False,
     pub_socket_hwm=None,
     parent_application="capture",
+    skip_driver_installation=False,
 ):
     import cProfile
     import subprocess
     import os
+    from textwrap import dedent
     from .eye import eye
 
     cProfile.runctx(
-        (
-            "eye("
-            "timebase, "
-            "is_alive_flag, "
-            "ipc_pub_url, "
-            "ipc_sub_url, "
-            "ipc_push_url, "
-            "user_dir, "
-            "version, "
-            "eye_id, "
-            "overwrite_cap_settings, "
-            "hide_ui, "
-            "debug, "
-            "pub_socket_hwm, "
-            "parent_application, "
-            ")"
+        dedent(
+            """
+            eye(
+                timebase,
+                is_alive_flag,
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                version,
+                eye_id,
+                overwrite_cap_settings,
+                hide_ui,
+                debug,
+                pub_socket_hwm,
+                parent_application,
+                skip_driver_installation
+            )
+            """
         ),
         {
             "timebase": timebase,
@@ -872,6 +877,7 @@ def eye_profiled(
             "debug": debug,
             "pub_socket_hwm": pub_socket_hwm,
             "parent_application": parent_application,
+            "skip_driver_installation": skip_driver_installation,
         },
         locals(),
         "eye{}.pstats".format(eye_id),
