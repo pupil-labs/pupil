@@ -884,14 +884,32 @@ def world_profiled(
     preferred_remote_port,
     hide_ui,
     debug,
+    skip_driver_installation,
 ):
     import cProfile
     import subprocess
     import os
+    from textwrap import dedent
     from .world import world
 
     cProfile.runctx(
-        "world(timebase, eye_procs_alive, ipc_pub_url,ipc_sub_url,ipc_push_url,user_dir,version,preferred_remote_port, hide_ui, debug)",
+        dedent(
+            """
+            world(
+                timebase,
+                eye_procs_alive,
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                version,
+                preferred_remote_port,
+                hide_ui,
+                debug,
+                skip_driver_installation
+            )
+            """
+        ),
         {
             "timebase": timebase,
             "eye_procs_alive": eye_procs_alive,
@@ -903,6 +921,7 @@ def world_profiled(
             "preferred_remote_port": preferred_remote_port,
             "hide_ui": hide_ui,
             "debug": debug,
+            "skip_driver_installation": skip_driver_installation,
         },
         locals(),
         "world.pstats",
