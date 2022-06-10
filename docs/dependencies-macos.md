@@ -10,14 +10,20 @@ Trigger the install of the Command Line Tools (CLT) by typing this in your termi
 git
 ```
 
+## Note about Non-Intel / M1 Macs
+
+It is recommended to install the Intel-versions of Homebrew and Python. This will simplify building many of the dependencies below.
+
 ## Install Homebrew
 [Homebrew](http://brew.sh/) describes itself as "the missing package manager for OSX."  It makes development on MacOS much easier, [plus it's open source](https://github.com/Homebrew/homebrew).  Install with the following ruby script.
 
 ```sh
-ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+arch -x86_64 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
 ## Install Python 3.6 or higher
+
+**Note:** Python 3.10 or higher are currently not supported
 
 ```sh
 brew install python3
