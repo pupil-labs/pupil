@@ -35,4 +35,3 @@ av @ https://github.com/pupil-labs/PyAV/releases/download/v0.4.6/av-0.4.6-cp36-c
 uvc @ https://github.com/pupil-labs/pyuvc/releases/download/v0.14/uvc-0.14-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
 uvc @ git+https://github.com/pupil-labs/pyuvc@no-kernel-detach-older-macos ; platform_system == "Darwin"
 uvc @ git+https://github.com/pupil-labs/pyuvc@v0.14.1 ; platform_system == "Linux"
-
