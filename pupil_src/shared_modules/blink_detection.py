@@ -513,7 +513,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
         legend_height = 13.0 * scale
         pad = 10 * scale
 
-        self.glfont.draw_text(width, legend_height, "Activaty")
+        self.glfont.draw_text(width, legend_height, "Activity")
         cygl_utils.draw_polyline(
             [
                 (pad, legend_height + pad * 2 / 3),
