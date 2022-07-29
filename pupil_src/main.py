@@ -244,20 +244,22 @@ def launcher():
 
     # Starting communication threads:
     # A ZMQ Proxy Device serves as our IPC Backbone
-    ipc_backbone_thread = Thread(target=zmq.proxy, args=(xsub_socket, xpub_socket))
-    ipc_backbone_thread.setDaemon(True)
+    ipc_backbone_thread = Thread(
+        target=zmq.proxy, args=(xsub_socket, xpub_socket), daemon=True
+    )
     ipc_backbone_thread.start()
 
-    pull_pub = Thread(target=pull_pub, args=(ipc_pub_url, pull_socket))
-    pull_pub.setDaemon(True)
+    pull_pub = Thread(target=pull_pub, args=(ipc_pub_url, pull_socket), daemon=True)
     pull_pub.start()
 
-    log_thread = Thread(target=log_loop, args=(ipc_sub_url, parsed_args.debug))
-    log_thread.setDaemon(True)
+    log_thread = Thread(
+        target=log_loop, args=(ipc_sub_url, parsed_args.debug), daemon=True
+    )
     log_thread.start()
 
-    delay_thread = Thread(target=delay_proxy, args=(ipc_push_url, ipc_sub_url))
-    delay_thread.setDaemon(True)
+    delay_thread = Thread(
+        target=delay_proxy, args=(ipc_push_url, ipc_sub_url), daemon=True
+    )
     delay_thread.start()
 
     del xsub_socket, xpub_socket, pull_socket
