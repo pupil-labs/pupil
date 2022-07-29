@@ -135,7 +135,7 @@ class Audio_Playback(System_Plugin_Base):
         )
         self.audio_paused = False
 
-        self.audio.stream.seek(0)
+        self.audio.container.seek(0)
         if self.should_check_ts_consistency:
             first_frame = next(self.audio_frame_iterator)
             self.check_ts_consistency(reference_frame=first_frame)
@@ -276,7 +276,7 @@ class Audio_Playback(System_Plugin_Base):
 
     def seek_to_audio_frame(self, seek_pos):
         try:
-            self.audio.stream.seek(self.audio_idx_to_pts(seek_pos))
+            self.audio.container.seek(self.audio_idx_to_pts(seek_pos))
         except av.AVError:
             raise FileSeekError()
         else:
