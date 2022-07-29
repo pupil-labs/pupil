@@ -164,19 +164,31 @@ class Audio_Viz_Transform:
                 # if audio_frame is None:
                 #    continue
                 # audio_frame.pts = None
-                audio_frame_rs = self.audio_resampler.resample(audio_frame)
-                if audio_frame_rs is None:
+                audio_frames_rs = self.audio_resampler.resample(audio_frame)
+                if not audio_frames_rs:
                     continue
-                samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
+                samples = np.concatenate(
+                    [
+                        np.frombuffer(frame.planes[0], dtype=np.float32)
+                        for frame in audio_frames_rs
+                    ],
+                    axis=0,
+                )
                 if allSamples is not None:
                     allSamples = np.concatenate((allSamples, samples), axis=0)
                 else:
                     allSamples = samples
 
             # flush
-            audio_frame_rs = self.audio_resampler.resample(None)
-            if audio_frame_rs is not None:
-                samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
+            audio_frames_rs = self.audio_resampler.resample(None)
+            if audio_frames_rs:
+                samples = samples = np.concatenate(
+                    [
+                        np.frombuffer(frame.planes[0], dtype=np.float32)
+                        for frame in audio_frames_rs
+                    ],
+                    axis=0,
+                )
                 if allSamples is not None:
                     allSamples = np.concatenate((allSamples, samples), axis=0)
                 else:
