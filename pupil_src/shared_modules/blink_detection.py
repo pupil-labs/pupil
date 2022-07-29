@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import csv
 import logging
 import os
+import time
 from collections import deque
 
 import numpy as np
@@ -336,8 +337,6 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             logger.info("Created 'blink_detection_report.csv' file.")
 
     def recalculate(self):
-        import time
-
         t0 = time.perf_counter()
         all_pp = self._pupil_data()
         if not all_pp:
