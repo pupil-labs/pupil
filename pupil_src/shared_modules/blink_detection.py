@@ -263,7 +263,10 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             self.recalculate()
         elif notification["subject"] == "blinks_changed":
             self.cache_activation()
-            self.timeline.refresh()
+            try:
+                self.timeline.refresh()
+            except AttributeError:
+                pass
         elif notification["subject"] == "should_export":
             self.export(notification["ts_window"], notification["export_dir"])
 
