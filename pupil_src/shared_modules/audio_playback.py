@@ -12,10 +12,10 @@ See COPYING and COPYING.LESSER for license details.
 import collections
 import itertools
 import logging
+import traceback
 from bisect import bisect_left as bisect
 from threading import Timer
 from time import monotonic
-import traceback
 
 import av
 import av.filter
@@ -29,7 +29,6 @@ from audio_utils import Audio_Viz_Transform, NoAudioLoadedError, load_audio
 from methods import make_change_loglevel_fn
 from plugin import System_Plugin_Base
 from version_utils import parse_version
-
 
 assert parse_version(av.__version__) >= parse_version("0.4.4")
 
