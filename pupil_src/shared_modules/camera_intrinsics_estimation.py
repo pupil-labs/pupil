@@ -328,9 +328,16 @@ class Camera_Intrinsics_Estimation(Plugin):
             return
         if self.collect_new:
             img = frame.img
-            status, grid_points = cv2.findCirclesGrid(
-                img, (4, 11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID
-            )
+            try:
+                status, grid_points = cv2.findCirclesGrid(
+                    img, (4, 11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID
+                )
+            except cv2.error:
+                logger.exception(
+                    f"Exception in cv2.findCirclesGrid() using shape={img.shape!r} "
+                    f"dtype={img.dtype!r}"
+                )
+                return
             if status:
                 self.img_points.append(grid_points)
                 self.obj_points.append(self.obj_grid)

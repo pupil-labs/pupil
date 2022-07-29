@@ -12,6 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import csv
 import logging
 import os
+import time
 from collections import deque
 
 import numpy as np
@@ -263,7 +264,10 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             self.recalculate()
         elif notification["subject"] == "blinks_changed":
             self.cache_activation()
-            self.timeline.refresh()
+            try:
+                self.timeline.refresh()
+            except AttributeError:
+                pass
         elif notification["subject"] == "should_export":
             self.export(notification["ts_window"], notification["export_dir"])
 
@@ -333,8 +337,6 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             logger.info("Created 'blink_detection_report.csv' file.")
 
     def recalculate(self):
-        import time
-
         t0 = time.perf_counter()
         all_pp = self._pupil_data()
         if not all_pp:
@@ -513,7 +515,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
         legend_height = 13.0 * scale
         pad = 10 * scale
 
-        self.glfont.draw_text(width, legend_height, "Activaty")
+        self.glfont.draw_text(width, legend_height, "Activity")
         cygl_utils.draw_polyline(
             [
                 (pad, legend_height + pad * 2 / 3),

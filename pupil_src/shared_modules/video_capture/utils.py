@@ -206,7 +206,7 @@ class Video:
             return cont
 
     def _open_container(self):
-        cont = av.open(self.path)
+        cont = av.open(self.path, format=os.path.splitext(self.path)[-1][1:])
         try:
             cont.streams.video[0].thread_type = "AUTO"
         except AttributeError:

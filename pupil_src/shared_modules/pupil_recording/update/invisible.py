@@ -208,8 +208,9 @@ class BrokenFirstFrameRecordingIssue:
                 temp_v_path = Path(temp_dir) / v_path.name
 
                 # Save video, dropping first frame, to temp file
-                in_container = av.open(str(v_path))
-                out_container = av.open(str(temp_v_path), "w")
+                video_format = v_path.suffix[1:]
+                in_container = av.open(str(v_path), format=video_format)
+                out_container = av.open(str(temp_v_path), "w", format=video_format)
 
                 # input -> output stream mapping
                 stream_mapping = {
@@ -254,7 +255,7 @@ class BrokenFirstFrameRecordingIssue:
         # If the first timestamp is greater, remove it from the timestamps and overwrite the file.
         for v_path, ts_path in cls._pi_world_video_and_raw_time_paths(recording):
 
-            in_container = av.open(str(v_path))
+            in_container = av.open(str(v_path), format=v_path.suffix[1:])
             packets = in_container.demux(video=0)
 
             # Try to demux the first frame.
