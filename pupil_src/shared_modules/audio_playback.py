@@ -135,7 +135,7 @@ class Audio_Playback(System_Plugin_Base):
         )
         self.audio_paused = False
 
-        self.audio.container.seek(0)
+        self.audio.container.seek(0, stream=self.audio.stream)
         if self.should_check_ts_consistency:
             first_frame = next(self.audio_frame_iterator)
             self.check_ts_consistency(reference_frame=first_frame)

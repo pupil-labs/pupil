@@ -186,7 +186,7 @@ class OnDemandDecoder(Decoder):
         self.video_stream = video_stream
 
     def seek(self, pts_position):
-        self.container.seek(pts_position)
+        self.container.seek(pts_position, stream=self.video_stream)
 
     def get_frame_iterator(self):
         frames = container_decode(self.container, self.video_stream)
