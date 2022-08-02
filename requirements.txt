@@ -6,7 +6,7 @@ msgpack>=1.0.0
 numexpr
 packaging>=20.0
 psutil
-pyaudio
+sounddevice
 pyopengl
 pyzmq
 scikit-learn
