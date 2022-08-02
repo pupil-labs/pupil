@@ -22,6 +22,7 @@ from pathlib import Path
 
 import msgpack
 import numpy as np
+from rich.progress import track
 
 
 assert (
@@ -153,8 +154,10 @@ def load_pldata_file(directory, topic):
         topics = collections.deque()
         data_ts = np.load(ts_file)
         with open(msgpack_file, "rb") as fh:
-            for topic, payload in msgpack.Unpacker(
-                fh, use_list=False, strict_map_key=False
+            for topic, payload in track(
+                msgpack.Unpacker(fh, use_list=False, strict_map_key=False),
+                description=f"Loading {topic} data",
+                total=len(data_ts),
             ):
                 data.append(Serialized_Dict(msgpack_bytes=payload))
                 topics.append(topic)

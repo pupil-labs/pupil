@@ -816,10 +816,7 @@ def player(
         glfw.destroy_window(main_window)
 
     except Exception:
-        import traceback
-
-        trace = traceback.format_exc()
-        logger.error("Process Player crashed with trace:\n{}".format(trace))
+        logger.exception("Process Player crashed with trace:")
     finally:
         logger.info("Process shutting down.")
         ipc_pub.notify({"subject": "player_process.stopped"})
@@ -889,7 +886,7 @@ def player_drop(
             try:
                 assert_valid_recording_type(rec_dir)
             except InvalidRecordingException as err:
-                logger.error(str(err))
+                logger.exception(str(err))
                 rec_dir = None
         # load session persistent settings
         session_settings = Persistent_Dict(
@@ -964,7 +961,7 @@ def player_drop(
                     text = "Updating recording format."
                     tip = "This may take a while!"
                 except InvalidRecordingException as err:
-                    logger.error(str(err))
+                    logger.exception(str(err))
                     if err.recovery:
                         text = err.reason
                         tip = err.recovery
@@ -984,11 +981,11 @@ def player_drop(
                 try:
                     update_recording(rec_dir)
                 except AssertionError as err:
-                    logger.error(str(err))
+                    logger.exception(str(err))
                     tip = "Oops! There was an error updating the recording."
                     rec_dir = None
                 except InvalidRecordingException as err:
-                    logger.error(str(err))
+                    logger.exception(str(err))
                     if err.recovery:
                         text = err.reason
                         tip = err.recovery
@@ -1010,10 +1007,7 @@ def player_drop(
             )
 
     except Exception:
-        import traceback
-
-        trace = traceback.format_exc()
-        logger.error("Process player_drop crashed with trace:\n{}".format(trace))
+        logger.exception("Process player_drop crashed with trace:")
 
     finally:
         sleep(1.0)
