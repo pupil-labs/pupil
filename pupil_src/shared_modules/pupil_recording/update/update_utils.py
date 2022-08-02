@@ -37,7 +37,7 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
     camera_hint = ""
     for video in videos:
         try:
-            container = av.open(str(video))
+            container = av.open(str(video), format=video.suffix[1:])
         except av.AVError:
             continue
 

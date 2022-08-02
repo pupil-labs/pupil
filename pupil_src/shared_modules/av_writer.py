@@ -315,9 +315,13 @@ class JPEG_Writer(AV_Writer):
 
     def encode_frame(self, input_frame, pts: int) -> T.Iterator[Packet]:
         # for JPEG we only get a single packet per frame
-        packet = Packet()
+        try:
+            packet = Packet()
+            packet.payload = input_frame.jpeg_buffer
+        except AttributeError:
+            packet = Packet(input_frame.jpeg_buffer)
+            # packet.update()
         packet.stream = self.video_stream
-        packet.payload = input_frame.jpeg_buffer
         packet.time_base = self.time_base
         packet.pts = pts
         # TODO: check if we still need dts here, as they were removed from MPEG_Writer
@@ -333,7 +337,10 @@ class MPEG_Audio_Writer(MPEG_Writer):
         stream = container.add_stream(
             codec_name=template.codec.name, rate=template.rate
         )
-        stream.layout = template.layout
+        try:
+            stream.layout = template.layout
+        except AttributeError:
+            pass
         return stream
 
     def __init__(self, *args, audio_dir: str, **kwargs):

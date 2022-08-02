@@ -1,6 +1,7 @@
 ###
 ### Third-party
 ###
+av
 msgpack>=1.0.0
 numexpr
 packaging>=20.0
@@ -26,10 +27,6 @@ pupil-apriltags==1.0.4
 pupil-detectors==2.0.*
 pye3d==0.3.0
 pyglui>=1.31.0
-
-# pupil-labs/PyAV 0.4.6
-av @ git+https://github.com/pupil-labs/PyAV@v0.4.6 ; platform_system != "Windows"
-av @ https://github.com/pupil-labs/PyAV/releases/download/v0.4.6/av-0.4.6-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
 
 # pupil-labs/pyuvc 0.14
 uvc @ https://github.com/pupil-labs/pyuvc/releases/download/v0.14/uvc-0.14-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"

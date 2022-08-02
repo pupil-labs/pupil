@@ -59,7 +59,7 @@ class Audio_Playback(System_Plugin_Base):
     icon_chr = chr(0xE050)
     icon_font = "pupil_icons"
 
-    def __init__(self, g_pool):
+    def __init__(self, g_pool, req_audio_volume=1.0, log_scale=False):
         super().__init__(g_pool)
 
         self.play = False
@@ -73,7 +73,8 @@ class Audio_Playback(System_Plugin_Base):
         # debug flag. Only set if timestamp consistency should be checked
         self.should_check_ts_consistency = False
 
-        self.req_audio_volume = 1.0
+        self.log_scale = log_scale
+        self.req_audio_volume = req_audio_volume
         self.current_audio_volume = 1.0
         self.req_buffer_size_secs = 0.5
         self.audio_viz_trans = None
@@ -98,6 +99,9 @@ class Audio_Playback(System_Plugin_Base):
 
         self._setup_output_audio()
         self._setup_audio_vis()
+
+    def get_init_dict(self):
+        return {"req_audio_volume": self.req_audio_volume, "log_scale": self.log_scale}
 
     def check_audio_part_setup(self):
         part_idx = self.audio_part_idx_from_playbacktime()
@@ -131,7 +135,7 @@ class Audio_Playback(System_Plugin_Base):
         )
         self.audio_paused = False
 
-        self.audio.stream.seek(0)
+        self.audio.container.seek(0, stream=self.audio.stream)
         if self.should_check_ts_consistency:
             first_frame = next(self.audio_frame_iterator)
             self.check_ts_consistency(reference_frame=first_frame)
@@ -177,9 +181,10 @@ class Audio_Playback(System_Plugin_Base):
 
     def _setup_audio_vis(self):
         self.audio_timeline = None
-        self.audio_viz_trans = Audio_Viz_Transform(self.g_pool.rec_dir)
+        self.audio_viz_trans = Audio_Viz_Transform(
+            self.g_pool.rec_dir, log_scaling=self.log_scale
+        )
         self.audio_viz_data = None
-        self.log_scale = False
         self.xlim = (self.g_pool.timestamps[0], self.g_pool.timestamps[-1])
         self.ylim = (0, 210)
 
@@ -189,9 +194,11 @@ class Audio_Playback(System_Plugin_Base):
         logger.debug("Setting volume {} ".format(self.current_audio_volume))
         self.filter_graph = av.filter.Graph()
         self.filter_graph_list = []
-        self.filter_graph_list.append(
-            self.filter_graph.add_buffer(template=self.audio.stream)
-        )
+        try:
+            buffer = self.filter_graph.add_abuffer(template=self.audio.stream)
+        except AttributeError:
+            buffer = self.filter_graph.add_buffer(template=self.audio.stream)
+        self.filter_graph_list.append(buffer)
         args = "volume={}:precision=float".format(self.current_audio_volume)
         logger.debug("args = {}".format(args))
         self.volume_filter = self.filter_graph.add("volume", args)
@@ -269,7 +276,7 @@ class Audio_Playback(System_Plugin_Base):
 
     def seek_to_audio_frame(self, seek_pos):
         try:
-            self.audio.stream.seek(self.audio_idx_to_pts(seek_pos))
+            self.audio.container.seek(self.audio_idx_to_pts(seek_pos))
         except av.AVError:
             raise FileSeekError()
         else:
@@ -389,9 +396,10 @@ class Audio_Playback(System_Plugin_Base):
         if self.filter_graph_list is None:
             self._setup_filter_graph()
         elif self.req_audio_volume != self.current_audio_volume:
-            self.current_audio_volume = self.req_audio_volume
-            args = "{}".format(self.current_audio_volume)
-            self.volume_filter.cmd("volume", args)
+            self._setup_filter_graph()
+            # self.current_audio_volume = self.req_audio_volume
+            # args = "{}".format(self.current_audio_volume)
+            # self.volume_filter.cmd("volume", args)
 
     def fill_audio_queue(self):
         frames_to_fetch = self.sec_to_frames(
@@ -419,7 +427,8 @@ class Audio_Playback(System_Plugin_Base):
     def draw_audio(self, width, height, scale):
         if self.audio_viz_data is None:
             return
-        with gl_utils.Coord_System(*self.xlim, *self.ylim):
+        ylim = self.audio_viz_data.min(), self.audio_viz_data.max()
+        with gl_utils.Coord_System(*self.xlim, *ylim):
             pyglui_utils.draw_bars_buffer(self.audio_viz_data, color=viz_color)
 
     def init_ui(self):

@@ -158,25 +158,26 @@ class Audio_Viz_Transform:
             for af in frames_chunk:
                 audio_frame = af
                 audio_frame.pts = None
-                # af_dbl = audio_resampler1.resample(af)
-                # lp_graph_list[0].push(af)
-                # audio_frame = lp_graph_list[-1].pull()
-                # if audio_frame is None:
-                #    continue
-                # audio_frame.pts = None
-                audio_frame_rs = self.audio_resampler.resample(audio_frame)
-                if audio_frame_rs is None:
+                try:
+                    audio_frames_rs = self.audio_resampler.resample(audio_frame)
+                except av.error.ValueError:
                     continue
-                samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
+                if not audio_frames_rs:
+                    continue
+                samples = np.concatenate(
+                    [frame.to_ndarray().ravel() for frame in audio_frames_rs], axis=0
+                )
                 if allSamples is not None:
                     allSamples = np.concatenate((allSamples, samples), axis=0)
                 else:
                     allSamples = samples
 
             # flush
-            audio_frame_rs = self.audio_resampler.resample(None)
-            if audio_frame_rs is not None:
-                samples = np.frombuffer(audio_frame_rs.planes[0], dtype=np.float32)
+            audio_frames_rs = self.audio_resampler.resample(None)
+            if audio_frames_rs:
+                samples = np.concatenate(
+                    [frame.to_ndarray().ravel() for frame in audio_frames_rs], axis=0
+                )
                 if allSamples is not None:
                     allSamples = np.concatenate((allSamples, samples), axis=0)
                 else:
