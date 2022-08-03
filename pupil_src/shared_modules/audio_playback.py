@@ -284,7 +284,9 @@ class Audio_Playback(System_Plugin_Base):
 
     def seek_to_audio_frame(self, seek_pos):
         try:
-            self.audio.container.seek(self.audio_idx_to_pts(seek_pos))
+            self.audio.container.seek(
+                self.audio_idx_to_pts(seek_pos), stream=self.audio.stream
+            )
         except av.AVError:
             raise FileSeekError()
         else:
@@ -352,16 +354,20 @@ class Audio_Playback(System_Plugin_Base):
                 self.audio_timeline.refresh()
 
     def setup_pyaudio_output_if_necessary(self):
-        if self.pa_stream is not None and not self.pa_stream.is_stopped():
-            if not self.audio_paused and not self.pa_stream.is_active():
-                logger.debug("Reopening audio stream...")
-                self._setup_output_audio()
+        if (
+            self.sd_stream is not None
+            and not self.sd_stream.stopped
+            and not self.audio_paused
+            and not self.sd_stream.active
+        ):
+            logger.debug("Reopening audio stream...")
+            self._setup_output_audio()
 
     def calculate_delays(self, ts_audio_start):
         real_time_delay = (
             ts_audio_start - self.g_pool.seek_control.current_playback_time
         )
-        adjusted_delay = real_time_delay - self.pa_stream.get_output_latency()
+        adjusted_delay = real_time_delay - self.sd_stream.latency
         self.audio_delay = 0
         self.audio_sync = 0
         if adjusted_delay > 0:
