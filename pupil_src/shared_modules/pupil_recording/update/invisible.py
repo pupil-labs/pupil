@@ -255,39 +255,39 @@ class BrokenFirstFrameRecordingIssue:
         # If the first timestamp is greater, remove it from the timestamps and overwrite the file.
         for v_path, ts_path in cls._pi_world_video_and_raw_time_paths(recording):
 
-            in_container = av.open(str(v_path), format=v_path.suffix[1:])
-            packets = in_container.demux(video=0)
+            with av.open(str(v_path), format=v_path.suffix[1:]) as in_container:
+                packets = in_container.demux(video=0)
 
-            # Try to demux the first frame.
-            # This is expected to raise an error.
-            # If no error is raised, ignore this video.
-            try:
-                _ = next(packets).decode()
-            except av.AVError:
-                pass  # Expected
-            except StopIteration:
-                continue  # Not expected
-            else:
-                continue  # Not expected
+                # Try to demux the first frame.
+                # This is expected to raise an error.
+                # If no error is raised, ignore this video.
+                try:
+                    _ = next(packets).decode()
+                except av.AVError:
+                    pass  # Expected
+                except StopIteration:
+                    continue  # Not expected
+                else:
+                    continue  # Not expected
 
-            # Try to demux the second frame.
-            # This is not expected to raise an error.
-            # If an error is raised, ignore this video.
-            try:
-                _ = next(packets).decode()
-            except av.AVError:
-                continue  # Not expected
-            except StopIteration:
-                continue  # Not expected
-            else:
-                pass  # Expected
+                # Try to demux the second frame.
+                # This is not expected to raise an error.
+                # If an error is raised, ignore this video.
+                try:
+                    _ = next(packets).decode()
+                except av.AVError:
+                    continue  # Not expected
+                except StopIteration:
+                    continue  # Not expected
+                else:
+                    pass  # Expected
 
-            # Check there are 2 or more raw timestamps.
-            raw_time = cls._pi_raw_time_load(ts_path)
-            if len(raw_time) < 2:
-                continue
+                # Check there are 2 or more raw timestamps.
+                raw_time = cls._pi_raw_time_load(ts_path)
+                if len(raw_time) < 2:
+                    continue
 
-            yield v_path, ts_path
+                yield v_path, ts_path
 
     @classmethod
     def _pi_world_video_and_raw_time_paths(cls, recording: PupilRecording):

@@ -37,22 +37,21 @@ def _try_patch_world_instrinsics_file(rec_dir: str, videos: T.Sequence[Path]) ->
     camera_hint = ""
     for video in videos:
         try:
-            container = av.open(str(video), format=video.suffix[1:])
+            with av.open(str(video), format=video.suffix[1:]) as container:
+                if container.streams.video[0].format is None:
+                    continue
+
+                for camera in cm.default_intrinsics:
+                    if camera in video.name:
+                        camera_hint = camera
+                        break
+                frame_size = (
+                    container.streams.video[0].format.width,
+                    container.streams.video[0].format.height,
+                )
+                break
         except av.AVError:
             continue
-
-        if container.streams.video[0].format is None:
-            continue
-
-        for camera in cm.default_intrinsics:
-            if camera in video.name:
-                camera_hint = camera
-                break
-        frame_size = (
-            container.streams.video[0].format.width,
-            container.streams.video[0].format.height,
-        )
-        break
 
     intrinsics = cm.Camera_Model.from_file(rec_dir, camera_hint, frame_size)
     intrinsics.save(rec_dir, "world")
