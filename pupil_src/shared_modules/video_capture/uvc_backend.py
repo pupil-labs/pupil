@@ -483,7 +483,7 @@ class UVC_Source(Base_Source):
                 self.frame_rate = self.frame_rate
                 logger.debug("Stripes detected")
 
-        except uvc.StreamError:
+        except (uvc.StreamError, TimeoutError):
             self._recent_frame = None
             self._restart_logic()
         except (AttributeError, uvc.InitError):
