@@ -64,6 +64,11 @@ class Detector2DPlugin(PupilDetectorPlugin):
         super().__init__(g_pool=g_pool)
         self.detector_2d = detector_2d or Detector2D(properties or {})
 
+    def get_init_dict(self):
+        init_dict = super().get_init_dict()
+        init_dict["properties"] = self.detector_2d.get_properties()
+        return init_dict
+
     def detect(self, frame, **kwargs):
         # convert roi-plugin to detector roi
         roi = Roi(*self.g_pool.roi.bounds)
