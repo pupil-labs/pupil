@@ -898,7 +898,8 @@ class UVC_Manager(Base_Manager):
         }
         # Do not show RealSense cameras in selection, since they are not supported
         # anymore in Pupil Capture since v1.22 and won't work.
-        self.ignore_patterns = ["RealSense"]
+        self.ignore_name_patterns = ["RealSense"]
+        self.ignore_vid_pid = [(0x04B4, 0x0036), (0x0BDA, 0x3036)]
 
     def get_devices(self):
         self.devices.update()
@@ -916,7 +917,10 @@ class UVC_Manager(Base_Manager):
                 key=f"cam.{device['uid']}",
             )
             for device in self.devices
-            if not any(pattern in device["name"] for pattern in self.ignore_patterns)
+            if not any(
+                pattern in device["name"] for pattern in self.ignore_name_patterns
+            )
+            and (device["idVendor"], device["idProduct"]) not in self.ignore_vid_pid
         ]
 
     def activate(self, key):
