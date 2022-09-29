@@ -133,7 +133,7 @@ class Msg_Receiver(ZMQ_Socket):
         return payload
 
     @property
-    def new_data(self):
+    def new_data(self) -> bool:
         return self.socket.get(zmq.EVENTS) & zmq.POLLIN
 
 

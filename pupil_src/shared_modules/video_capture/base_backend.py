@@ -246,7 +246,7 @@ class Base_Source(Plugin):
         )
 
     @property
-    def name(self):
+    def name(self) -> str:
         raise NotImplementedError()
 
     def get_init_dict(self):
