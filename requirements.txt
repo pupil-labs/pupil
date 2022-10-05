@@ -13,24 +13,20 @@ rich
 scikit-learn
 scipy
 glfw>=2.0.0
-ndsi==1.4.*
 zeromq-pyre>=0.3.4  # Gracefully handle https://github.com/pupil-labs/pupil/issues/2174
 typing_extensions>=4.1.0
 
 cysignals ; platform_system != "Windows"
 
 win_inet_pton ; platform_system == "Windows"
-opencv-python==3.* ; platform_system == "Windows"
+opencv-python
 
 ###
 ### Pupil-Labs
 ###
-pupil-apriltags==1.0.4
-pupil-detectors==2.0.*
+ndsi==1.4.*
+pupil-apriltags==1.0.*
+pupil-detectors>=2.0.2rc2
 pye3d==0.3.*
 pyglui>=1.31.0
-
-# pupil-labs/pyuvc 0.14
-uvc @ https://github.com/pupil-labs/pyuvc/releases/download/v0.14/uvc-0.14-cp36-cp36m-win_amd64.whl ; platform_system == "Windows"
-uvc @ git+https://github.com/pupil-labs/pyuvc@no-kernel-detach-older-macos ; platform_system == "Darwin"
-uvc @ git+https://github.com/pupil-labs/pyuvc@v0.14.1 ; platform_system == "Linux"
+pupil-labs-uvc
