@@ -44,21 +44,23 @@ There are a number of ways you can interact with Pupil Core software as a develo
 
 All setup and dependency installation instructions are contained in this repo. All other developer documentation is [here](https://docs.pupil-labs.com/developer/core/overview/ "Pupil Core developer docs").
 
-### Installing Dependencies
-- [Ubuntu 18.04 LTS](./docs/dependencies-ubuntu18.md "Pupil dependency installation for Ubuntu 18.04") (recommended Linux distribution)
-- [Ubuntu 17.10 or lower](./docs/dependencies-ubuntu17.md "Pupil dependency installation for Ubuntu 17.10 or lower")
-- [macOS](./docs/dependencies-macos.md "Pupil dependency installation for macOS")
-- [Windows 10](./docs/dependencies-windows.md "Pupil dependency installation for Windows 10")
+### Installing Dependencies and Code
 
-### Clone the repo
-After you have installed all dependencies, clone this repo and start Pupil software.
+Note: It is recommended to install the requirements into a
+[virtual environment](https://docs.python.org/3/tutorial/venv.html).
+
+Note: On arm64 macs (e.g. M1 MacBook Air), use the `python3.*-intel64` binary to create
+the virtual environment. We do not yet provide arm64-native wheels for the Pupil Core
+dependencies.
 
 ```sh
-git clone https://github.com/pupil-labs/pupil.git # or your fork
+git clone https://github.com/pupil-labs/pupil.git
 cd pupil
+python -m pip install -r requirements.txt
 ```
 
-_Note_: If you are using Windows, you will have to complete a few more steps after cloning the repo. Please refer to the [Windows 10 dependencies setup guide](./docs/dependencies-windows.md "Pupil dependency installation for Windows 10").
+If you have trouble installing any of the dependencies, please see the corresponding
+code repository for manual installation steps and troubleshooting.
 
 ### Run Pupil
 
