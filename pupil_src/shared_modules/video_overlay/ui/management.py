@@ -12,12 +12,11 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import weakref
 from collections import OrderedDict
-from pyglui import ui
 
 from observable import Observable
-
+from pyglui import ui
 from video_overlay.ui.interactions import Draggable
-from video_overlay.ui.menu import GenericOverlayMenuRenderer, EyesOverlayMenuRenderer
+from video_overlay.ui.menu import EyesOverlayMenuRenderer, GenericOverlayMenuRenderer
 
 
 class UIManagement(Observable, abc.ABC):

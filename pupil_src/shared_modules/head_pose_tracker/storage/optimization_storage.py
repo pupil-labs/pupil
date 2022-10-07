@@ -13,9 +13,8 @@ import logging
 import os
 import re
 
-import numpy as np
-
 import file_methods as fm
+import numpy as np
 from head_pose_tracker.function import utils
 
 logger = logging.getLogger(__name__)

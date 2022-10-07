@@ -9,14 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
+import time
 from bisect import bisect_left
 
-from pyglui import ui
-from plugin import System_Plugin_Base
 import player_methods as pm
-import time
-
-import logging
+from plugin import System_Plugin_Base
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 

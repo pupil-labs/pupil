@@ -10,8 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import pytest
-
-from stdlib_utils import unique, is_none, is_not_none
+from stdlib_utils import is_none, is_not_none, unique
 
 
 def test_unique():

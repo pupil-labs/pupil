@@ -14,11 +14,10 @@ import typing as T
 from enum import IntEnum, auto
 from time import monotonic, sleep
 
-import numpy as np
-from pyglui import cygl, ui
-
 import gl_utils
+import numpy as np
 from plugin import Plugin
+from pyglui import cygl, ui
 
 logger = logging.getLogger(__name__)
 

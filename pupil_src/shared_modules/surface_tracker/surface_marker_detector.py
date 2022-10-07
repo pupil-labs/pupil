@@ -14,8 +14,8 @@ import enum
 import logging
 import typing as T
 
-import square_marker_detect
 import pupil_apriltags
+import square_marker_detect
 
 from .surface_marker import Surface_Marker, Surface_Marker_Type
 

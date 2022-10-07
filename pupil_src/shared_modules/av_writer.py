@@ -10,21 +10,20 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-import math
-import logging
 import collections
+import logging
+import math
 import multiprocessing as mp
 import os
 import typing as T
 from fractions import Fraction
 
+import audio_utils
 import av
 import numpy as np
 from av.packet import Packet
-
-import audio_utils
-from video_capture.utils import Video, InvalidContainerError
-from methods import iter_catch, container_decode
+from methods import container_decode, iter_catch
+from video_capture.utils import InvalidContainerError, Video
 
 logger = logging.getLogger(__name__)
 

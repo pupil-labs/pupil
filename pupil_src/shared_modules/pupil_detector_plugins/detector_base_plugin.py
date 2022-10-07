@@ -14,9 +14,8 @@ import re
 import traceback
 import typing as T
 
-from pupil_detectors import DetectorBase
-
 from plugin import Plugin
+from pupil_detectors import DetectorBase
 
 logger = logging.getLogger(__name__)
 

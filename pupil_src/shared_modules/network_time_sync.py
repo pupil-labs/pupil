@@ -10,15 +10,15 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import functools
-from time import sleep
-from uvc import get_time_monotonic
+import logging
 import socket
 import socketserver
-import threading
 import struct
+import threading
 from random import random
+from time import sleep
 
-import logging
+from uvc import get_time_monotonic
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -163,9 +163,7 @@ class Clock_Sync_Follower(threading.Thread):
                         if self.jump_time(offset):
                             self.in_sync = True
                             self.offset_remains = False
-                            logger.debug(
-                                f"Time adjusted by {offset / self.ms}ms."
-                            )
+                            logger.debug(f"Time adjusted by {offset / self.ms}ms.")
                         else:
                             self.in_sync = True
                             self.offset_remains = True
@@ -178,9 +176,7 @@ class Clock_Sync_Follower(threading.Thread):
                             # print offset/self.ms,slew_time/self.ms
                             self.slew_time(slew_time)
                             offset -= slew_time
-                            logger.debug(
-                                f"Time slewed by: {slew_time / self.ms}ms"
-                            )
+                            logger.debug(f"Time slewed by: {slew_time / self.ms}ms")
 
                             self.in_sync = not bool(offset)
                             self.offset_remains = not self.in_sync

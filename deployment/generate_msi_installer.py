@@ -148,7 +148,7 @@ class SoftwareComponent:
 
     def icon_data(self) -> str:
         cap = self.name.capitalize()
-        return fr"""
+        return rf"""
         <Icon Id="{cap}Icon.exe" SourceFile="{self.dir.name}\pupil_{self.name}.exe" />"""
 
 

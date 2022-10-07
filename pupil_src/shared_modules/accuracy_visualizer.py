@@ -16,9 +16,6 @@ import typing as T
 import numpy as np
 import OpenGL.GL as gl
 import scipy.spatial
-from pyglui import ui
-from pyglui.cygl.utils import RGBA, draw_points_norm, draw_polyline_norm
-
 from calibration_choreography import (
     ChoreographyAction,
     ChoreographyMode,
@@ -31,6 +28,8 @@ from gaze_mapping.notifications import (
 )
 from gaze_mapping.utils import closest_matches_monocular
 from plugin import Plugin
+from pyglui import ui
+from pyglui.cygl.utils import RGBA, draw_points_norm, draw_polyline_norm
 
 logger = logging.getLogger(__name__)
 

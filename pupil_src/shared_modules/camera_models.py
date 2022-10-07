@@ -16,7 +16,6 @@ import typing as T
 
 import cv2
 import numpy as np
-
 from file_methods import load_object, save_object
 
 logger = logging.getLogger(__name__)

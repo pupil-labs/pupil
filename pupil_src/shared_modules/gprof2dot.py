@@ -21,17 +21,16 @@
 __author__ = "Jose Fonseca et al"
 
 
-import sys
+import collections
+import json
+import locale
 import math
+import optparse
 import os.path
 import re
+import sys
 import textwrap
-import optparse
 import xml.parsers.expat
-import collections
-import locale
-import json
-
 
 # Python 2.x/3.x compatibility
 if sys.version_info[0] >= 3:
@@ -81,7 +80,7 @@ def times(x):
 
 
 def percentage(p):
-    return "{:.02f}%".format(p * 100.0)
+    return f"{p * 100.0:.02f}%"
 
 
 def add(a, b):
@@ -104,13 +103,15 @@ def ratio(numerator, denominator):
     if ratio < 0.0:
         if ratio < -tol:
             sys.stderr.write(
-                "warning: negative ratio ({}/{})\n".format(numerator, denominator)
+                f"warning: negative ratio ({numerator}/{denominator})\n"
             )
         return 0.0
     if ratio > 1.0:
         if ratio > 1.0 + tol:
             sys.stderr.write(
-                "warning: ratio greater than one ({}/{})\n".format(numerator, denominator)
+                "warning: ratio greater than one ({}/{})\n".format(
+                    numerator, denominator
+                )
             )
         return 1.0
     return ratio
@@ -804,21 +805,21 @@ class Profile(Object):
 
     def dump(self):
         for function in compat_itervalues(self.functions):
-            sys.stderr.write("Function {}:\n".format(function.name))
+            sys.stderr.write(f"Function {function.name}:\n")
             self._dump_events(function.events)
             for call in compat_itervalues(function.calls):
                 callee = self.functions[call.callee_id]
-                sys.stderr.write("  Call {}:\n".format(callee.name))
+                sys.stderr.write(f"  Call {callee.name}:\n")
                 self._dump_events(call.events)
         for cycle in self.cycles:
             sys.stderr.write("Cycle:\n")
             self._dump_events(cycle.events)
             for function in cycle.functions:
-                sys.stderr.write("  Function {}\n".format(function.name))
+                sys.stderr.write(f"  Function {function.name}\n")
 
     def _dump_events(self, events):
         for event, value in compat_iteritems(events):
-            sys.stderr.write("    {}: {}\n".format(event.name, event.format(value)))
+            sys.stderr.write(f"    {event.name}: {event.format(value)}\n")
 
 
 ########################################################################
@@ -859,7 +860,7 @@ class ParseError(Exception):
         self.line = line
 
     def __str__(self):
-        return "{}: {!r}".format(self.msg, self.line)
+        return f"{self.msg}: {self.line!r}"
 
 
 class Parser:

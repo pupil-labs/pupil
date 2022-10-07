@@ -11,15 +11,13 @@ See COPYING and COPYING.LESSER for license details.
 from time import monotonic
 from types import SimpleNamespace
 
-import numpy as np
-
-from pupil_recording import PupilRecording
-from video_capture.utils import VideoSet
-from video_capture.file_backend import File_Source, EndofVideoError
-from gaze_producer.gaze_from_recording import GazeFromRecording
 import methods as m
+import numpy as np
 import player_methods as pm
-
+from gaze_producer.gaze_from_recording import GazeFromRecording
+from pupil_recording import PupilRecording
+from video_capture.file_backend import EndofVideoError, File_Source
+from video_capture.utils import VideoSet
 
 SCAN_PATH_GAZE_DATUM_DTYPE = np.dtype(
     [

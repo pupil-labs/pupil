@@ -12,12 +12,11 @@ import logging
 import socket
 from time import sleep
 
+import os_utils
 import zmq
 import zmq_tools
-from pyre import zhelper
-
-import os_utils
 from observable import Observable
+from pyre import zhelper
 
 os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)

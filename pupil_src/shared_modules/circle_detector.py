@@ -9,10 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-from numpy import linalg as LA
 import cv2
+import numpy as np
 from methods import dist_pts_ellipse, normalize
+from numpy import linalg as LA
 
 
 class CircleTracker:
@@ -707,7 +707,9 @@ if __name__ == "__main__":
             cv2.waitKey(1)
             # return
 
-    import cProfile, subprocess, os
+    import cProfile
+    import os
+    import subprocess
 
     cProfile.runctx("bench()", {}, locals(), "world.pstats")
     loc = os.path.abspath(__file__).rsplit("pupil_src", 1)

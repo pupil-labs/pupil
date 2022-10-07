@@ -51,8 +51,9 @@ def service(
     # This is not harmful but unnecessary.
 
     # general imports
-    from time import sleep
     import logging
+    from time import sleep
+
     import zmq
     import zmq_tools
 
@@ -87,25 +88,25 @@ def service(
     try:
 
         # helpers/utils
-        from file_methods import Persistent_Dict
-        from methods import delta_t, get_system_info
-        from version_utils import parse_version
         import audio
-        from uvc import get_time_monotonic
-
-        # Plug-ins
-        from plugin import Plugin, Plugin_List, import_runtime_plugins
+        from background_helper import IPC_Logging_Task_Proxy
+        from blink_detection import Blink_Detection
         from calibration_choreography import (
             available_calibration_choreography_plugins,
             patch_loaded_plugins_with_choreography_plugin,
         )
-        from gaze_mapping import registered_gazer_classes
-        from network_api import NetworkApiPlugin
-        from pupil_groups import Pupil_Groups
-        from blink_detection import Blink_Detection
+        from file_methods import Persistent_Dict
         from fixation_detector import Fixation_Detector
+        from gaze_mapping import registered_gazer_classes
+        from methods import delta_t, get_system_info
+        from network_api import NetworkApiPlugin
+
+        # Plug-ins
+        from plugin import Plugin, Plugin_List, import_runtime_plugins
+        from pupil_groups import Pupil_Groups
         from service_ui import Service_UI
-        from background_helper import IPC_Logging_Task_Proxy
+        from uvc import get_time_monotonic
+        from version_utils import parse_version
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
@@ -337,7 +338,10 @@ def service_profiled(
     hide_ui,
     debug,
 ):
-    import cProfile, subprocess, os
+    import cProfile
+    import os
+    import subprocess
+
     from .service import service
 
     cProfile.runctx(

@@ -14,7 +14,6 @@ import tasklib
 from gaze_producer import worker
 from observable import Observable
 
-
 logger = logging.getLogger(__name__)
 
 

@@ -11,15 +11,10 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import logging
 import typing as T
+
 import numpy as np
+from gaze_mapping.gazer_base import GazerBase, Model, NotEnoughDataError
 from sklearn.linear_model import LinearRegression
-
-from gaze_mapping.gazer_base import (
-    GazerBase,
-    Model,
-    NotEnoughDataError,
-)
-
 
 logger = logging.getLogger(__name__)
 

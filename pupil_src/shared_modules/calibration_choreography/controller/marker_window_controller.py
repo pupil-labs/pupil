@@ -13,20 +13,16 @@ import functools
 import logging
 import typing as T
 
-import observable
-
 import numpy as np
+import observable
 import OpenGL.GL as gl
+from gl_utils import draw_circle_filled_func_builder
+from pyglui.cygl.utils import RGBA, draw_points
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from pyglui.cygl.utils import draw_points
-from pyglui.cygl.utils import RGBA
-
-from gl_utils import draw_circle_filled_func_builder
 
 from .gui_monitor import GUIMonitor
 from .gui_window import GUIWindow
-
 
 logger = logging.getLogger(__name__)
 

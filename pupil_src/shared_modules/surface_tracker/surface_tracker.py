@@ -14,19 +14,18 @@ import typing as T
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-from pyglui import ui
-
+from hotkey import Hotkey
 from plugin import Plugin
+from pyglui import ui
 
 from . import gui
 from .surface_file_store import Surface_File_Store
 from .surface_marker_detector import (
+    ApriltagFamily,
     MarkerDetectorController,
     MarkerDetectorMode,
     MarkerType,
-    ApriltagFamily,
 )
-from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
 
@@ -509,9 +508,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def on_add_surface_click(self, _=None):
         if self.markers:
-            surface = self.Surface_Class(
-                name=f"Surface {len(self.surfaces) + 1}"
-            )
+            surface = self.Surface_Class(name=f"Surface {len(self.surfaces) + 1}")
             self.add_surface(surface)
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")

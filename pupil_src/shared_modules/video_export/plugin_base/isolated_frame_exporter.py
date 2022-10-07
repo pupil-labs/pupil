@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import player_methods as pm
 from av_writer import MPEG_Writer
 from task_manager import ManagedTask
-from video_capture import File_Source, EndofVideoError
+from video_capture import EndofVideoError, File_Source
 from video_export.plugin_base.video_exporter import VideoExporter
 
 

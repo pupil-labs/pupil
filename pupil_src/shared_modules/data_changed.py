@@ -103,8 +103,7 @@ class Announcer:
 
     def _on_notify(self, notification):
         if (
-            notification["subject"]
-            == f"data_changed.{self._topic}.request_token"
+            notification["subject"] == f"data_changed.{self._topic}.request_token"
             and self._current_token is not None
         ):
             self.announce_existing()

@@ -9,16 +9,17 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from time import sleep
+import logging
 import socket
 import struct
+from time import sleep
+
+import os_utils
 import zmq
 import zmq_tools
-from pyre import zhelper
-from pyglui import ui
 from plugin import Plugin
-import logging
-import os_utils
+from pyglui import ui
+from pyre import zhelper
 
 os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
@@ -235,9 +236,7 @@ class Hololens_Relay(Plugin):
             self.menu.append(
                 ui.Info_Text(f'Connect locally:   "127.0.0.1:{self.port}"')
             )
-            self.menu.append(
-                ui.Info_Text(f'Connect remotely: "{ip}:{self.port}"')
-            )
+            self.menu.append(ui.Info_Text(f'Connect remotely: "{ip}:{self.port}"'))
         else:
             self.menu.append(
                 ui.Text_Input(
@@ -247,9 +246,7 @@ class Hololens_Relay(Plugin):
                     getter=lambda: f"{self.host}:{self.port}",
                 )
             )
-            self.menu.append(
-                ui.Info_Text(f'Bound to: "{self.host}:{self.port}"')
-            )
+            self.menu.append(ui.Info_Text(f'Bound to: "{self.host}:{self.port}"'))
 
     def thread_loop(self, context, pipe):
         poller = zmq.Poller()

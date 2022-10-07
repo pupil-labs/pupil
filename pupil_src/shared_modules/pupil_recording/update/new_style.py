@@ -22,7 +22,6 @@ from ..recording import PupilRecording
 from ..recording_utils import InvalidRecordingException
 from . import invisible
 
-
 logger = logging.getLogger(__name__)
 
 

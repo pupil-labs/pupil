@@ -15,14 +15,12 @@ import logging
 import os
 import types
 
-import cv2
-
 import background_helper
-import player_methods
+import cv2
 import file_methods
+import player_methods
 
 from .surface_marker import Surface_Marker
-
 
 logger = logging.getLogger(__name__)
 
@@ -39,8 +37,8 @@ def background_video_processor(
 
 
 def video_processing_generator(video_file_path, callable, seek_idx, visited_list):
-    import os
     import logging
+    import os
 
     logger = logging.getLogger(__name__ + " with pid: " + str(os.getpid()))
     logger.debug("Started cacher process for Marker Detector")
@@ -302,9 +300,7 @@ class Exporter:
             )
             self._export_surface_heatmap(surface, surface_name)
 
-            logger.info(
-                f"Saved surface gaze and fixation data for '{surface.name}'"
-            )
+            logger.info(f"Saved surface gaze and fixation data for '{surface.name}'")
 
         # Cleanup surface related data to release memory
         self.surfaces = None

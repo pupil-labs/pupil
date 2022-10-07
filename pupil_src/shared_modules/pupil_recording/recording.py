@@ -18,9 +18,9 @@ from pathlib import Path
 
 from .info.recording_info import RecordingInfoFile, RecordingInfoInvalidError
 from .recording_utils import (
+    VALID_VIDEO_EXTENSIONS,
     InvalidRecordingException,
     assert_valid_rec_dir,
-    VALID_VIDEO_EXTENSIONS,
 )
 
 logger = logging.getLogger(__name__)

@@ -9,5 +9,5 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from .surface_tracker_online import Surface_Tracker_Online
 from .surface_tracker_offline import Surface_Tracker_Offline
+from .surface_tracker_online import Surface_Tracker_Online

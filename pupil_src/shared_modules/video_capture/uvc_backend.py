@@ -95,9 +95,7 @@ class UVC_Source(Base_Source):
             except uvc.InitError:
                 logger.error("Camera failed to initialize.")
             except uvc.DeviceNotFoundError:
-                logger.warning(
-                    f"No camera found that matched {preferred_names}"
-                )
+                logger.warning(f"No camera found that matched {preferred_names}")
 
         # otherwise we use name or preffered_names
         else:
@@ -146,9 +144,7 @@ class UVC_Source(Base_Source):
             self.name_backup = (self.name,)
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
-            controls_dict = {
-                c.display_name: c for c in self.uvc_capture.controls
-            }
+            controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
             try:
                 self.exposure_time_backup = controls_dict[
                     "Absolute Exposure Time"
@@ -361,9 +357,7 @@ class UVC_Source(Base_Source):
             if self.exposure_mode == "auto":
                 # special settings apply to both, Pupil Cam2 and Cam3
                 special_settings = {200: 28, 180: 31}
-                controls_dict = {
-                    c.display_name: c for c in self.uvc_capture.controls
-                }
+                controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
                 self.preferred_exposure_time = Exposure_Time(
                     max_ET=special_settings.get(self.frame_rate, 32),
                     frame_rate=self.frame_rate,
@@ -402,9 +396,7 @@ class UVC_Source(Base_Source):
             try:
                 c.value = uvc_controls[c.display_name]
             except KeyError:
-                logger.debug(
-                    f'No UVC setting "{c.display_name}" found from settings.'
-                )
+                logger.debug(f'No UVC setting "{c.display_name}" found from settings.')
 
         if self.should_check_stripes:
             self.stripe_detector = Check_Frame_Stripes()
@@ -619,9 +611,7 @@ class UVC_Source(Base_Source):
     def exposure_time(self):
         if self.uvc_capture:
             try:
-                controls_dict = {
-                    c.display_name: c for c in self.uvc_capture.controls
-                }
+                controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
                 return controls_dict["Absolute Exposure Time"].value
             except KeyError:
                 return None
@@ -631,9 +621,7 @@ class UVC_Source(Base_Source):
     @exposure_time.setter
     def exposure_time(self, new_et):
         try:
-            controls_dict = {
-                c.display_name: c for c in self.uvc_capture.controls
-            }
+            controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
             if abs(new_et - controls_dict["Absolute Exposure Time"].value) >= 1:
                 controls_dict["Absolute Exposure Time"].value = new_et
         except KeyError:

@@ -18,14 +18,12 @@ import traceback
 import typing as T
 from collections import namedtuple
 
-from pyglui import ui
-
 import file_methods as fm
 import player_methods as pm
 import zmq_tools
-from plugin import Plugin
 from hotkey import Hotkey
-
+from plugin import Plugin
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 
@@ -281,9 +279,7 @@ class Annotation_Player(AnnotationPlugin, Plugin):
         annotations = pm.Mutable_Bisector(
             annotation_pldata.data, annotation_pldata.timestamps
         )
-        logger.info(
-            f"Loaded {len(annotations)} annotations from {file_name}.pldata"
-        )
+        logger.info(f"Loaded {len(annotations)} annotations from {file_name}.pldata")
         return annotations
 
     def cleanup(self):

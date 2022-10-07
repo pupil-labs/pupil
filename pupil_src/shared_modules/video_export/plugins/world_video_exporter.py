@@ -13,9 +13,9 @@ import logging
 import os
 
 import player_methods as pm
+from pupil_recording import PupilRecording
 from task_manager import ManagedTask
 from video_export.plugin_base.video_exporter import VideoExporter
-from pupil_recording import PupilRecording
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +117,7 @@ def _export_world_video(
     # Plug-ins
     from plugin import Plugin_List, import_runtime_plugins
     from video_capture import EndofVideoError, File_Source
-    from video_overlay.plugins import Video_Overlay, Eye_Overlay
+    from video_overlay.plugins import Eye_Overlay, Video_Overlay
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
     from vis_light_points import Vis_Light_Points

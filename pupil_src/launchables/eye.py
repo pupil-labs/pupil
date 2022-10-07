@@ -120,43 +120,47 @@ def eye(
     with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
         import traceback
-        import numpy as np
-        import cv2
 
-        from OpenGL.GL import GL_COLOR_BUFFER_BIT
+        import cv2
 
         # display
         import glfw
+        import numpy as np
         from gl_utils import GLFWErrorReporting
+        from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
         GLFWErrorReporting.set_default()
 
-        from pyglui import ui, graph, cygl
-        from pyglui.cygl.utils import Named_Texture
         import gl_utils
-        from gl_utils import basic_gl_setup, adjust_gl_view, clear_gl_screen
-        from gl_utils import make_coord_system_pixel_based
-        from gl_utils import make_coord_system_norm_based
-        from gl_utils import is_window_visible, glViewport
 
         # monitoring
         import psutil
+        from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
+        from background_helper import IPC_Logging_Task_Proxy
+        from file_methods import Persistent_Dict
+        from gl_utils import (
+            adjust_gl_view,
+            basic_gl_setup,
+            clear_gl_screen,
+            glViewport,
+            is_window_visible,
+            make_coord_system_norm_based,
+            make_coord_system_pixel_based,
+        )
+        from methods import denormalize, normalize, timer
+        from ndsi import H264Writer
 
         # Plug-ins
         from plugin import Plugin_List
+        from pupil_detector_plugins import EVENT_KEY, available_detector_plugins
+        from pyglui import cygl, graph, ui
+        from pyglui.cygl.utils import Named_Texture
+        from roi import Roi
 
         # helpers/utils
         from uvc import get_time_monotonic
-        from file_methods import Persistent_Dict
         from version_utils import parse_version
-        from methods import normalize, denormalize, timer
-        from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
-        from ndsi import H264Writer
-        from video_capture import source_classes, manager_classes
-        from roi import Roi
-
-        from background_helper import IPC_Logging_Task_Proxy
-        from pupil_detector_plugins import available_detector_plugins, EVENT_KEY
+        from video_capture import manager_classes, source_classes
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
@@ -639,9 +643,7 @@ def eye(
                         raw_mode = notification["compression"]
                         start_time_synced = notification["start_time_synced"]
                         logger.debug(f"Saving eye video to: {g_pool.rec_path}")
-                        video_path = os.path.join(
-                            g_pool.rec_path, f"eye{eye_id}.mp4"
-                        )
+                        video_path = os.path.join(g_pool.rec_path, f"eye{eye_id}.mp4")
                         if raw_mode and frame and g_pool.capture.jpeg_support:
                             g_pool.writer = JPEG_Writer(video_path, start_time_synced)
                         elif hasattr(g_pool.capture._recent_frame, "h264_buffer"):
@@ -837,9 +839,10 @@ def eye_profiled(
     skip_driver_installation=False,
 ):
     import cProfile
-    import subprocess
     import os
+    import subprocess
     from textwrap import dedent
+
     from .eye import eye
 
     cProfile.runctx(

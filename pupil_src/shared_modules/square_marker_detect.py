@@ -9,13 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import cv2
 import logging
+
+import cv2
 
 logger = logging.Logger(__name__)
 import numpy as np
-from scipy.spatial.distance import pdist
 from scipy.interpolate import interp1d
+from scipy.spatial.distance import pdist
+
 
 # because np.sqrt is slower when we do it on small arrays
 def reversedEnumerate(l):
@@ -496,6 +498,7 @@ def detect_markers_robust(
 
 def bench(folder):
     from os.path import join
+
     from video_capture.av_file_capture import File_Capture
 
     cap = File_Capture(join(folder, "marker-test.mp4"))
@@ -525,7 +528,9 @@ def bench(folder):
 
 if __name__ == "__main__":
     folder = "/Users/mkassner/Desktop/"
-    import cProfile, subprocess, os
+    import cProfile
+    import os
+    import subprocess
 
     cProfile.runctx(
         "bench(folder)",

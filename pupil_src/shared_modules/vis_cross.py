@@ -9,12 +9,11 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from plugin import Plugin
-import numpy as np
 import cv2
-
-from pyglui import ui
+import numpy as np
 from methods import denormalize
+from plugin import Plugin
+from pyglui import ui
 
 
 class Vis_Cross(Plugin):

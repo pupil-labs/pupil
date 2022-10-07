@@ -15,7 +15,6 @@ import typing as T
 
 import av
 import numpy as np
-
 import pupil_recording
 
 logger = logging.getLogger(__name__)

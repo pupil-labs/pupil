@@ -9,13 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os
-from pyglui import ui
-from plugin import Plugin
-import zmq_tools
-
 # logging
 import logging
+import os
+
+import zmq_tools
+from plugin import Plugin
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 

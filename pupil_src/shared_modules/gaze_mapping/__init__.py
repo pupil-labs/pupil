@@ -8,11 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from . import matching
-from . import gazer_base
-from .gazer_base import CalibrationError
+from . import gazer_base, matching
 from .gazer_2d import Gazer2D
 from .gazer_3d import Gazer3D, GazerHMD3D
+from .gazer_base import CalibrationError
 
 
 def registered_gazer_classes() -> list:

@@ -15,15 +15,14 @@ import typing as T
 from contextlib import contextmanager
 from itertools import chain
 
-import numpy as np
-import OpenGL.GL as gl
-import zmq
-
 import data_changed
 import file_methods as fm
 import gl_utils
+import numpy as np
+import OpenGL.GL as gl
 import player_methods as pm
 import pyglui.cygl.utils as cygl_utils
+import zmq
 import zmq_tools
 from observable import Observable
 from plugin import System_Plugin_Base

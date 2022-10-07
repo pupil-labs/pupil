@@ -34,8 +34,9 @@ def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
 
     # imports
     from time import sleep
-    from video_capture import File_Source, EndofVideoError
+
     from circle_detector import CircleTracker
+    from video_capture import EndofVideoError, File_Source
 
     try:
         # TODO: we need fill_gaps=True for correct frame indices to paint the circle

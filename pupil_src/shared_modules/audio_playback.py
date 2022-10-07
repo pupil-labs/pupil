@@ -19,15 +19,14 @@ from time import monotonic
 
 import av
 import av.filter
+import gl_utils
 import numpy as np
 import pyglui.cygl.utils as pyglui_utils
 import sounddevice as sd
-from pyglui import ui
-
-import gl_utils
 from audio_utils import Audio_Viz_Transform, NoAudioLoadedError, load_audio
 from methods import make_change_loglevel_fn
 from plugin import System_Plugin_Base
+from pyglui import ui
 from version_utils import parse_version
 
 assert parse_version(av.__version__) >= parse_version("0.4.4")

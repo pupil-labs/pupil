@@ -9,11 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import platform, sys, os, time, traceback
-import subprocess as sp
-from version_utils import parse_version
-
 import logging
+import os
+import platform
+import subprocess as sp
+import sys
+import time
+import traceback
+
+from version_utils import parse_version
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +91,7 @@ def patch_pyre_zhelper_cdll():
         return
 
     import ctypes.util
+
     import pyre.zhelper
 
     class AbsolutePathFallbackCDLL(ctypes.CDLL):

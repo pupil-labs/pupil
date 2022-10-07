@@ -13,11 +13,10 @@ import logging
 from collections import OrderedDict
 
 import player_methods as pm
-from observable import Observable
-
 import video_overlay.utils.image_manipulation as IM
-from video_overlay.utils.constraints import InclusiveConstraint
+from observable import Observable
 from video_overlay.models.config import Configuration
+from video_overlay.utils.constraints import InclusiveConstraint
 from video_overlay.workers.frame_fetcher import FrameFetcher
 
 logger = logging.getLogger(__name__)

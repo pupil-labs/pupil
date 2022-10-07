@@ -8,16 +8,15 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import data_changed
+import gl_utils
 import numpy as np
 import OpenGL.GL as gl
 import pyglui.cygl.utils as cygl_utils
-from pyglui import ui
-from pyglui.pyfontstash import fontstash as fs
-
-import data_changed
-import gl_utils
 from observable import Observable
 from plugin import System_Plugin_Base
+from pyglui import ui
+from pyglui.pyfontstash import fontstash as fs
 
 COLOR_LEGEND_WORLD = cygl_utils.RGBA(0.66, 0.86, 0.461, 1.0)
 COLOR_LEGEND_EYE_RIGHT = cygl_utils.RGBA(0.9844, 0.5938, 0.4023, 1.0)

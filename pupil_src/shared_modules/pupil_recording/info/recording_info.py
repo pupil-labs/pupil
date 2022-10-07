@@ -18,8 +18,7 @@ import os
 import typing as T
 import uuid
 
-from version_utils import get_version, parse_version, ParsedVersion
-
+from version_utils import ParsedVersion, get_version, parse_version
 
 __all__ = ["RecordingInfo", "RecordingInfoFile", "RecordingInfoInvalidError"]
 
@@ -37,8 +36,8 @@ class RecordingInfoInvalidError(Exception):
         key: str, actual_type, expected_type
     ) -> "RecordingInfoInvalidError":
         return RecordingInfoInvalidError(
-                f'Value for key "{key}" is of the wrong type "{actual_type}"; '
-                f'expected "{expected_type}"'
+            f'Value for key "{key}" is of the wrong type "{actual_type}"; '
+            f'expected "{expected_type}"'
         )
 
 

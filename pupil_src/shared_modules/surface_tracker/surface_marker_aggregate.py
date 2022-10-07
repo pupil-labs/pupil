@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import typing
+
 import numpy as np
 
 from .surface_marker import Surface_Marker_UID

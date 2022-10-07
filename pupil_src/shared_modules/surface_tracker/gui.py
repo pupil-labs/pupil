@@ -14,19 +14,17 @@ import typing
 from enum import Enum
 
 import cv2
+import gl_utils
+import glfw
 import numpy as np
 import OpenGL.GL as gl
 import pyglui
 import pyglui.cygl.utils as pyglui_utils
-
-import gl_utils
-import glfw
-from gl_utils import draw_circle_filled_func_builder, GLFWErrorReporting
+from gl_utils import GLFWErrorReporting, draw_circle_filled_func_builder
 
 GLFWErrorReporting.set_default()
 
 from .surface_marker import Surface_Marker_Type
-
 
 SURFACE_TRACKER_CHANGED_DELAY = 1.0
 

@@ -9,17 +9,16 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-from pyglui import ui
+import logging
 import os
 import sys
 import time
-
 from ctypes import c_bool, c_int
 from multiprocessing import cpu_count
-import background_helper as bh
 
-import logging
+import background_helper as bh
+import numpy as np
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +27,9 @@ if __name__ == "__main__":
     pupil_base_dir = os.path.abspath(__file__).rsplit("pupil_src", 1)[0]
     sys.path.append(os.path.join(pupil_base_dir, "pupil_src", "shared_modules"))
 
-from plugin import Plugin, System_Plugin_Base
-
 from exporter import export as export_function
 from player_methods import is_pupil_rec_dir
+from plugin import Plugin, System_Plugin_Base
 
 
 def get_recording_dirs(data_dir):
@@ -408,6 +406,7 @@ def main():
 
     import argparse
     from textwrap import dedent
+
     from file_methods import Persistent_Dict
 
     def show_progess(jobs):

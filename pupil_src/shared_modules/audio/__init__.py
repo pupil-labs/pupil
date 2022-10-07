@@ -13,7 +13,6 @@ import platform
 import subprocess as sp
 from time import sleep
 
-
 logger = logging.getLogger(__name__)
 
 

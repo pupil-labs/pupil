@@ -9,7 +9,9 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import os, sys, platform
+import os
+import platform
+import sys
 
 running_from_bundle = getattr(sys, "frozen", False)
 if not running_from_bundle:
@@ -83,44 +85,48 @@ plugin_dir = os.path.join(user_dir, "plugins")
 if not os.path.isdir(plugin_dir):
     os.mkdir(plugin_dir)
 
+from ctypes import c_bool, c_double
+
 # threading and processing
 from multiprocessing import (
     Process,
     Value,
     active_children,
-    set_start_method,
     freeze_support,
+    set_start_method,
 )
 from threading import Thread
-from ctypes import c_double, c_bool
+
+# time
+from time import time
 
 # networking
 import zmq
 import zmq_tools
-
-# time
-from time import time
 
 # os utilities
 from os_utils import Prevent_Idle_Sleep
 
 # functions to run in seperate processes
 if parsed_args.profile:
-    from launchables.world import world_profiled as world
-    from launchables.service import service_profiled as service
     from launchables.eye import eye_profiled as eye
     from launchables.player import player_profiled as player
+    from launchables.service import service_profiled as service
+    from launchables.world import world_profiled as world
 else:
     from launchables.world import world
     from launchables.service import service
     from launchables.eye import eye
     from launchables.player import player
-from launchables.player import player_drop
+
 from launchables.marker_detectors import circle_detector
+from launchables.player import player_drop
 
 
 def clear_settings(user_dir):
-    import glob, os, time
+    import glob
+    import os
+    import time
 
     time.sleep(1.0)
     for f in glob.glob(os.path.join(user_dir, "user_settings_*")):

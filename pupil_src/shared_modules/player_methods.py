@@ -16,9 +16,8 @@ import typing as T
 from itertools import chain
 
 import cv2
-import numpy as np
-
 import file_methods as fm
+import numpy as np
 import player_methods as pm
 
 logger = logging.getLogger(__name__)
@@ -42,8 +41,8 @@ class Bisector:
     def __init__(self, data=(), data_ts=()):
         if len(data) != len(data_ts):
             raise ValueError(
-                    "Each element in `data` requires a corresponding"
-                    " timestamp in `data_ts`"
+                "Each element in `data` requires a corresponding"
+                " timestamp in `data_ts`"
             )
         elif not len(data):
             self.data = np.array([], dtype=object)

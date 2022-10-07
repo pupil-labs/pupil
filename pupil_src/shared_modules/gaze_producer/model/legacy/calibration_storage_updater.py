@@ -18,7 +18,6 @@ from pupil_recording import PupilRecording
 
 from .calibration_v1 import CalibrationV1
 
-
 logger = logging.getLogger(__name__)
 
 

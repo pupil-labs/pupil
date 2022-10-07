@@ -32,16 +32,15 @@ def player(
     rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version, debug
 ):
     # general imports
-    from time import sleep
     import logging
     from glob import glob
-    from time import time, strftime, localtime
+    from time import localtime, sleep, strftime, time
+
+    import numpy as np
 
     # networking
     import zmq
     import zmq_tools
-
-    import numpy as np
 
     # zmq ipc setup
     zmq_ctx = zmq.Context()
@@ -67,81 +66,75 @@ def player(
         IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # imports
-        from file_methods import Persistent_Dict, next_export_sub_dir
-
-        from OpenGL.GL import GL_COLOR_BUFFER_BIT
-
         # display
         import glfw
+        from file_methods import Persistent_Dict, next_export_sub_dir
         from gl_utils import GLFWErrorReporting
+        from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
         GLFWErrorReporting.set_default()
 
         # check versions for our own depedencies as they are fast-changing
-        from pyglui import __version__ as pyglui_version
-
-        from pyglui import ui, cygl
-        from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
-
-        # capture
-        from video_capture import File_Source
-
-        # helpers/utils
-        from version_utils import parse_version
-        from methods import normalize, denormalize, delta_t, get_system_info
         import player_methods as pm
-        from pupil_recording import PupilRecording
+        from annotations import Annotation_Player
+        from audio_playback import Audio_Playback
+        from blink_detection import Offline_Blink_Detection
         from csv_utils import write_key_value_file
+
+        # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
+        from fixation_detector import Offline_Fixation_Detector
+        from gaze_producer.gaze_from_offline_calibration import (
+            GazeFromOfflineCalibration,
+        )
+        from gaze_producer.gaze_from_recording import GazeFromRecording
+        from head_pose_tracker.offline_head_pose_tracker import (
+            Offline_Head_Pose_Tracker,
+        )
         from hotkey import Hotkey
+        from imu_timeline import IMUTimeline
+        from log_display import Log_Display
+        from log_history import Log_History
+        from methods import delta_t, denormalize, get_system_info, normalize
 
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
         from plugin_manager import Plugin_Manager
-        from vis_circle import Vis_Circle
-        from vis_cross import Vis_Cross
-        from vis_polyline import Vis_Polyline
-        from vis_light_points import Vis_Light_Points
-        from vis_watermark import Vis_Watermark
-        from vis_fixation import Vis_Fixation
-
-        from seek_control import Seek_Control
-        from surface_tracker import Surface_Tracker_Offline
-
-        # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
-        from fixation_detector import Offline_Fixation_Detector
-        from log_display import Log_Display
-        from annotations import Annotation_Player
-        from raw_data_exporter import Raw_Data_Exporter
-        from log_history import Log_History
+        from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
         from pupil_producers import (
             DisabledPupilProducer,
-            Pupil_From_Recording,
             Offline_Pupil_Detection,
+            Pupil_From_Recording,
         )
-        from gaze_producer.gaze_from_recording import GazeFromRecording
-        from gaze_producer.gaze_from_offline_calibration import (
-            GazeFromOfflineCalibration,
+        from pupil_recording import (
+            InvalidRecordingException,
+            PupilRecording,
+            assert_valid_recording_type,
         )
-        from imu_timeline import IMUTimeline
-        from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
+        from pyglui import __version__ as pyglui_version
+        from pyglui import cygl, ui
+        from pyglui.cygl.utils import RGBA, Named_Texture
+        from raw_data_exporter import Raw_Data_Exporter
+        from seek_control import Seek_Control
+        from surface_tracker import Surface_Tracker_Offline
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
-        from blink_detection import Offline_Blink_Detection
-        from audio_playback import Audio_Playback
-        from video_export.plugins.imotions_exporter import iMotions_Exporter
-        from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
-        from video_export.plugins.world_video_exporter import World_Video_Exporter
-        from head_pose_tracker.offline_head_pose_tracker import (
-            Offline_Head_Pose_Tracker,
-        )
-        from video_capture import File_Source
-        from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
-        from pupil_recording import (
-            assert_valid_recording_type,
-            InvalidRecordingException,
-        )
+        # helpers/utils
+        from version_utils import parse_version
+
+        # capture
+        from video_capture import File_Source
+        from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
+        from video_export.plugins.imotions_exporter import iMotions_Exporter
+        from video_export.plugins.world_video_exporter import World_Video_Exporter
+        from video_overlay.plugins import Eye_Overlay, Video_Overlay
+        from vis_circle import Vis_Circle
+        from vis_cross import Vis_Cross
+        from vis_fixation import Vis_Fixation
+        from vis_light_points import Vis_Light_Points
+        from vis_polyline import Vis_Polyline
+        from vis_watermark import Vis_Watermark
 
         assert parse_version(pyglui_version) >= parse_version(
             "1.31.0"
@@ -828,11 +821,11 @@ def player_drop(
 ):
     # general imports
     import logging
+    from time import sleep
 
     # networking
     import zmq
     import zmq_tools
-    from time import sleep
 
     # zmq ipc setup
     zmq_ctx = zmq.Context()
@@ -854,17 +847,17 @@ def player_drop(
         GLFWErrorReporting.set_default()
 
         import gl_utils
-        from OpenGL.GL import glClearColor
-        from version_utils import parse_version
-        from file_methods import Persistent_Dict
-        from pyglui.pyfontstash import fontstash
-        from pyglui.ui import get_roboto_font_path
         import player_methods as pm
+        from file_methods import Persistent_Dict
+        from OpenGL.GL import glClearColor
         from pupil_recording import (
-            assert_valid_recording_type,
             InvalidRecordingException,
+            assert_valid_recording_type,
         )
         from pupil_recording.update import update_recording
+        from pyglui.pyfontstash import fontstash
+        from pyglui.ui import get_roboto_font_path
+        from version_utils import parse_version
 
         process_was_interrupted = False
 
@@ -1017,8 +1010,9 @@ def player_profiled(
     rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version, debug
 ):
     import cProfile
-    import subprocess
     import os
+    import subprocess
+
     from .player import player
 
     cProfile.runctx(

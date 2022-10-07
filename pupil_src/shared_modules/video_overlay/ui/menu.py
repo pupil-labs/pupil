@@ -13,9 +13,8 @@ import abc
 import os
 import weakref
 
-from pyglui import ui
-
 from observable import Observable
+from pyglui import ui
 
 
 def make_scale_slider(config):
@@ -114,6 +113,4 @@ class EyesOverlayMenuRenderer(OverlayMenuRenderer):
     def _not_valid_video_elements(self):
         video_path = self.overlay().config.video_path
         video_name = os.path.basename(video_path)
-        return (
-            ui.Info_Text(f"{video_name} was not recorded or cannot be found."),
-        )
+        return (ui.Info_Text(f"{video_name} was not recorded or cannot be found."),)

@@ -9,22 +9,20 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import platform
 import logging
+import platform
 import socket
 
-import numpy as np
-
-from OpenGL.GL import GL_COLOR_BUFFER_BIT
-
-import glfw
 import gl_utils
+import glfw
+import numpy as np
 from gl_utils import GLFWErrorReporting
+from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
 GLFWErrorReporting.set_default()
 
-from pyglui import ui, cygl
 from plugin import System_Plugin_Base
+from pyglui import cygl, ui
 
 # UI Platform tweaks
 if platform.system() == "Linux":
@@ -173,9 +171,7 @@ class Service_UI(System_Plugin_Base):
             )
         )
 
-        g_pool.menubar.append(
-            ui.Info_Text(f"Service Version: {g_pool.version}")
-        )
+        g_pool.menubar.append(ui.Info_Text(f"Service Version: {g_pool.version}"))
 
         g_pool.menubar.append(ui.Button("Restart with default settings", reset_restart))
 

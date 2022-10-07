@@ -10,17 +10,15 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import csv
-import os
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 ROTATION_HEADER = tuple("rotation_" + dim for dim in "xyz")
 TRANSLATION_HEADER = tuple("translation_" + dim for dim in "xyz")
 ORIENTATION_HEADER = ("pitch", "yaw", "roll")
-VERTICES_HEADER = tuple(
-    f"vert_{idx}_{dim}" for idx in range(4) for dim in "xyz"
-)
+VERTICES_HEADER = tuple(f"vert_{idx}_{dim}" for idx in range(4) for dim in "xyz")
 
 MODEL_HEADER = ("marker_id",) + VERTICES_HEADER
 POSES_HEADER = (

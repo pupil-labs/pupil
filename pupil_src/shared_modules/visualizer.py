@@ -8,20 +8,24 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import glfw
 import gl_utils
+import glfw
 from gl_utils import GLFWErrorReporting
 
 GLFWErrorReporting.set_default()
 
+import math
+from platform import system
+
+import numpy as np
 from OpenGL.GL import (
     GL_BLEND,
     GL_COLOR_BUFFER_BIT,
-    GL_LINES,
     GL_LINE_LOOP,
     GL_LINE_SMOOTH,
     GL_LINE_SMOOTH_HINT,
     GL_LINE_STRIP,
+    GL_LINES,
     GL_MODELVIEW,
     GL_NICEST,
     GL_ONE_MINUS_SRC_ALPHA,
@@ -51,14 +55,10 @@ from OpenGL.GL import (
     glVertex3f,
     glViewport,
 )
-from platform import system
-
-from pyglui.cygl.utils import RGBA
 from pyglui.cygl import utils as glutils
+from pyglui.cygl.utils import RGBA
 from pyglui.pyfontstash import fontstash as fs
 from pyglui.ui import get_opensans_font_path
-import math
-import numpy as np
 
 # UI Platform tweaks
 if system() == "Linux":

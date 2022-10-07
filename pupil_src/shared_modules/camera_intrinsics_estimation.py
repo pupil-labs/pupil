@@ -10,34 +10,31 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import cv2
+import gl_utils
+import glfw
 import numpy as np
+import OpenGL.GL as gl
+from camera_models import Fisheye_Dist_Camera, Radial_Dist_Camera
 from gl_utils import (
+    GLFWErrorReporting,
     adjust_gl_view,
-    clear_gl_screen,
     basic_gl_setup,
+    clear_gl_screen,
+    draw_circle_filled_func_builder,
     make_coord_system_norm_based,
 )
-from camera_models import Fisheye_Dist_Camera, Radial_Dist_Camera
-
-
-import OpenGL.GL as gl
 from pyglui import ui
-from pyglui.cygl.utils import draw_polyline, RGBA, draw_gl_texture
+from pyglui.cygl.utils import RGBA, draw_gl_texture, draw_polyline
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 
-import glfw
-import gl_utils
-from gl_utils import draw_circle_filled_func_builder, GLFWErrorReporting
-
 GLFWErrorReporting.set_default()
-
-from plugin import Plugin
-
-from hotkey import Hotkey
 
 # logging
 import logging
+
+from hotkey import Hotkey
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 

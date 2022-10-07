@@ -2,12 +2,13 @@
 # Changes, Additions: Moritz Kassner <moritz@pupil-labs.com>, Will Patera <will@pupil-labs.com>
 # This file is placed into the public domain.
 
-from subprocess import check_output, CalledProcessError, STDOUT
-import os, sys
-import packaging.version
-import typing as T
-
 import logging
+import os
+import sys
+import typing as T
+from subprocess import STDOUT, CalledProcessError, check_output
+
+import packaging.version
 
 logger = logging.getLogger(__name__)
 

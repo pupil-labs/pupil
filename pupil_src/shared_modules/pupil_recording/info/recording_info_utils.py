@@ -16,9 +16,9 @@ import uuid
 
 import csv_utils
 from methods import get_system_info
+from version_utils import ParsedVersion, parse_version
 
 from .recording_info import RecordingInfoFile
-from version_utils import parse_version, ParsedVersion
 
 
 def string_from_recording_version(value: ParsedVersion) -> str:

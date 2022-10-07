@@ -19,7 +19,6 @@ import zmq_tools
 from camera_models import Dummy_Camera, Radial_Dist_Camera
 from pyglui import ui
 from typing_extensions import Literal, NotRequired, TypedDict
-
 from video_capture.base_backend import Base_Source
 
 logger = logging.getLogger(__name__)
@@ -206,9 +205,7 @@ class HMD_Streaming_Source(Base_Source):
                     frame_class = FRAME_CLASS_BY_FORMAT[frame_format]
                     return self._process_frame(frame_class, frame)
             except KeyError as err:
-                logger.debug(
-                    f"Ill-formatted frame received. Missing key: {err}"
-                )
+                logger.debug(f"Ill-formatted frame received. Missing key: {err}")
 
     def _process_frame(
         self, frame_class: Type[Uint8BufferFrame], frame_data: SerializedFrame

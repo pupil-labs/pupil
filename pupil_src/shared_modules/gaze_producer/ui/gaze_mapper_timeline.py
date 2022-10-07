@@ -8,8 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from plugin_timeline import Row, RangeElementFrameIdx
-
+from plugin_timeline import RangeElementFrameIdx, Row
 
 # TODO: add an observer to refresh the timeline when the selected calibration of a
 #  gaze mapping changes. This is currently not easily possible, but will be easy with

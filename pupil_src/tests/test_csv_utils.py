@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import pytest
-
 from csv_utils import read_key_value_file, write_key_value_file
 
 

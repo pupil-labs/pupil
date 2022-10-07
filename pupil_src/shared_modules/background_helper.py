@@ -15,7 +15,6 @@ import signal
 from ctypes import c_bool
 
 import zmq
-
 import zmq_tools
 
 logger = logging.getLogger(__name__)
@@ -176,8 +175,9 @@ if __name__ == "__main__":
 
     def example_generator(mu=0.0, sigma=1.0, steps=100):
         r"""samples `N(\mu, \sigma^2)`"""
-        import numpy as np
         from time import sleep
+
+        import numpy as np
 
         for i in range(steps):
             # yield progress, datum
@@ -189,7 +189,7 @@ if __name__ == "__main__":
         "Background", example_generator, args=(5.0, 3.0), kwargs={"steps": 100}
     )
 
-    from time import time, sleep
+    from time import sleep, time
 
     start = time()
     maximal_duration = 2.0

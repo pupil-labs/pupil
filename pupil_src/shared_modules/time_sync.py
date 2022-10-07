@@ -9,17 +9,17 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
+import random
+from heapq import heappush
+from socket import gethostname
+from urllib.parse import urlparse
+
+import os_utils
+from network_time_sync import Clock_Sync_Follower, Clock_Sync_Master
 from plugin import Plugin
 from pyglui import ui
-from socket import gethostname
-from heapq import heappush
 from pyre import Pyre
-from urllib.parse import urlparse
-from network_time_sync import Clock_Sync_Master, Clock_Sync_Follower
-import random
-
-import logging
-import os_utils
 
 os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)

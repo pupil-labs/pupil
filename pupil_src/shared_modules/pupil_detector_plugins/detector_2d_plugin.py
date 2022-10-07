@@ -10,20 +10,18 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
-from pupil_detectors import Detector2D, DetectorBase, Roi
-from pyglui import ui
-from pyglui.cygl.utils import draw_gl_texture
-
 import glfw
-
 from gl_utils import (
+    GLFWErrorReporting,
     adjust_gl_view,
     basic_gl_setup,
     clear_gl_screen,
     make_coord_system_norm_based,
     make_coord_system_pixel_based,
-    GLFWErrorReporting,
 )
+from pupil_detectors import Detector2D, DetectorBase, Roi
+from pyglui import ui
+from pyglui.cygl.utils import draw_gl_texture
 
 GLFWErrorReporting.set_default()
 

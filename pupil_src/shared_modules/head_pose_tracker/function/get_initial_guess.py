@@ -12,8 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import collections
 
 import numpy as np
-
-from head_pose_tracker.function import triangulate_marker, solvepnp
+from head_pose_tracker.function import solvepnp, triangulate_marker
 
 InitialGuess = collections.namedtuple(
     "InitialGuess", ["key_markers", "frame_id_to_extrinsics", "marker_id_to_extrinsics"]

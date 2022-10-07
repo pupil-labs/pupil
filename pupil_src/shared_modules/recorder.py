@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import errno
-
 import glob
 import logging
 import os
@@ -18,27 +17,23 @@ import uuid
 from shutil import copy2
 from time import gmtime, localtime, strftime, time
 
-import psutil
-from ndsi import H264Writer
-from pyglui import ui
-
 import csv_utils
-from av_writer import MPEG_Writer, JPEG_Writer, NonMonotonicTimestampError
+import psutil
+from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
 from file_methods import PLData_Writer, load_object
-from methods import get_system_info, timer
-from video_capture.ndsi_backend import NDSI_Source
-
-from pupil_recording.info import RecordingInfoFile
-
 from gaze_mapping.notifications import (
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
 )
+from hotkey import Hotkey
+from methods import get_system_info, timer
+from ndsi import H264Writer
 
 # from scipy.interpolate import UnivariateSpline
 from plugin import System_Plugin_Base
-
-from hotkey import Hotkey
+from pupil_recording.info import RecordingInfoFile
+from pyglui import ui
+from video_capture.ndsi_backend import NDSI_Source
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +90,7 @@ class Recorder(System_Plugin_Base):
                     logger.error("Could not create Rec dir")
                     raise e
             else:
-                logger.info(
-                    f'Created standard Rec dir at "{default_rec_root_dir}"'
-                )
+                logger.info(f'Created standard Rec dir at "{default_rec_root_dir}"')
             self.rec_root_dir = default_rec_root_dir
 
         self.raw_jpeg = raw_jpeg

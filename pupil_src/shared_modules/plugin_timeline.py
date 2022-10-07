@@ -11,12 +11,11 @@ See COPYING and COPYING.LESSER for license details.
 
 import collections
 
+import gl_utils
 import OpenGL.GL as gl
 import pyglui.cygl.utils as cygl_utils
 from pyglui import ui
 from pyglui.pyfontstash import fontstash
-
-import gl_utils
 
 Row = collections.namedtuple("Row", ["label", "elements"])
 

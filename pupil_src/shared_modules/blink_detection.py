@@ -15,21 +15,20 @@ import os
 import time
 from collections import deque
 
-import numpy as np
-import OpenGL.GL as gl
-import pyglui.cygl.utils as cygl_utils
-from pyglui import ui
-from pyglui.pyfontstash import fontstash as fs
-from scipy.signal import fftconvolve
-
 import csv_utils
 import data_changed
 import file_methods as fm
 import gl_utils
+import numpy as np
+import OpenGL.GL as gl
 import player_methods as pm
+import pyglui.cygl.utils as cygl_utils
 from observable import Observable
 from plugin import Plugin
 from pupil_recording import PupilRecording, RecordingInfo
+from pyglui import ui
+from pyglui.pyfontstash import fontstash as fs
+from scipy.signal import fftconvolve
 
 logger = logging.getLogger(__name__)
 
