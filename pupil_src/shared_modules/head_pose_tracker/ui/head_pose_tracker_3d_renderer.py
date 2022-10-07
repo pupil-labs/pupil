@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import numpy as np
-
 from head_pose_tracker import ui as plugin_ui
 from head_pose_tracker.ui import gl_renderer_utils as utils
 

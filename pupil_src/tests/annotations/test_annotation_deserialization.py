@@ -10,8 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 import io
 import json
-import pytest
 
+import pytest
 from annotations import Annotation_Player
 
 

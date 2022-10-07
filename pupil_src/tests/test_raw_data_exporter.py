@@ -9,9 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import pytest
-
-from raw_data_exporter import Pupil_Positions_Exporter
-from raw_data_exporter import Gaze_Positions_Exporter
+from raw_data_exporter import Gaze_Positions_Exporter, Pupil_Positions_Exporter
 
 
 def _test_exporter(exporter, positions, expected_dict_export, world_index=123):

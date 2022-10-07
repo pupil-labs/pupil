@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+
 from observable import Observable
 
 

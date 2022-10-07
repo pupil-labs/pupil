@@ -26,7 +26,7 @@ See COPYING and COPYING.LESSER for license details.
 
 
 pattern = re.compile(
-    "(\"{3}|'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\"{3}|'{3}|[*][/])(\r\n|\r|\n)*",
+    "(\"{3}|'{3}|[/][*])\n\\([*]\\)~(.+?)~\\([*]\\)\n(\"{3}|'{3}|[*][/])(\r\n|\r|\n)*",
     re.DOTALL | re.MULTILINE,
 )
 
@@ -86,7 +86,7 @@ def write_header(file_name, license_txt, delete_header=False):
         raise Exception("Dont know how to deal with this filetype")
 
     try:
-        with open(file_name, "r") as original:
+        with open(file_name) as original:
             data = original.read()
     except UnicodeDecodeError:
         return

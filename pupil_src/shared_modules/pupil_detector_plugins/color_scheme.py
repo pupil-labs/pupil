@@ -26,7 +26,7 @@ class Color(T.NamedTuple):
     def from_hex(cls, hex: str) -> "Color":
         # find: rgb tuple from hex string
         # example: 00ff00 -> (0, 255, 0)
-        c0, c1, c2 = [int(hex[i : i + 2], 16) for i in range(0, 5, 2)]
+        c0, c1, c2 = (int(hex[i : i + 2], 16) for i in range(0, 5, 2))
         return cls(c0, c1, c2)
 
     @property

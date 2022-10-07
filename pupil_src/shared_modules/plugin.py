@@ -26,7 +26,7 @@ It is a good starting point to build your own plugin.
 """
 
 
-class Plugin(object):
+class Plugin:
     """docstring for Plugin
     plugin is a base class
     it has all interfaces that will be called
@@ -351,7 +351,7 @@ class Plugin(object):
 
 
 # Plugin manager classes and fns
-class Plugin_List(object):
+class Plugin_List:
     """This is the Plugin Manager
     It is a self sorting list with a few functions to manage adding and
     removing Plugins and lacking most other list methods.
@@ -409,11 +409,10 @@ class Plugin_List(object):
                 self.add(plugin, args)
 
     def __iter__(self):
-        for p in self._plugins:
-            yield p
+        yield from self._plugins
 
     def __str__(self):
-        return "Plugin List: {}".format(self._plugins)
+        return f"Plugin List: {self._plugins}"
 
     def add(self, new_plugin_cls, args={}):
         """
@@ -488,7 +487,7 @@ class Plugin_List(object):
                 ):
                     p.deinit_ui()
                 p.cleanup()
-                logger.debug("Unloaded Plugin: {}".format(p))
+                logger.debug(f"Unloaded Plugin: {p}")
                 self._plugins.remove(p)
 
     def get_initializers(self):
@@ -522,14 +521,14 @@ def import_runtime_plugins(plugin_dir):
         # over other modules with identical name.
         sys.path.insert(0, plugin_dir)
         for d in os.listdir(plugin_dir):
-            logger.debug("Scanning: {}".format(d))
+            logger.debug(f"Scanning: {d}")
             try:
                 if os.path.isfile(os.path.join(plugin_dir, d)):
                     d, ext = d.rsplit(".", 1)
                     if ext not in ("py", "so", "dylib"):
                         continue
                 module = importlib.import_module(d)
-                logger.debug("Imported: {}".format(module))
+                logger.debug(f"Imported: {module}")
                 for name in dir(module):
                     member = getattr(module, name)
                     if (
@@ -537,10 +536,10 @@ def import_runtime_plugins(plugin_dir):
                         and issubclass(member, Plugin)
                         and member.__name__ != "Plugin"
                     ):
-                        logger.debug("Added: {}".format(member))
+                        logger.debug(f"Added: {member}")
                         runtime_plugins.append(member)
             except Exception as e:
-                logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
+                logger.warning(f"Failed to load '{d}'. Reason: '{e}' ")
                 import traceback
 
                 logger.debug(traceback.format_exc())

@@ -54,7 +54,7 @@ if platform.system() == "Darwin":
     print("removed the non-app dist bundle")
 
     print("hack injecting file type info in to info.plist")
-    with open("dist/Pupil Player.app/Contents/Info.plist", "r") as f:
+    with open("dist/Pupil Player.app/Contents/Info.plist") as f:
         txt = f.read()  # read everything in the file
     txt = txt.replace(split_str, mac_plist_document_type_str + split_str)
     with open("dist/Pupil Player.app/Contents/Info.plist", "w") as f:
@@ -108,13 +108,13 @@ elif platform.system() == "Linux":
         )
         content = """\
 Package: pupil-player
-Version: %s
+Version: {}
 Architecture: amd64
 Maintainer: Pupil Labs <info@pupil-labs.com>
 Priority: optional
 Description: Pupil Player is part of the Pupil Eye Tracking Platform
-Installed-Size: %s
-""" % (
+Installed-Size: {}
+""".format(
             pupil_version(),
             round(dist_size / 1024),
         )

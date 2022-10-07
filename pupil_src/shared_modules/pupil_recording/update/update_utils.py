@@ -14,9 +14,8 @@ import typing as T
 from pathlib import Path
 
 import av
-import numpy as np
-
 import camera_models as cm
+import numpy as np
 
 from ..recording import PupilRecording
 

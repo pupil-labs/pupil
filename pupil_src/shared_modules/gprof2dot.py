@@ -21,17 +21,16 @@
 __author__ = "Jose Fonseca et al"
 
 
-import sys
+import collections
+import json
+import locale
 import math
+import optparse
 import os.path
 import re
+import sys
 import textwrap
-import optparse
 import xml.parsers.expat
-import collections
-import locale
-import json
-
 
 # Python 2.x/3.x compatibility
 if sys.version_info[0] >= 3:
@@ -81,7 +80,7 @@ def times(x):
 
 
 def percentage(p):
-    return "%.02f%%" % (p * 100.0,)
+    return f"{p * 100.0:.02f}%"
 
 
 def add(a, b):
@@ -103,14 +102,14 @@ def ratio(numerator, denominator):
         return 1.0
     if ratio < 0.0:
         if ratio < -tol:
-            sys.stderr.write(
-                "warning: negative ratio (%s/%s)\n" % (numerator, denominator)
-            )
+            sys.stderr.write(f"warning: negative ratio ({numerator}/{denominator})\n")
         return 0.0
     if ratio > 1.0:
         if ratio > 1.0 + tol:
             sys.stderr.write(
-                "warning: ratio greater than one (%s/%s)\n" % (numerator, denominator)
+                "warning: ratio greater than one ({}/{})\n".format(
+                    numerator, denominator
+                )
             )
         return 1.0
     return ratio
@@ -127,7 +126,7 @@ class UndefinedEvent(Exception):
         return "unspecified event %s" % self.event.name
 
 
-class Event(object):
+class Event:
     """Describe a kind of event, and its basic operations."""
 
     def __init__(self, name, null, aggregator, formatter=str):
@@ -179,7 +178,7 @@ TOTAL_TIME_RATIO = Event("Total time ratio", 0.0, fail, percentage)
 totalMethod = "callratios"
 
 
-class Object(object):
+class Object:
     """Base class for all objects in profile which can store events."""
 
     def __init__(self, events=None):
@@ -362,7 +361,7 @@ class Profile(Object):
 
     def prune_root(self, root):
         visited = set()
-        frontier = set([root])
+        frontier = {root}
         while len(frontier) > 0:
             node = frontier.pop()
             visited.add(node)
@@ -381,7 +380,7 @@ class Profile(Object):
                 edgesUp[n].add(f)
         # build the tree up
         visited = set()
-        frontier = set([leaf])
+        frontier = {leaf}
         while len(frontier) > 0:
             node = frontier.pop()
             visited.add(node)
@@ -621,7 +620,7 @@ class Profile(Object):
         Q = []
         Qd = {}
         p = {}
-        visited = set([function])
+        visited = {function}
 
         ranks[function] = 0
         for call in compat_itervalues(function.calls):
@@ -804,21 +803,21 @@ class Profile(Object):
 
     def dump(self):
         for function in compat_itervalues(self.functions):
-            sys.stderr.write("Function %s:\n" % (function.name,))
+            sys.stderr.write(f"Function {function.name}:\n")
             self._dump_events(function.events)
             for call in compat_itervalues(function.calls):
                 callee = self.functions[call.callee_id]
-                sys.stderr.write("  Call %s:\n" % (callee.name,))
+                sys.stderr.write(f"  Call {callee.name}:\n")
                 self._dump_events(call.events)
         for cycle in self.cycles:
             sys.stderr.write("Cycle:\n")
             self._dump_events(cycle.events)
             for function in cycle.functions:
-                sys.stderr.write("  Function %s\n" % (function.name,))
+                sys.stderr.write(f"  Function {function.name}\n")
 
     def _dump_events(self, events):
         for event, value in compat_iteritems(events):
-            sys.stderr.write("    %s: %s\n" % (event.name, event.format(value)))
+            sys.stderr.write(f"    {event.name}: {event.format(value)}\n")
 
 
 ########################################################################
@@ -859,7 +858,7 @@ class ParseError(Exception):
         self.line = line
 
     def __str__(self):
-        return "%s: %r" % (self.msg, self.line)
+        return f"{self.msg}: {self.line!r}"
 
 
 class Parser:
@@ -1763,7 +1762,7 @@ class CallgrindParser(LineParser):
             or self.parse_cost_summary()
         )
 
-    _detail_keys = set(("cmd", "pid", "thread", "part"))
+    _detail_keys = {"cmd", "pid", "thread", "part"}
 
     def parse_part_detail(self):
         return self.parse_keys(self._detail_keys)
@@ -3386,9 +3385,9 @@ def main():
         if not args:
             fp = sys.stdin
         elif PYTHON_3:
-            fp = open(args[0], "rt", encoding="UTF-8")
+            fp = open(args[0], encoding="UTF-8")
         else:
-            fp = open(args[0], "rt")
+            fp = open(args[0])
         parser = Format(fp)
     elif Format.multipleInput:
         if not args:

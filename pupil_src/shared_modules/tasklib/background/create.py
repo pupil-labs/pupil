@@ -11,9 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 import inspect
 
-from tasklib.background.task import BackgroundGeneratorFunction
-from tasklib.background.task import BackgroundRoutine
 from tasklib.background.patches import IPCLoggingPatch, KeyboardInterruptHandlerPatch
+from tasklib.background.task import BackgroundGeneratorFunction, BackgroundRoutine
 
 
 def create(

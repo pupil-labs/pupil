@@ -12,14 +12,17 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from plugin import Plugin
-from offline_surface_tracker import Offline_Surface_Tracker
-from video_export_launcher import Video_Export_Launcher
 from ctypes import c_int
 
-from pyglui import ui
-from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup, cvmat_to_glmat
-from pyglui.cygl.utils import RGBA, draw_polyline
+import glfw
+from gl_utils import (
+    GLFWErrorReporting,
+    adjust_gl_view,
+    basic_gl_setup,
+    clear_gl_screen,
+    cvmat_to_glmat,
+)
+from offline_surface_tracker import Offline_Surface_Tracker
 from OpenGL.GL import (
     GL_LINES,
     GL_MODELVIEW,
@@ -30,14 +33,16 @@ from OpenGL.GL import (
     glPushMatrix,
     glTranslatef,
 )
-
-import glfw
-from gl_utils import GLFWErrorReporting
+from plugin import Plugin
+from pyglui import ui
+from pyglui.cygl.utils import RGBA, draw_polyline
+from video_export_launcher import Video_Export_Launcher
 
 GLFWErrorReporting.set_default()
 
-import numpy as np
 from itertools import groupby
+
+import numpy as np
 
 
 class Marker_Auto_Trim_Marks(Plugin):
@@ -117,7 +122,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         ]
         if plugins:
             launcher = plugins[0]
-            logger.info("exporting {!s}".format(section))
+            logger.info(f"exporting {section!s}")
             self.g_pool.seek_control.set_trim_range(section)
             launcher.rec_name.value = "world_viz_section_{}-{}".format(*section)
             launcher.add_export()
@@ -128,7 +133,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         ]
         if plugins:
             tracker = plugins[0]
-            logger.info("exporting {!s}".format(section))
+            logger.info(f"exporting {section!s}")
             self.g_pool.seek_control.set_trim_range(section)
             tracker.recalculate()
             tracker.save_surface_statsics_to_file()
@@ -177,9 +182,7 @@ class Marker_Auto_Trim_Marks(Plugin):
                 # make a marker signal 0 = none, 1 = in, -1=out
                 in_id = self.in_marker_id
                 out_id = self.out_marker_id
-                logger.debug(
-                    "Looking for trim mark markers: {},{}".format(in_id, out_id)
-                )
+                logger.debug(f"Looking for trim mark markers: {in_id},{out_id}")
                 in_out_signal = [0] * len(marker_tracker_plugin.cache)
                 for idx, frame in enumerate(marker_tracker_plugin.cache):
                     # marker = {'id':msg,'verts':r,'verts_norm':r_norm,'centroid':centroid,"frames_since_true_detection":0}

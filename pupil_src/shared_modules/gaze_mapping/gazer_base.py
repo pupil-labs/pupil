@@ -15,23 +15,18 @@ import logging
 import os
 import typing as T
 
-import numpy as np
-
-from plugin import Plugin
 import file_methods as fm
+import numpy as np
+from plugin import Plugin
 
 from .matching import RealtimeMatcher
 from .notifications import (
-    CalibrationSuccessNotification,
     CalibrationFailureNotification,
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
+    CalibrationSuccessNotification,
 )
-from .utils import (
-    _filter_pupil_list_by_confidence,
-    _match_data_batch,
-)
-
+from .utils import _filter_pupil_list_by_confidence, _match_data_batch
 
 logger = logging.getLogger(__name__)
 

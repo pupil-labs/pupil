@@ -12,11 +12,8 @@ import logging
 
 from plugin import Plugin
 
-from .controller import FramePublisherController
-from .controller import PupilRemoteController
-from .ui import FramePublisherMenu
-from .ui import PupilRemoteMenu
-
+from .controller import FramePublisherController, PupilRemoteController
+from .ui import FramePublisherMenu, PupilRemoteMenu
 
 logger = logging.getLogger(__name__)
 

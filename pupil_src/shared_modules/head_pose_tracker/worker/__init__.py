@@ -13,6 +13,7 @@ from head_pose_tracker.worker.detection_worker import (
     offline_detection,
     online_detection,
 )
+from head_pose_tracker.worker.export_worker import export_routine
 from head_pose_tracker.worker.localization_worker import (
     offline_localization,
     online_localization,
@@ -21,5 +22,3 @@ from head_pose_tracker.worker.optimization_worker import (
     offline_optimization,
     online_optimization,
 )
-
-from head_pose_tracker.worker.export_worker import export_routine

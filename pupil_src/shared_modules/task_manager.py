@@ -9,13 +9,12 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import logging
 import abc
-
-from pyglui import ui
+import logging
 
 import background_helper as bh
 from plugin import Plugin
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 

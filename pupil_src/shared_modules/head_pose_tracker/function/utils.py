@@ -174,11 +174,11 @@ def timer(func):
         t2 = time.perf_counter()
         run_time = t2 - t1
         if run_time > 1:
-            logger.info("{0} took {1:.2f} s".format(func.__name__, run_time))
+            logger.info(f"{func.__name__} took {run_time:.2f} s")
         elif run_time > 1e-3:
-            logger.info("{0} took {1:.2f} ms".format(func.__name__, run_time * 1e3))
+            logger.info(f"{func.__name__} took {run_time * 1e3:.2f} ms")
         else:
-            logger.info("{0} took {1:.2f} µs".format(func.__name__, run_time * 1e6))
+            logger.info(f"{func.__name__} took {run_time * 1e6:.2f} µs")
 
         return value
 

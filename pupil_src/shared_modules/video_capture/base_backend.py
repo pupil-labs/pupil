@@ -14,11 +14,10 @@ import typing as T
 from enum import IntEnum, auto
 from time import monotonic, sleep
 
-import numpy as np
-from pyglui import cygl, ui
-
 import gl_utils
+import numpy as np
 from plugin import Plugin
+from pyglui import cygl, ui
 
 logger = logging.getLogger(__name__)
 
@@ -363,7 +362,7 @@ class Playback_Source(Base_Source):
             "external",
             "own",
             None,
-        ), "invalid timing argument: {}".format(timing)
+        ), f"invalid timing argument: {timing}"
         self.timing = timing
         self.finished_sleep = 0.0
         self._recent_wait_ts = -1

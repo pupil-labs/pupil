@@ -10,12 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import typing
+
 import numpy as np
 
 from .surface_marker import Surface_Marker_UID
 
 
-class Surface_Marker_Aggregate(object):
+class Surface_Marker_Aggregate:
     """
     Stores a list of detections of a specific square marker and aggregates them over
     time to get a more robust localisation.

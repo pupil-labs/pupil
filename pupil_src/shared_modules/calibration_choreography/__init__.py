@@ -14,10 +14,10 @@ from .base_plugin import (
     ChoreographyMode,
     ChoreographyNotification,
 )
+from .hmd_plugin import HMD3DChoreographyPlugin
+from .natural_feature_plugin import NaturalFeatureChoreographyPlugin
 from .screen_marker_plugin import ScreenMarkerChoreographyPlugin
 from .single_marker_plugin import SingleMarkerChoreographyPlugin
-from .natural_feature_plugin import NaturalFeatureChoreographyPlugin
-from .hmd_plugin import HMD3DChoreographyPlugin
 
 
 def available_calibration_choreography_plugins():

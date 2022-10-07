@@ -14,13 +14,13 @@ import re
 import uuid
 from pathlib import Path
 
+from version_utils import parse_version
+
 from ..info import RecordingInfoFile
 from ..info import recording_info_utils as utils
 from ..recording import PupilRecording
 from ..recording_utils import InvalidRecordingException
 from . import update_utils
-
-from version_utils import parse_version
 
 # NOTE: Due to Pupil Mobile not having a data format version, we are using the software
 # version here. The idea is to use Major.Minor specifically. This means that the
@@ -39,10 +39,8 @@ def transform_mobile_to_corresponding_new_style(rec_dir: str) -> RecordingInfoFi
 
     if mobile_version >= NEXT_UNSUPPORTED_VERSION:
         raise InvalidRecordingException(
-            (
-                "This Player version does not support Pupil Mobile versions >= "
-                f"{NEXT_UNSUPPORTED_VERSION}. Got {mobile_version}."
-            )
+            "This Player version does not support Pupil Mobile versions >= "
+            f"{NEXT_UNSUPPORTED_VERSION}. Got {mobile_version}."
         )
 
     # elif mobile_version >= 3.0:

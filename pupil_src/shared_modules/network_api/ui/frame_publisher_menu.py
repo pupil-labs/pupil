@@ -10,12 +10,10 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
+from network_api.controller import FramePublisherController
+from network_api.model import FrameFormat
 from observable import Observable
 from pyglui import ui
-
-from network_api.model import FrameFormat
-from network_api.controller import FramePublisherController
-
 
 logger = logging.getLogger(__name__)
 

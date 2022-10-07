@@ -75,7 +75,7 @@ class iMotions_Exporter(IsolatedFrameExporter):
             return
 
         rec_start = _get_recording_start_date(self.g_pool.rec_dir)
-        im_dir = os.path.join(export_dir, "iMotions_{}".format(rec_start))
+        im_dir = os.path.join(export_dir, f"iMotions_{rec_start}")
 
         try:
             csv_header, csv_rows = _csv_exported_gaze_data(

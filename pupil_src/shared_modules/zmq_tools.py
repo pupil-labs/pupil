@@ -61,7 +61,7 @@ class ZMQ_handler(logging.Handler):
             self.socket.send(record_dict)
 
 
-class ZMQ_Socket(object):
+class ZMQ_Socket:
     def __del__(self):
         self.socket.close()
 
@@ -163,7 +163,7 @@ class Msg_Streamer(ZMQ_Socket):
         require exposing the pyhton memoryview interface.
         """
         assert deprecated == (), "Depracted use of send()"
-        assert "topic" in payload, "`topic` field required in {}".format(payload)
+        assert "topic" in payload, f"`topic` field required in {payload}"
 
         if "__raw_data__" not in payload:
             # IMPORTANT: serialize first! Else if there is an exception

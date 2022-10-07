@@ -9,14 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
+import time
 from bisect import bisect_left
 
-from pyglui import ui
-from plugin import System_Plugin_Base
 import player_methods as pm
-import time
-
-import logging
+from plugin import System_Plugin_Base
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 
@@ -290,7 +289,7 @@ class Seek_Control(System_Plugin_Base):
         )
 
     def get_frame_index_trim_range_string(self):
-        return "{} - {}".format(self.trim_left, self.trim_right)
+        return f"{self.trim_left} - {self.trim_right}"
 
     def set_frame_index_trim_range_string(self, range_str):
         try:

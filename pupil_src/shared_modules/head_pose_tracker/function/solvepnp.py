@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import numpy as np
-
 from head_pose_tracker.function import utils
 
 

@@ -11,12 +11,11 @@ See COPYING and COPYING.LESSER for license details.
 
 import collections
 
+import gl_utils
 import OpenGL.GL as gl
 import pyglui.cygl.utils as cygl_utils
 from pyglui import ui
 from pyglui.pyfontstash import fontstash
-
-import gl_utils
 
 Row = collections.namedtuple("Row", ["label", "elements"])
 
@@ -102,7 +101,7 @@ class PluginTimeline:
             elif isinstance(element, RangeElementFrameIdx):
                 self._draw_range_element_frame_idx(element, scale, height)
             else:
-                raise ValueError("Unknown element {}".format(element))
+                raise ValueError(f"Unknown element {element}")
 
     def _translate_to_next_row(self, scale):
         gl.glTranslatef(0, scale * self.timeline_row_height, 0)

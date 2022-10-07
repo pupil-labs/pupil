@@ -15,7 +15,6 @@ from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
 
 from .fake_gpool import FakeGPool
 
-
 g_pool = None  # set by the plugin
 
 

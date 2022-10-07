@@ -12,9 +12,8 @@ See COPYING and COPYING.LESSER for license details.
 import collections
 import os
 
-import numpy as np
-
 import file_methods as fm
+import numpy as np
 import player_methods as pm
 from observable import Observable
 

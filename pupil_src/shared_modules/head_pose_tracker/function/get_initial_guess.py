@@ -12,8 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import collections
 
 import numpy as np
-
-from head_pose_tracker.function import triangulate_marker, solvepnp
+from head_pose_tracker.function import solvepnp, triangulate_marker
 
 InitialGuess = collections.namedtuple(
     "InitialGuess", ["key_markers", "frame_id_to_extrinsics", "marker_id_to_extrinsics"]
@@ -36,8 +35,8 @@ def calculate(
         frame_id: np.array(extrinsics)
         for frame_id, extrinsics in frame_id_to_extrinsics_opt.items()
     }
-    frame_ids = list(set(marker.frame_id for marker in key_markers))
-    marker_ids = list(set(marker.marker_id for marker in key_markers))
+    frame_ids = list({marker.frame_id for marker in key_markers})
+    marker_ids = list({marker.marker_id for marker in key_markers})
 
     # The function _calculate_extrinsics calculates camera extrinsics and marker
     # extrinsics iteratively. It is possible that not all of them can be calculated

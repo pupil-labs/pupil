@@ -12,8 +12,9 @@ import logging
 import platform
 import typing as T
 
-import glfw
 import gl_utils
+import glfw
+
 from .utils import GLFWErrorReporting
 
 GLFWErrorReporting.set_default()

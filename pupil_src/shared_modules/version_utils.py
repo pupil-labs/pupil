@@ -1,14 +1,14 @@
-# -*- coding: utf-8 -*-
 # Author: Douglas Creager <dcreager@dcreager.net>
 # Changes, Additions: Moritz Kassner <moritz@pupil-labs.com>, Will Patera <will@pupil-labs.com>
 # This file is placed into the public domain.
 
-from subprocess import check_output, CalledProcessError, STDOUT
-import os, sys
-import packaging.version
-import typing as T
-
 import logging
+import os
+import sys
+import typing as T
+from subprocess import STDOUT, CalledProcessError, check_output
+
+import packaging.version
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +27,10 @@ def get_tag_commit() -> T.Optional[T.AnyStr]:
         desc_tag = desc_tag.replace("\n", "")  # strip newlines
         return desc_tag
     except CalledProcessError as e:
-        logger.error('Error calling git: "{}" \n output: "{}"'.format(e, e.output))
+        logger.error(f'Error calling git: "{e}" \n output: "{e.output}"')
         return None
     except OSError as e:
-        logger.error('Could not call git, is it installed? error msg: "{}"'.format(e))
+        logger.error(f'Could not call git, is it installed? error msg: "{e}"')
         return None
 
 
@@ -75,7 +75,7 @@ def get_version():
     # get the current software version
     if getattr(sys, "frozen", False):
         version_file = os.path.join(sys._MEIPASS, "_version_string_")
-        with open(version_file, "r") as f:
+        with open(version_file) as f:
             version_string = f.read()
     else:
         version_string = pupil_version_string()

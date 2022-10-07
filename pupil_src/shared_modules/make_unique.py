@@ -27,7 +27,7 @@ def by_number_at_end(new_string, existing_strings):
         return stripped_string
     lowest_unused_number = 2
     while True:
-        new_string = "{} {}".format(stripped_string, lowest_unused_number)
+        new_string = f"{stripped_string} {lowest_unused_number}"
         if new_string not in existing_strings:
             return new_string
         lowest_unused_number += 1

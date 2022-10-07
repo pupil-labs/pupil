@@ -13,7 +13,6 @@ import typing as T
 
 from calibration_choreography.controller import GUIMonitor
 
-
 logger = logging.getLogger(__name__)
 
 

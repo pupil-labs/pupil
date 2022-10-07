@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import pytest
-
 from csv_utils import read_key_value_file, write_key_value_file
 
 
@@ -28,7 +27,7 @@ def test_read_write_key_value_file(testfile):
     # Test write+read
     with open(testfile, "w", encoding="utf-8", newline="") as csvfile:
         write_key_value_file(csvfile, test)
-    with open(testfile, "r", encoding="utf-8", newline="") as csvfile:
+    with open(testfile, encoding="utf-8", newline="") as csvfile:
         result = read_key_value_file(csvfile)
     assert test == result, (test, result)
 
@@ -36,7 +35,7 @@ def test_read_write_key_value_file(testfile):
     with open(testfile, "w", encoding="utf-8", newline="") as csvfile:
         write_key_value_file(csvfile, test)
         write_key_value_file(csvfile, test, append=True)
-    with open(testfile, "r", encoding="utf-8", newline="") as csvfile:
+    with open(testfile, encoding="utf-8", newline="") as csvfile:
         result = read_key_value_file(csvfile)
     assert test == result
 
@@ -44,6 +43,6 @@ def test_read_write_key_value_file(testfile):
     with open(testfile, "w", encoding="utf-8", newline="") as csvfile:
         write_key_value_file(csvfile, test)
         write_key_value_file(csvfile, test_append, append=True)
-    with open(testfile, "r", encoding="utf-8", newline="") as csvfile:
+    with open(testfile, encoding="utf-8", newline="") as csvfile:
         result = read_key_value_file(csvfile)
     assert test_updated == result

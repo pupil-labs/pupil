@@ -8,15 +8,14 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
-import logging
-import threading
 import contextlib
+import logging
+import os
+import threading
 
 import numpy as np
 
-from .utils import scan_path_zeros_numpy_array, SCAN_PATH_GAZE_DATUM_DTYPE
-
+from .utils import SCAN_PATH_GAZE_DATUM_DTYPE, scan_path_zeros_numpy_array
 
 logger = logging.getLogger(__name__)
 
@@ -100,7 +99,7 @@ class ScanPathStorage:
     def __load_from_disk(self):
         try:
             gaze_data = np.load(self.__file_path)
-        except IOError:
+        except OSError:
             return
         self.gaze_data = gaze_data
         # TODO: Figure out if gaze_data is complete

@@ -102,7 +102,7 @@ class OfflineLocalizationController(Observable):
     def _create_localization_task(self):
         def on_yield(data_pairs):
             self._insert_pose_bisector(data_pairs)
-            self.status = "{:.0f}% completed".format(self._task.progress * 100)
+            self.status = f"{self._task.progress * 100:.0f}% completed"
 
         def on_completed(_):
             self.status = "successfully completed"
