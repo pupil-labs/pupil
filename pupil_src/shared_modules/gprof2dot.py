@@ -102,9 +102,7 @@ def ratio(numerator, denominator):
         return 1.0
     if ratio < 0.0:
         if ratio < -tol:
-            sys.stderr.write(
-                f"warning: negative ratio ({numerator}/{denominator})\n"
-            )
+            sys.stderr.write(f"warning: negative ratio ({numerator}/{denominator})\n")
         return 0.0
     if ratio > 1.0:
         if ratio > 1.0 + tol:
