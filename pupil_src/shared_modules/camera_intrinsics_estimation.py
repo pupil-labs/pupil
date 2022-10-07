@@ -183,7 +183,7 @@ class Camera_Intrinsics_Estimation(Plugin):
     def advance(self, _):
         if self.count == 10:
             logger.info("Capture 10 calibration patterns.")
-            self.button.status_text = "{:d} to go".format(self.count)
+            self.button.status_text = f"{self.count:d} to go"
             self.calculated = False
             self.img_points = []
             self.obj_points = []
@@ -305,7 +305,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                     self.g_pool.capture.name, img_shape, camera_matrix, dist_coefs
                 )
             else:
-                raise ValueError("Unkown distortion model: {}".format(self.dist_mode))
+                raise ValueError(f"Unkown distortion model: {self.dist_mode}")
         except ValueError as e:
             raise e
         except Exception as e:
@@ -315,7 +315,7 @@ class Camera_Intrinsics_Estimation(Plugin):
             )
             return
 
-        logger.info("Calibrated Camera, RMS:{}".format(rms))
+        logger.info(f"Calibrated Camera, RMS:{rms}")
 
         camera_model.save(self.g_pool.user_dir)
         self.g_pool.capture.intrinsics = camera_model
@@ -343,7 +343,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                 self.obj_points.append(self.obj_grid)
                 self.collect_new = False
                 self.count -= 1
-                self.button.status_text = "{:d} to go".format(self.count)
+                self.button.status_text = f"{self.count:d} to go"
 
         if self.count <= 0 and not self.calculated:
             self.calculate()
@@ -409,7 +409,7 @@ class Camera_Intrinsics_Estimation(Plugin):
             self.glfont.draw_text(
                 p_window_size[0] / 2.0,
                 p_window_size[1] / 4.0,
-                "Touch {} more times to close window.".format(self.clicks_to_close),
+                f"Touch {self.clicks_to_close} more times to close window.",
             )
 
         glfw.swap_buffers(self._window)

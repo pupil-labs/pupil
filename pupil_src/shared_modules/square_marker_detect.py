@@ -85,7 +85,7 @@ def decode(square_img, grid):
         msg_int = 0
     elif sum(corners) == 1:
         msg_int = 1
-        corners = tuple([1 - c for c in corners])  # just inversion
+        corners = tuple(1 - c for c in corners)  # just inversion
     else:
         # this is no valid marker but maybe a maldetected one? We return unknown marker with None rotation
         return None
@@ -454,7 +454,7 @@ def detect_markers_robust(
             m for m in not_found if m["frames_since_true_detection"] < 5
         ] + new_markers
         if markers:  # del double detected markers
-            min_distace = min([m["perimeter"] for m in markers]) / 4.0
+            min_distace = min(m["perimeter"] for m in markers) / 4.0
             # min_distace = 50
             if len(markers) > 1:
                 remove = set()

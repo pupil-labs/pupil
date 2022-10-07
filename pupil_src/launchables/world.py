@@ -81,7 +81,7 @@ def world(
 
     def launch_eye_process(eye_id, delay=0):
         n = {
-            "subject": "eye_process.should_start.{}".format(eye_id),
+            "subject": f"eye_process.should_start.{eye_id}",
             "eye_id": eye_id,
             "delay": delay,
         }
@@ -89,7 +89,7 @@ def world(
 
     def stop_eye_process(eye_id):
         n = {
-            "subject": "eye_process.should_stop.{}".format(eye_id),
+            "subject": f"eye_process.should_stop.{eye_id}",
             "eye_id": eye_id,
             "delay": 0.2,
         }
@@ -141,8 +141,8 @@ def world(
         from methods import normalize, denormalize, delta_t, get_system_info, timer
         from uvc import get_time_monotonic
 
-        logger.debug("Application Version: {}".format(version))
-        logger.debug("System Info: {}".format(get_system_info()))
+        logger.debug(f"Application Version: {version}")
+        logger.debug(f"System Info: {get_system_info()}")
         logger.debug(f"Debug flag: {debug}")
 
         import audio
@@ -636,7 +636,7 @@ def world(
         )
 
         general_settings.append(
-            ui.Info_Text("Capture Version: {}".format(g_pool.version))
+            ui.Info_Text(f"Capture Version: {g_pool.version}")
         )
         general_settings.append(
             ui.Button("Restart with default settings", reset_restart)
@@ -861,7 +861,7 @@ def world(
         import traceback
 
         trace = traceback.format_exc()
-        logger.error("Process Capture crashed with trace:\n{}".format(trace))
+        logger.error(f"Process Capture crashed with trace:\n{trace}")
 
     finally:
         # shut down eye processes:

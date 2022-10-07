@@ -175,7 +175,7 @@ if __name__ == "__main__":
     )
 
     def example_generator(mu=0.0, sigma=1.0, steps=100):
-        """samples `N(\mu, \sigma^2)`"""
+        r"""samples `N(\mu, \sigma^2)`"""
         import numpy as np
         from time import sleep
 
@@ -196,7 +196,7 @@ if __name__ == "__main__":
     while time() - start < maximal_duration:
         # fetch all available results
         for progress, random_number in task.fetch():
-            logger.debug("[{:3.0f}%] {:0.2f}".format(progress * 100, random_number))
+            logger.debug(f"[{progress * 100:3.0f}%] {random_number:0.2f}")
 
         # test if task is completed
         if task.completed:

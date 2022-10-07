@@ -80,7 +80,7 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
     ts_path = file_path.with_name(file_path.stem + "_timestamps.npy")
     try:
         timestamps = np.load(ts_path)
-    except IOError:
+    except OSError:
         return None
 
     start = timestamps[0]

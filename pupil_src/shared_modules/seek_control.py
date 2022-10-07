@@ -290,7 +290,7 @@ class Seek_Control(System_Plugin_Base):
         )
 
     def get_frame_index_trim_range_string(self):
-        return "{} - {}".format(self.trim_left, self.trim_right)
+        return f"{self.trim_left} - {self.trim_right}"
 
     def set_frame_index_trim_range_string(self, range_str):
         try:

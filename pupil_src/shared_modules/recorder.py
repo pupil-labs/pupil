@@ -96,7 +96,7 @@ class Recorder(System_Plugin_Base):
                     raise e
             else:
                 logger.info(
-                    'Created standard Rec dir at "{}"'.format(default_rec_root_dir)
+                    f'Created standard Rec dir at "{default_rec_root_dir}"'
                 )
             self.rec_root_dir = default_rec_root_dir
 
@@ -322,7 +322,7 @@ class Recorder(System_Plugin_Base):
         session = os.path.join(self.rec_root_dir, self.session_name)
         try:
             os.makedirs(session, exist_ok=True)
-            logger.debug("Created new recordings session dir {}".format(session))
+            logger.debug(f"Created new recordings session dir {session}")
         except OSError:
             logger.error(
                 "Could not start recording. Session dir {} not writable.".format(
@@ -340,10 +340,10 @@ class Recorder(System_Plugin_Base):
         # set up self incrementing folder within session folder
         counter = 0
         while True:
-            self.rec_path = os.path.join(session, "{:03d}/".format(counter))
+            self.rec_path = os.path.join(session, f"{counter:03d}/")
             try:
                 os.mkdir(self.rec_path)
-                logger.debug("Created new recording dir {}".format(self.rec_path))
+                logger.debug(f"Created new recording dir {self.rec_path}")
                 break
             except FileExistsError:
                 logger.debug(
@@ -569,7 +569,7 @@ class Recorder(System_Plugin_Base):
             return False
         # elif not os.access(n_path, os.W_OK):
         elif not writable_dir(n_path):
-            logger.warning("Do not have write access to '{}'.".format(n_path))
+            logger.warning(f"Do not have write access to '{n_path}'.")
             return False
         else:
             return n_path
@@ -593,7 +593,7 @@ class Recorder(System_Plugin_Base):
 def writable_dir(n_path):
     try:
         open(os.path.join(n_path, "dummpy_tmp"), "w")
-    except IOError:
+    except OSError:
         return False
     else:
         os.remove(os.path.join(n_path, "dummpy_tmp"))

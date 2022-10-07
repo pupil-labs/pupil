@@ -117,7 +117,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         ]
         if plugins:
             launcher = plugins[0]
-            logger.info("exporting {!s}".format(section))
+            logger.info(f"exporting {section!s}")
             self.g_pool.seek_control.set_trim_range(section)
             launcher.rec_name.value = "world_viz_section_{}-{}".format(*section)
             launcher.add_export()
@@ -128,7 +128,7 @@ class Marker_Auto_Trim_Marks(Plugin):
         ]
         if plugins:
             tracker = plugins[0]
-            logger.info("exporting {!s}".format(section))
+            logger.info(f"exporting {section!s}")
             self.g_pool.seek_control.set_trim_range(section)
             tracker.recalculate()
             tracker.save_surface_statsics_to_file()
@@ -178,7 +178,7 @@ class Marker_Auto_Trim_Marks(Plugin):
                 in_id = self.in_marker_id
                 out_id = self.out_marker_id
                 logger.debug(
-                    "Looking for trim mark markers: {},{}".format(in_id, out_id)
+                    f"Looking for trim mark markers: {in_id},{out_id}"
                 )
                 in_out_signal = [0] * len(marker_tracker_plugin.cache)
                 for idx, frame in enumerate(marker_tracker_plugin.cache):

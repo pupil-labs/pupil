@@ -363,7 +363,7 @@ class Playback_Source(Base_Source):
             "external",
             "own",
             None,
-        ), "invalid timing argument: {}".format(timing)
+        ), f"invalid timing argument: {timing}"
         self.timing = timing
         self.finished_sleep = 0.0
         self._recent_wait_ts = -1

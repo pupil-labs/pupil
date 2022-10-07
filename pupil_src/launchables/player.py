@@ -320,7 +320,7 @@ def player(
                     break
 
         def _restart_with_recording(rec_dir):
-            logger.debug("Starting new session with '{}'".format(rec_dir))
+            logger.debug(f"Starting new session with '{rec_dir}'")
             ipc_pub.notify(
                 {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
             )
@@ -335,8 +335,8 @@ def player(
         meta_info = recording.meta_info
 
         # log info about Pupil Platform and Platform in player.log
-        logger.info("Application Version: {}".format(app_version))
-        logger.info("System Info: {}".format(get_system_info()))
+        logger.info(f"Application Version: {app_version}")
+        logger.info(f"System Info: {get_system_info()}")
         logger.debug(f"Debug flag: {debug}")
 
         icon_bar_width = 50
@@ -442,7 +442,7 @@ def player(
             export_dir = next_export_sub_dir(export_dir)
 
             os.makedirs(export_dir)
-            logger.info('Created export dir at "{}"'.format(export_dir))
+            logger.info(f'Created export dir at "{export_dir}"')
 
             export_info = {
                 "Player Software Version": str(g_pool.version),
@@ -957,7 +957,7 @@ def player_drop(
             if rec_dir:
                 try:
                     assert_valid_recording_type(rec_dir)
-                    logger.info("Starting new session with '{}'".format(rec_dir))
+                    logger.info(f"Starting new session with '{rec_dir}'")
                     text = "Updating recording format."
                     tip = "This may take a while!"
                 except InvalidRecordingException as err:

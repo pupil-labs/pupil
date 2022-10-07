@@ -778,7 +778,7 @@ def timeit(method):
         ts = time.time()
         result = method(*args, **kw)
         te = time.time()
-        print("TIMEIT %r %f sec" % (method.__name__, te - ts))
+        print("TIMEIT {!r} {:f} sec".format(method.__name__, te - ts))
         return result
 
     return timed

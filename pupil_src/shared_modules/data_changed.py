@@ -95,7 +95,7 @@ class Announcer:
     def _notify_all(self, token, delay=None):
         self._plugin().notify_all(
             {
-                "subject": "data_changed.{}.announce_token".format(self._topic),
+                "subject": f"data_changed.{self._topic}.announce_token",
                 "token": token,
                 "delay": delay,
             }
@@ -104,7 +104,7 @@ class Announcer:
     def _on_notify(self, notification):
         if (
             notification["subject"]
-            == "data_changed.{}.request_token".format(self._topic)
+            == f"data_changed.{self._topic}.request_token"
             and self._current_token is not None
         ):
             self.announce_existing()
@@ -149,7 +149,7 @@ class Listener(Observable):
 
     def _request_token(self):
         self._plugin().notify_all(
-            {"subject": "data_changed.{}.request_token".format(self._topic)}
+            {"subject": f"data_changed.{self._topic}.request_token"}
         )
 
     def _on_notify(self, notification):
@@ -181,7 +181,7 @@ def _create_new_token():
     """
     Returns: A random string like e.g. "04bfd332"
     """
-    return "{:0>8x}".format(random.getrandbits(32))
+    return f"{random.getrandbits(32):0>8x}"
 
 
 def _write_token_to_file(token, plugin_role, topic, plugin_name, rec_dir):
@@ -195,7 +195,7 @@ def _write_token_to_file(token, plugin_role, topic, plugin_name, rec_dir):
 def _read_token_from_file(topic, plugin_role, plugin_name, rec_dir):
     file_path = _get_token_file_path(plugin_role, topic, plugin_name, rec_dir)
     try:
-        with open(file_path, "r") as f:
+        with open(file_path) as f:
             token = f.read()
             return token
     except FileNotFoundError:
@@ -203,6 +203,6 @@ def _read_token_from_file(topic, plugin_role, plugin_name, rec_dir):
 
 
 def _get_token_file_path(plugin_role, topic, plugin_name, rec_dir):
-    file_name = "{}_{}_{}.token".format(topic, plugin_role, plugin_name)
+    file_name = f"{topic}_{plugin_role}_{plugin_name}.token"
     file_path = os.path.join(rec_dir, "offline_data", "tokens", file_name)
     return file_path

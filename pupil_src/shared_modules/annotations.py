@@ -168,7 +168,7 @@ class AnnotationPlugin(Plugin, abc.ABC):
 
         label = annotation_definition.label
         hotkey = annotation_definition.hotkey
-        return ui.Button(label="{} <{}>".format(label, hotkey), function=make_remove)
+        return ui.Button(label=f"{label} <{hotkey}>", function=make_remove)
 
     def _append_button_quickbar(self, button_quickbar):
         current_buttons = self.g_pool.quickbar.elements
@@ -282,7 +282,7 @@ class Annotation_Player(AnnotationPlugin, Plugin):
             annotation_pldata.data, annotation_pldata.timestamps
         )
         logger.info(
-            "Loaded {} annotations from {}.pldata".format(len(annotations), file_name)
+            f"Loaded {len(annotations)} annotations from {file_name}.pldata"
         )
         return annotations
 
@@ -363,7 +363,7 @@ class Annotation_Player(AnnotationPlugin, Plugin):
             csv_writer.writerow(csv_keys)
             for annotation, idx in zip(annotation_section["data"], annotation_idc):
                 csv_row = [idx]
-                csv_row.extend((annotation.get(k, "") for k in csv_keys[1:]))
+                csv_row.extend(annotation.get(k, "") for k in csv_keys[1:])
                 csv_writer.writerow(csv_row)
             logger.info("Created 'annotations.csv' file.")
 
@@ -410,7 +410,7 @@ class Annotation_Player(AnnotationPlugin, Plugin):
             T.Tuple[T.Tuple[str, str], ...]: Tuple of annotation definitions, each being
               a label-hotkey tuple.
         """
-        with open(self.file_definitions_path, "r") as json_file:
+        with open(self.file_definitions_path) as json_file:
             return self._deserialize_definitions_from_file(
                 readable_json_file=json_file,
                 expected_version=self._FILE_DEFINITIONS_VERSION,

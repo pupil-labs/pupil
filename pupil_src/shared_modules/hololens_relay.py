@@ -160,7 +160,7 @@ class Hololens_Relay(Plugin):
         self.host = host
         self.port = port
 
-        self.start_server("{}:{}".format(host, port))
+        self.start_server(f"{host}:{port}")
         self.menu = None
 
     def start_server(self, new_address):
@@ -233,10 +233,10 @@ class Hololens_Relay(Plugin):
         if self.use_primary_interface:
             self.menu.append(ui.Text_Input("port", self, setter=set_port, label="Port"))
             self.menu.append(
-                ui.Info_Text('Connect locally:   "127.0.0.1:{}"'.format(self.port))
+                ui.Info_Text(f'Connect locally:   "127.0.0.1:{self.port}"')
             )
             self.menu.append(
-                ui.Info_Text('Connect remotely: "{}:{}"'.format(ip, self.port))
+                ui.Info_Text(f'Connect remotely: "{ip}:{self.port}"')
             )
         else:
             self.menu.append(
@@ -244,11 +244,11 @@ class Hololens_Relay(Plugin):
                     "host",
                     setter=set_address,
                     label="Address",
-                    getter=lambda: "{}:{}".format(self.host, self.port),
+                    getter=lambda: f"{self.host}:{self.port}",
                 )
             )
             self.menu.append(
-                ui.Info_Text('Bound to: "{}:{}"'.format(self.host, self.port))
+                ui.Info_Text(f'Bound to: "{self.host}:{self.port}"')
             )
 
     def thread_loop(self, context, pipe):
@@ -396,14 +396,14 @@ class Hololens_Relay(Plugin):
             ipc_pub.notify({"subject": "pupil_detector.set_enabled", "value": True})
             ipc_pub.notify(
                 {
-                    "subject": "eye_process.should_start.{}".format(0),
+                    "subject": f"eye_process.should_start.{0}",
                     "eye_id": 0,
                     "delay": 0.4,
                 }
             )
             ipc_pub.notify(
                 {
-                    "subject": "eye_process.should_start.{}".format(1),
+                    "subject": f"eye_process.should_start.{1}",
                     "eye_id": 1,
                     "delay": 0.2,
                 }

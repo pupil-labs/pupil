@@ -39,10 +39,8 @@ def transform_mobile_to_corresponding_new_style(rec_dir: str) -> RecordingInfoFi
 
     if mobile_version >= NEXT_UNSUPPORTED_VERSION:
         raise InvalidRecordingException(
-            (
                 "This Player version does not support Pupil Mobile versions >= "
                 f"{NEXT_UNSUPPORTED_VERSION}. Got {mobile_version}."
-            )
         )
 
     # elif mobile_version >= 3.0:

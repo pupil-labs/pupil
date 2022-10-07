@@ -291,7 +291,7 @@ class PupilRemoteController(Observable):
             try:
                 target = float(msg[2:])
             except Exception:
-                response = "'{}' cannot be converted to float.".format(msg[2:])
+                response = f"'{msg[2:]}' cannot be converted to float."
             else:
                 raw_time = self.g_pool.get_now()
                 self.g_pool.timebase.value = raw_time - target
@@ -299,8 +299,8 @@ class PupilRemoteController(Observable):
         elif msg[0] == "t":
             response = repr(self.g_pool.get_timestamp())
         elif msg[0] == "v":
-            response = "{}".format(self.g_pool.version)
+            response = f"{self.g_pool.version}"
         else:
             response = "Unknown command."
         remote.send_string(response)
-        logger.debug("Request: '{}', Response: '{}'".format(msg, response))
+        logger.debug(f"Request: '{msg}', Response: '{response}'")

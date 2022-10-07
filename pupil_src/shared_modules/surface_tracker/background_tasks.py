@@ -94,18 +94,18 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
     def handle_frame(frame_idx):
         if frame_idx != cap.get_frame_index() + 1:
             # we need to seek:
-            logger.debug("Seeking to Frame {}".format(frame_idx))
+            logger.debug(f"Seeking to Frame {frame_idx}")
             try:
                 cap.seek_to_frame(frame_idx)
             except video_capture.FileSeekError:
-                logger.warning("Could not evaluate frame: {}.".format(frame_idx))
+                logger.warning(f"Could not evaluate frame: {frame_idx}.")
                 visited_list[frame_idx] = True  # this frame is now visited.
                 return []
 
         try:
             frame = cap.get_frame()
         except video_capture.EndofVideoError:
-            logger.warning("Could not evaluate frame: {}.".format(frame_idx))
+            logger.warning(f"Could not evaluate frame: {frame_idx}.")
             visited_list[frame_idx] = True
             return []
         return callable(frame)
@@ -119,7 +119,7 @@ def video_processing_generator(video_file_path, callable, seek_idx, visited_list
             last_frame_idx = seek_idx.value
             seek_idx.value = -1
             logger.debug(
-                "User required seek. Marker caching at Frame: {}".format(last_frame_idx)
+                f"User required seek. Marker caching at Frame: {last_frame_idx}"
             )
 
         next_frame_idx = next_unvisited_idx(last_frame_idx)
@@ -270,14 +270,14 @@ class Exporter:
         self.marker_cache_path = marker_cache_path
 
     def save_surface_statisics_to_file(self):
-        logger.info("exporting metrics to {}".format(self.metrics_dir))
+        logger.info(f"exporting metrics to {self.metrics_dir}")
         if os.path.isdir(self.metrics_dir):
             logger.info("Will overwrite previous export for this section")
         else:
             try:
                 os.mkdir(self.metrics_dir)
             except OSError:
-                logger.warning("Could not make metrics dir {}".format(self.metrics_dir))
+                logger.warning(f"Could not make metrics dir {self.metrics_dir}")
                 return
 
         (
@@ -303,7 +303,7 @@ class Exporter:
             self._export_surface_heatmap(surface, surface_name)
 
             logger.info(
-                "Saved surface gaze and fixation data for '{}'".format(surface.name)
+                f"Saved surface gaze and fixation data for '{surface.name}'"
             )
 
         # Cleanup surface related data to release memory
@@ -458,7 +458,7 @@ class Exporter:
                 self.world_timestamps, self.export_range
             )
             gaze_in_section = self.gaze_positions.by_ts_window(export_window)
-            not_on_any_surf_ts = set([gp["timestamp"] for gp in gaze_in_section])
+            not_on_any_surf_ts = {gp["timestamp"] for gp in gaze_in_section}
 
             csv_writer.writerow(("total_gaze_point_count", len(gaze_in_section)))
             csv_writer.writerow("")
@@ -467,9 +467,9 @@ class Exporter:
             for surf_idx, surface in enumerate(self.surfaces):
                 gaze_on_surf = self.gaze_on_surfaces[surf_idx]
                 gaze_on_surf = list(itertools.chain.from_iterable(gaze_on_surf))
-                gaze_on_surf_ts = set(
-                    [gp["base_data"][1] for gp in gaze_on_surf if gp["on_surf"]]
-                )
+                gaze_on_surf_ts = {
+                    gp["base_data"][1] for gp in gaze_on_surf if gp["on_surf"]
+                }
                 not_on_any_surf_ts -= gaze_on_surf_ts
                 csv_writer.writerow((surface.name, len(gaze_on_surf_ts)))
 

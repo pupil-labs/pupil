@@ -74,13 +74,13 @@ elif platform.system() == "Linux":
         )
         content = """\
 Package: pupil-capture
-Version: %s
+Version: {}
 Architecture: amd64
 Maintainer: Pupil Labs <info@pupil-labs.com>
 Priority: optional
 Description: Pupil Capture is part of the Pupil Eye Tracking Platform
-Installed-Size: %s
-""" % (
+Installed-Size: {}
+""".format(
             pupil_version(),
             round(dist_size / 1024),
         )

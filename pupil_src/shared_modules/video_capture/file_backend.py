@@ -610,7 +610,7 @@ class File_Source(Playback_Source, Base_Source):
                 "frame_rate",
                 label="Frame rate",
                 setter=lambda x: None,
-                getter=lambda: "{:.0f} FPS".format(self.frame_rate),
+                getter=lambda: f"{self.frame_rate:.0f} FPS",
             )
         )
 

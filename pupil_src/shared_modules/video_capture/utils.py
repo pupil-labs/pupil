@@ -24,7 +24,7 @@ VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "fake")
 VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 
-class Exposure_Time(object):
+class Exposure_Time:
     def __init__(self, max_ET, frame_rate, mode="manual"):
         self.mode = mode
         self.ET_thres = 1, min(10000 / frame_rate, max_ET)
@@ -78,7 +78,7 @@ class Exposure_Time(object):
                 return next_ET
 
 
-class Check_Frame_Stripes(object):
+class Check_Frame_Stripes:
     def __init__(
         self,
         check_freq_init=0.1,

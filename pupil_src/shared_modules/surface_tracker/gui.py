@@ -293,7 +293,7 @@ class GUI:
     def _draw_surface_definition_progress(
         self, surface, surface_edit_anchor, marker_edit_anchor
     ):
-        progress_text = "{:.0f} %".format(surface.build_up_status * 100)
+        progress_text = f"{surface.build_up_status * 100:.0f} %"
         progress_color_rgba = rgb_to_rgba(self.color_secondary_rgb)
         self._draw_text(
             (surface_edit_anchor[0] + 15, surface_edit_anchor[1] + 6),

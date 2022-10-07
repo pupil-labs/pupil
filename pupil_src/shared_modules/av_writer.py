@@ -67,11 +67,11 @@ def write_timestamps(file_loc, timestamps, output_format="npy"):
     """
     directory, video_file = os.path.split(file_loc)
     name, ext = os.path.splitext(video_file)
-    ts_file = "{}_timestamps".format(name)
+    ts_file = f"{name}_timestamps"
     ts_loc = os.path.join(directory, ts_file)
     ts = np.array(timestamps)
     if output_format not in ("npy", "csv", "all"):
-        raise ValueError("Unknown timestamp output format `{}`".format(output_format))
+        raise ValueError(f"Unknown timestamp output format `{output_format}`")
     if output_format in ("npy", "all"):
         np.save(ts_loc + ".npy", ts)
     if output_format in ("csv", "all"):
@@ -130,7 +130,7 @@ class AV_Writer(abc.ABC):
         # `ext` starts with a dot, so we need to remove it for the format to be
         # recongnized by pyav
         self.container = av.open(self.output_file_path_in_porgress, "w", format=ext[1:])
-        logger.debug("Opened '{}' for writing.".format(output_file_path))
+        logger.debug(f"Opened '{output_file_path}' for writing.")
 
         self.configured = False
         self.video_stream = self.container.add_stream(

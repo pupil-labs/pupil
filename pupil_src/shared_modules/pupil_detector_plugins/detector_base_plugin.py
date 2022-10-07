@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 EVENT_KEY = "pupil_detection_results"
 
-PUPIL_DETECTOR_NOTIFICATION_SUBJECT_PATTERN = "^pupil_detector\.(?P<action>[a-z_]+)$"
+PUPIL_DETECTOR_NOTIFICATION_SUBJECT_PATTERN = r"^pupil_detector\.(?P<action>[a-z_]+)$"
 
 
 class DetectorPropertyProxy:

@@ -85,7 +85,7 @@ class World_Video_Exporter(VideoExporter):
         return pre_computed
 
 
-class GlobalContainer(object):
+class GlobalContainer:
     pass
 
 
@@ -182,7 +182,7 @@ def _export_world_video(
         if os.path.isfile(out_file_path):
             logger.warning("Video out file already exsists. I will overwrite!")
             os.remove(out_file_path)
-        logger.debug("Saving Video to {}".format(out_file_path))
+        logger.debug(f"Saving Video to {out_file_path}")
 
         # Trim mark verification
         # make sure the trim marks (start frame, end frame) make sense:
@@ -274,7 +274,7 @@ def _export_world_video(
 
                 writer.write_video_frame(frame)
                 current_frame += 1
-                yield "Exporting with pid {}".format(PID), current_frame
+                yield f"Exporting with pid {PID}", current_frame
         except GeneratorExit:
             logger.warning(f"Video export with pid {PID} was canceled.")
             writer.close(timestamp_export_format=None, closed_suffix=".canceled")
@@ -290,7 +290,7 @@ def _export_world_video(
             f"This took {duration} seconds. "
             f"Exporter ran at {effective_fps} frames per second."
         )
-        yield "Export done. This took {:.0f} seconds.".format(duration), current_frame
+        yield f"Export done. This took {duration:.0f} seconds.", current_frame
 
     except GeneratorExit:
         logger.warning(f"Video export with pid {PID} was canceled.")

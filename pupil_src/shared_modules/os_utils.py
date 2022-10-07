@@ -24,7 +24,7 @@ if os_name == "Darwin":
 
 if os_name == "Darwin" and mac_version >= min_version:
 
-    class Prevent_Idle_Sleep(object):
+    class Prevent_Idle_Sleep:
         def __init__(self):
             self.caffeine_process = None
 
@@ -42,7 +42,7 @@ if os_name == "Darwin" and mac_version >= min_version:
 
 else:
 
-    class Prevent_Idle_Sleep(object):
+    class Prevent_Idle_Sleep:
         def __init__(self):
             self.caffeine_process = None
 

@@ -166,7 +166,7 @@ class Surface_Tracker_Online(Surface_Tracker):
             # to save it.
             if self.markers and self.current_frame is not None:
                 surface = self.Surface_Class(
-                    name="Surface {:}".format(len(self.surfaces) + 1)
+                    name=f"Surface {len(self.surfaces) + 1}"
                 )
                 self.add_surface(surface)
                 surface.update_location(

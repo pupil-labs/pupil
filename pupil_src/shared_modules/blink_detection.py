@@ -589,7 +589,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
     def csv_representation_for_blink(self, b, header):
         data = [b[k] for k in header if k not in ("filter_response", "base_data")]
         try:
-            resp = " ".join(["{}".format(val) for val in b["filter_response"]])
+            resp = " ".join([f"{val}" for val in b["filter_response"]])
             data.insert(header.index("filter_response"), resp)
         except IndexError:
             pass

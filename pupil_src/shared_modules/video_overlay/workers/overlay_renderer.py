@@ -34,7 +34,7 @@ class OverlayRenderer:
             self.video = FrameFetcher(self.config.video_path)
             self.valid_video_loaded = True
         except FileNotFoundError:
-            logger.debug("Could not load overlay: {}".format(self.config.video_path))
+            logger.debug(f"Could not load overlay: {self.config.video_path}")
             self.valid_video_loaded = False
         return self.valid_video_loaded
 

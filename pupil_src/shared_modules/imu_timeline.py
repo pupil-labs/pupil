@@ -90,7 +90,7 @@ def merge_arrays(arr1, arr2):
     return new_array
 
 
-class Fusion(object):
+class Fusion:
     """
     Class provides sensor fusion estimating pitch and roll using Madgwick's algorithm:
     https://www.x-io.co.uk/res/doc/madgwick_internal_report.pdf
@@ -692,10 +692,8 @@ class Imu_Bisector(pm.Bisector):
     def __init__(self, data=(), data_ts=()):
         if len(data) != len(data_ts):
             raise ValueError(
-                (
                     "Each element in 'data' requires a corresponding"
                     " timestamp in `data_ts`"
-                )
             )
 
         elif not len(data):

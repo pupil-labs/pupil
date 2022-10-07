@@ -76,7 +76,7 @@ class Batch_Export(System_Plugin_Base):
         # uniqueness = 'not_unique' -> Automatic `Close` button
         # -> Rename to `Cancel`
         export_name = os.path.split(self.out_file_path)[-1]
-        self.menu.label = "Batch Export {}".format(export_name)
+        self.menu.label = f"Batch Export {export_name}"
         self.menu[0].label = "Cancel"
         self.menu_icon.indicator_start = 0.0
         self.menu_icon.indicator_stop = 0.1
@@ -101,7 +101,7 @@ class Batch_Export(System_Plugin_Base):
             try:
                 recent = [d for d in self.process.fetch()]
             except Exception as e:
-                self.status, self.progress = "{}: {}".format(type(e).__name__, e), 0
+                self.status, self.progress = f"{type(e).__name__}: {e}", 0
             else:
                 if recent:
                     self.status, self.progress = recent[-1]
@@ -170,7 +170,7 @@ class Batch_Export(System_Plugin_Base):
             {},
         )
         self.process = bh.IPC_Logging_Task_Proxy(
-            "Pupil Batch Export {}".format(self.out_file_path),
+            f"Pupil Batch Export {self.out_file_path}",
             export_function,
             args=args,
         )
@@ -275,7 +275,7 @@ class Batch_Exporter(Plugin):
             self.search_button.outer_label = "Searching..."
             self.search_button.label = "Cancel"
             self.search_task = bh.IPC_Logging_Task_Proxy(
-                "Searching recordings in {}".format(self.source_dir),
+                f"Searching recordings in {self.source_dir}",
                 get_recording_dirs,
                 args=[self.source_dir],
             )
@@ -285,7 +285,7 @@ class Batch_Exporter(Plugin):
         if os.path.isdir(new_dir):
             self.source_dir = new_dir
         else:
-            logger.warning('"{}" is not a directory'.format(new_dir))
+            logger.warning(f'"{new_dir}" is not a directory')
             return
 
     def set_dest_dir(self, new_dir):
@@ -293,7 +293,7 @@ class Batch_Exporter(Plugin):
         if os.path.isdir(new_dir):
             self.destination_dir = new_dir
         else:
-            logger.warning('"{}" is not a directory'.format(new_dir))
+            logger.warning(f'"{new_dir}" is not a directory')
             return
 
     def _clear_avail(self):
@@ -486,9 +486,9 @@ def main():
     if args.export_to_dir:
         export_dir = args.export_to_dir
         if os.path.isdir(export_dir):
-            logger.info("Exporting all vids to {}".format(export_dir))
+            logger.info(f"Exporting all vids to {export_dir}")
         else:
-            logger.error("Exporting dir is not valid {}".format(export_dir))
+            logger.error(f"Exporting dir is not valid {export_dir}")
             return
     else:
         export_dir = None
@@ -500,7 +500,7 @@ def main():
     else:
         preview = False
 
-    class Temp(object):
+    class Temp:
         pass
 
     recording_dirs = get_recording_dirs(data_dir)
@@ -516,7 +516,7 @@ def main():
     outfiles = set()
     for d in recording_dirs:
         j = Temp()
-        logger.info("Adding new export: {}".format(d))
+        logger.info(f"Adding new export: {d}")
         j.should_terminate = mp.Value(c_bool, 0)
         j.frames_to_export = mp.Value(c_int, 0)
         j.current_frame = mp.Value(c_int, 0)
@@ -542,7 +542,7 @@ def main():
                 )
                 return
             outfiles.add(j.out_file_path)
-            logger.info("Exporting to: {}".format(j.out_file_path))
+            logger.info(f"Exporting to: {j.out_file_path}")
 
         else:
             j.out_file_path = None

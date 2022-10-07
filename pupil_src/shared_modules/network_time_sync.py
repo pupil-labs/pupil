@@ -67,7 +67,7 @@ class Time_Echo_Server(socketserver.ThreadingTCPServer):
         handler_class = functools.partial(Time_Echo, time_fn=time_fn)
         super().__init__((host, 0), handler_class, **kwargs)
         self.allow_reuse_address = True
-        logger.debug("Timer Server ready on port: {}".format(self.port))
+        logger.debug(f"Timer Server ready on port: {self.port}")
 
     @property
     def host(self) -> str:
@@ -164,7 +164,7 @@ class Clock_Sync_Follower(threading.Thread):
                             self.in_sync = True
                             self.offset_remains = False
                             logger.debug(
-                                "Time adjusted by {}ms.".format(offset / self.ms)
+                                f"Time adjusted by {offset / self.ms}ms."
                             )
                         else:
                             self.in_sync = True
@@ -179,7 +179,7 @@ class Clock_Sync_Follower(threading.Thread):
                             self.slew_time(slew_time)
                             offset -= slew_time
                             logger.debug(
-                                "Time slewed by: {}ms".format(slew_time / self.ms)
+                                f"Time slewed by: {slew_time / self.ms}ms"
                             )
 
                             self.in_sync = not bool(offset)
@@ -220,17 +220,17 @@ class Clock_Sync_Follower(threading.Thread):
             times.sort(key=lambda t: t[2] - t[0])
             times = times[: int(len(times) * 0.69)]
             # delays = [t2-t0 for t0, t1, t2 in times]
-            offsets = [t0 - ((t1 + (t2 - t0) / 2)) for t0, t1, t2 in times]
+            offsets = [t0 - (t1 + (t2 - t0) / 2) for t0, t1, t2 in times]
             mean_offset = sum(offsets) / len(offsets)
-            offset_jitter = sum([abs(mean_offset - o) for o in offsets]) / len(offsets)
+            offset_jitter = sum(abs(mean_offset - o) for o in offsets) / len(offsets)
             # mean_delay = sum(delays)/len(delays)
             # delay_jitter = sum([abs(mean_delay-o)for o in delays])/len(delays)
 
             # logger.debug('offset: %s (%s),delay %s(%s)'%(mean_offset/self.ms,offset_jitter/self.ms,mean_delay/self.ms,delay_jitter/self.ms))
             return mean_offset, offset_jitter
 
-        except socket.error as e:
-            logger.debug("{} for {}:{}".format(e, self.host, self.port))
+        except OSError as e:
+            logger.debug(f"{e} for {self.host}:{self.port}")
             return None
         # except Exception as e:
         #     logger.error(str(e))
@@ -246,13 +246,13 @@ class Clock_Sync_Follower(threading.Thread):
     def __str__(self):
         if self.in_sync:
             if self.offset_remains:
-                return "NOT in sync with {}".format(self.host)
+                return f"NOT in sync with {self.host}"
             else:
                 return "Synced with {}:{} with  {:.2f}ms jitter".format(
                     self.host, self.port, self.sync_jitter / self.ms
                 )
         else:
-            return "Connecting to {}".format(self.host)
+            return f"Connecting to {self.host}"
 
 
 if __name__ == "__main__":

@@ -193,7 +193,7 @@ class Audio_Playback(System_Plugin_Base):
     def _setup_filter_graph(self):
         """Graph: buffer -> volume filter -> resample -> buffersink"""
         self.current_audio_volume = self.req_audio_volume
-        logger.debug("Setting volume {} ".format(self.current_audio_volume))
+        logger.debug(f"Setting volume {self.current_audio_volume} ")
         self.filter_graph = av.filter.Graph()
         self.filter_graph_list = []
         try:
@@ -201,15 +201,15 @@ class Audio_Playback(System_Plugin_Base):
         except AttributeError:
             buffer = self.filter_graph.add_buffer(template=self.audio.stream)
         self.filter_graph_list.append(buffer)
-        args = "volume={}:precision=float".format(self.current_audio_volume)
-        logger.debug("args = {}".format(args))
+        args = f"volume={self.current_audio_volume}:precision=float"
+        logger.debug(f"args = {args}")
         self.volume_filter = self.filter_graph.add("volume", args)
         self.filter_graph_list.append(self.volume_filter)
         self.filter_graph_list[-2].link_to(self.filter_graph_list[-1])
         self.filter_graph_list.append(
             self.filter_graph.add(
                 "aresample",
-                "osf={}".format(self.audio.stream.format.packed.name),
+                f"osf={self.audio.stream.format.packed.name}",
             )
         )
         self.filter_graph_list[-2].link_to(self.filter_graph_list[-1])
@@ -241,7 +241,7 @@ class Audio_Playback(System_Plugin_Base):
             self.audio_sync -= lat_diff
             self.g_pool.seek_control.time_slew = self.audio_sync
 
-            logger.debug("Measured latency = {}".format(self.audio_measured_latency))
+            logger.debug(f"Measured latency = {self.audio_measured_latency}")
         self.last_dac_time = time_info.outputBufferDacTime
         if not self.play:
             self.audio_paused = True
@@ -253,7 +253,7 @@ class Audio_Playback(System_Plugin_Base):
                 self.g_pool.seek_control.current_playback_time + cb_to_adc_time - ts
             )
             if desync > 0.4:
-                logger.debug("*** Audio desync detected: {}".format(desync))
+                logger.debug(f"*** Audio desync detected: {desync}")
                 self.audio_paused = True
                 raise sd.CallbackAbort()
             outdata[:] = samples.reshape(outdata.shape)
@@ -493,7 +493,7 @@ class Audio_Playback(System_Plugin_Base):
             for i, af in enumerate(self.audio_frame_iterator):
                 fnum = i + 1
                 if af.samples != reference_frame.samples:
-                    print("fnum {} samples = {}".format(fnum, af.samples))
+                    print(f"fnum {fnum} samples = {af.samples}")
                 if af.pts != self.audio_idx_to_pts(fnum):
                     print(
                         "af.pts = {} fnum = {} idx2pts = {}".format(

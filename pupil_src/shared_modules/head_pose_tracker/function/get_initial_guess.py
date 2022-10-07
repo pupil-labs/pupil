@@ -36,8 +36,8 @@ def calculate(
         frame_id: np.array(extrinsics)
         for frame_id, extrinsics in frame_id_to_extrinsics_opt.items()
     }
-    frame_ids = list(set(marker.frame_id for marker in key_markers))
-    marker_ids = list(set(marker.marker_id for marker in key_markers))
+    frame_ids = list({marker.frame_id for marker in key_markers})
+    marker_ids = list({marker.marker_id for marker in key_markers})
 
     # The function _calculate_extrinsics calculates camera extrinsics and marker
     # extrinsics iteratively. It is possible that not all of them can be calculated

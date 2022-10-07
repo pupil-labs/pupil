@@ -270,9 +270,9 @@ def update_recording_v093_to_v094(rec_dir):
             try:
                 rec_object = fm.load_object(rec_file, allow_legacy=True)
                 fm.save_object(rec_object, rec_file)
-                logger.info("Converted `{}` from pickle to msgpack".format(file))
+                logger.info(f"Converted `{file}` from pickle to msgpack")
             except Exception:
-                logger.warning("did not convert {}".format(rec_file))
+                logger.warning(f"did not convert {rec_file}")
 
     _update_info_version_to("v0.9.4", rec_dir)
 
@@ -377,7 +377,7 @@ def update_recording_v0913_to_v13(rec_dir):
         logger.info("Replaced `camera_calibration` with `world.intrinsics`.")
 
         os.rename(old_calib_loc, old_calib_loc + ".deprecated")
-    except IOError:
+    except OSError:
         pass
 
     _update_info_version_to("v1.3", rec_dir)
@@ -584,9 +584,9 @@ def update_recording_bytes_to_unicode(rec_dir):
             return data.decode()
         elif isinstance(data, str) or isinstance(data, np.ndarray):
             return data
-        elif isinstance(data, collections.Mapping):
+        elif isinstance(data, collections.abc.Mapping):
             return dict(map(convert, data.items()))
-        elif isinstance(data, collections.Iterable):
+        elif isinstance(data, collections.abc.Iterable):
             return type(data)(map(convert, data))
         else:
             return data
@@ -599,14 +599,14 @@ def update_recording_bytes_to_unicode(rec_dir):
             rec_object = fm.load_object(rec_file)
             converted_object = convert(rec_object)
             if converted_object != rec_object:
-                logger.info("Converted `{}` from bytes to unicode".format(file))
+                logger.info(f"Converted `{file}` from bytes to unicode")
                 fm.save_object(converted_object, rec_file)
         except (fm.UnpicklingError, IsADirectoryError):
             continue
 
     # manually convert k v dicts.
     meta_info_path = os.path.join(rec_dir, "info.csv")
-    with open(meta_info_path, "r", encoding="utf-8") as csvfile:
+    with open(meta_info_path, encoding="utf-8") as csvfile:
         meta_info = csv_utils.read_key_value_file(csvfile)
     with open(meta_info_path, "w", newline="") as csvfile:
         csv_utils.write_key_value_file(csvfile, meta_info)
@@ -635,7 +635,7 @@ def update_recording_v073_to_v074(rec_dir):
         )
     try:
         fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
-    except IOError:
+    except OSError:
         pass
 
 
@@ -647,7 +647,7 @@ def update_recording_v05_to_v074(rec_dir):
         p["method"] = "2d python"
     try:
         fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
-    except IOError:
+    except OSError:
         pass
 
 
@@ -672,7 +672,7 @@ def update_recording_v04_to_v074(rec_dir):
             }
         )
 
-    pupil_by_ts = dict([(p["timestamp"], p) for p in pupil_list])
+    pupil_by_ts = {p["timestamp"]: p for p in pupil_list}
 
     for datum in gaze_array:
         (
@@ -693,7 +693,7 @@ def update_recording_v04_to_v074(rec_dir):
     pupil_data = {"pupil_positions": pupil_list, "gaze_positions": gaze_list}
     try:
         fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
-    except IOError:
+    except OSError:
         pass
 
 
@@ -728,7 +728,7 @@ def update_recording_v03_to_v074(rec_dir):
     pupil_data = {"pupil_positions": pupil_list, "gaze_positions": gaze_list}
     try:
         fm.save_object(pupil_data, os.path.join(rec_dir, "pupil_data"))
-    except IOError:
+    except OSError:
         pass
 
     ts_path = os.path.join(rec_dir, "world_timestamps.npy")

@@ -100,7 +100,7 @@ class ScanPathStorage:
     def __load_from_disk(self):
         try:
             gaze_data = np.load(self.__file_path)
-        except IOError:
+        except OSError:
             return
         self.gaze_data = gaze_data
         # TODO: Figure out if gaze_data is complete

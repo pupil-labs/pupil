@@ -207,7 +207,7 @@ class HMD_Streaming_Source(Base_Source):
                     return self._process_frame(frame_class, frame)
             except KeyError as err:
                 logger.debug(
-                    "Ill-formatted frame received. Missing key: {}".format(err)
+                    f"Ill-formatted frame received. Missing key: {err}"
                 )
 
     def _process_frame(

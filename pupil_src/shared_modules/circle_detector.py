@@ -15,7 +15,7 @@ import cv2
 from methods import dist_pts_ellipse, normalize
 
 
-class CircleTracker(object):
+class CircleTracker:
     def __init__(self, wait_interval=30, roi_wait_interval=120):
         self.wait_interval = wait_interval
         self.roi_wait_interval = roi_wait_interval

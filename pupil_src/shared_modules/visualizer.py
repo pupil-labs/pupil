@@ -69,7 +69,7 @@ else:
     window_position_default = (0, 0)
 
 
-class Visualizer(object):
+class Visualizer:
     """docstring for Visualizer
     Visualizer is a base class for all visualizations in new windows
     """

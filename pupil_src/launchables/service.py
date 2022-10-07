@@ -121,8 +121,8 @@ def service(
 
         signal.signal(signal.SIGINT, interrupt_handler)
 
-        logger.info("Application Version: {}".format(version))
-        logger.info("System Info: {}".format(get_system_info()))
+        logger.info(f"Application Version: {version}")
+        logger.info(f"System Info: {get_system_info()}")
         logger.debug(f"Debug flag: {debug}")
 
         # g_pool holds variables for this process they are accesible to all plugins
@@ -309,7 +309,7 @@ def service(
         import traceback
 
         trace = traceback.format_exc()
-        logger.error("Process Service crashed with trace:\n{}".format(trace))
+        logger.error(f"Process Service crashed with trace:\n{trace}")
 
     finally:
         # shut down eye processes:

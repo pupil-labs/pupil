@@ -36,16 +36,14 @@ def exact_window(timestamps, index_range):
     return (timestamps[index_range[0]], timestamps[end_index])
 
 
-class Bisector(object):
+class Bisector:
     """Stores data with associated timestamps, both sorted by the timestamp."""
 
     def __init__(self, data=(), data_ts=()):
         if len(data) != len(data_ts):
             raise ValueError(
-                (
                     "Each element in `data` requires a corresponding"
                     " timestamp in `data_ts`"
-                )
             )
         elif not len(data):
             self.data = np.array([], dtype=object)
