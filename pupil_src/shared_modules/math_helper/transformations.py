@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # transformations.py
 
 # Copyright (c) 2006-2015, Christoph Gohlke
@@ -30,7 +29,7 @@
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-"""Homogeneous Transformation Matrices and Quaternions.
+r"""Homogeneous Transformation Matrices and Quaternions.
 
 A library for calculating 4x4 matrices for translating, rotating, reflecting,
 scaling, shearing, projecting, orthogonalizing, and superimposing arrays of
@@ -193,7 +192,6 @@ True
 
 """
 
-from __future__ import division, print_function
 
 import math
 
@@ -701,7 +699,7 @@ def shear_from_matrix(matrix):
     w, V = numpy.linalg.eig(M33)
     i = numpy.where(abs(numpy.real(w) - 1.0) < 1e-4)[0]
     if len(i) < 2:
-        raise ValueError("no two linear independent eigenvectors found {}".format(w))
+        raise ValueError(f"no two linear independent eigenvectors found {w}")
     V = numpy.real(V[:, i]).squeeze().T
     lenorm = -1.0
     for i0, i1 in ((0, 1), (0, 2), (1, 2)):
@@ -896,7 +894,7 @@ def orthogonalization_matrix(lengths, angles):
 
 
 def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
-    """Return affine transform matrix to register two point sets.
+    r"""Return affine transform matrix to register two point sets.
 
     v0 and v1 are shape (ndims, \*) arrays of at least ndims non-homogeneous
     coordinates, where ndims is the dimensionality of the coordinate space.
@@ -1007,7 +1005,7 @@ def affine_matrix_from_points(v0, v1, shear=True, scale=True, usesvd=True):
 
 
 def superimposition_matrix(v0, v1, scale=False, usesvd=True):
-    """Return matrix to transform given 3D point set into second point set.
+    r"""Return matrix to transform given 3D point set into second point set.
 
     v0 and v1 are shape (3, \*) or (4, \*) arrays of at least 3 points.
 
@@ -1556,7 +1554,7 @@ def random_rotation_matrix(rand=None):
     return quaternion_matrix(random_quaternion(rand))
 
 
-class Arcball(object):
+class Arcball:
     """Virtual Trackball Control.
 
     >>> ball = Arcball()
@@ -1744,7 +1742,7 @@ _AXES2TUPLE = {
     "rzyz": (2, 1, 1, 1),
 }
 
-_TUPLE2AXES = dict((v, k) for k, v in _AXES2TUPLE.items())
+_TUPLE2AXES = {v: k for k, v in _AXES2TUPLE.items()}
 
 
 def vector_norm(data, axis=None, out=None):
@@ -1964,7 +1962,7 @@ def _import_module(name, package=None, warn=True, prefix="_py_", ignore="_"):
             module = import_module("." + name, package=package)
     except ImportError:
         if warn:
-            warnings.warn("failed to import module {}".format(name))
+            warnings.warn(f"failed to import module {name}")
     else:
         for attr in dir(module):
             if ignore and attr.startswith(ignore):

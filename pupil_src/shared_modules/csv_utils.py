@@ -8,11 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
 import abc
 import csv
+import os
 import typing as t
-
 
 CSV_EXPORT_RAW_TYPE = t.TypeVar("CSV_EXPORT_RAW_TYPE")
 CSV_EXPORT_LABEL_TYPE = t.AnyStr

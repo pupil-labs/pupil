@@ -11,9 +11,9 @@ See COPYING and COPYING.LESSER for license details.
 
 import logging
 
-from storage import SingleFileStorage
 from gaze_producer import model
 from observable import Observable
+from storage import SingleFileStorage
 
 logger = logging.getLogger(__name__)
 

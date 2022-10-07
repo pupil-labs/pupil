@@ -10,17 +10,15 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+import collections
 import enum
-import typing
 import functools
 import itertools
-import collections
+import typing
 
 import cv2
 import numpy as np
-
 from pupil_apriltags import Detection as Apriltag_V3_Detection
-
 
 __all__ = [
     "Surface_Marker",

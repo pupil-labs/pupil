@@ -12,10 +12,9 @@ See COPYING and COPYING.LESSER for license details.
 import abc
 import os
 
-import OpenGL.GL as gl
-
 import gl_utils
 import glfw
+import OpenGL.GL as gl
 from gl_utils import GLFWErrorReporting
 
 GLFWErrorReporting.set_default()

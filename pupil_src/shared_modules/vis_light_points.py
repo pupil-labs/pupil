@@ -9,13 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import cv2
-from plugin import Plugin
-import numpy as np
-
-from pyglui import ui
-from methods import denormalize
 import logging
+
+import cv2
+import numpy as np
+from methods import denormalize
+from plugin import Plugin
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 

@@ -8,15 +8,13 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import player_methods as pm
 import tasklib
 from accuracy_visualizer import Accuracy_Visualizer
-from methods import normalize
-import player_methods as pm
-
 from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
+from methods import normalize
 
 from .fake_gpool import FakeGPool
-
 
 g_pool = None  # set by the plugin
 

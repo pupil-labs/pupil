@@ -11,9 +11,10 @@ See COPYING and COPYING.LESSER for license details.
 
 import uuid
 
+from version_utils import ParsedVersion, parse_version
+
 from . import RecordingInfoFile
 from . import recording_info_utils as utils
-from version_utils import parse_version, ParsedVersion
 
 
 class _RecordingInfoFile_2_0(RecordingInfoFile):

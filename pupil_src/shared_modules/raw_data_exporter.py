@@ -15,14 +15,11 @@ import logging
 import os
 import typing
 
-from pyglui import ui
-
 import csv_utils
 import player_methods as pm
 from plugin import Plugin
-
 from pupil_producers import Pupil_Producer_Base
-
+from pyglui import ui
 
 # logging
 logger = logging.getLogger(__name__)

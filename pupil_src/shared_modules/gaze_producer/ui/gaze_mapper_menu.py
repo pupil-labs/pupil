@@ -9,9 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from pyglui import ui
-
 from gaze_producer import ui as plugin_ui
+from pyglui import ui
 
 
 class GazeMapperMenu(plugin_ui.StorageEditMenu):

@@ -12,20 +12,20 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import sys
 
-from surface_tracker.surface import Surface
-from surface_tracker.surface import Surface_Marker_Aggregate
-
-from surface_tracker.surface_serializer import _Surface_Serializer_Base
-from surface_tracker.surface_serializer import _Surface_Serializer_V00
-from surface_tracker.surface_serializer import _Surface_Serializer_V01
+from surface_tracker.surface import Surface, Surface_Marker_Aggregate
+from surface_tracker.surface_serializer import (
+    _Surface_Serializer_Base,
+    _Surface_Serializer_V00,
+    _Surface_Serializer_V01,
+)
 
 from .fixtures import (
-    surface_pairs_v00_square,
-    surface_pairs_v01_apriltag,
-    surface_pairs_v01_square,
     surface_marker_aggregate_pairs_v00_square,
     surface_marker_aggregate_pairs_v01_apriltag,
     surface_marker_aggregate_pairs_v01_square,
+    surface_pairs_v00_square,
+    surface_pairs_v01_apriltag,
+    surface_pairs_v01_square,
 )
 
 

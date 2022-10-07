@@ -15,15 +15,11 @@ import logging
 import typing as T
 
 import audio
-from pyglui import ui
-from plugin import Plugin
-from hotkey import Hotkey
-
+from gaze_mapping import GazerHMD3D, default_gazer_class, registered_gazer_classes
 from gaze_mapping.gazer_base import GazerBase
-from gaze_mapping import default_gazer_class
-from gaze_mapping import GazerHMD3D
-from gaze_mapping import registered_gazer_classes
-
+from hotkey import Hotkey
+from plugin import Plugin
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 

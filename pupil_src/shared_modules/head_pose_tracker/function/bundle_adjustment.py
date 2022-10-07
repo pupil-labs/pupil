@@ -14,10 +14,9 @@ import logging
 
 import cv2
 import numpy as np
+from head_pose_tracker.function import utils
 from scipy import optimize as scipy_optimize
 from scipy import sparse as scipy_sparse
-
-from head_pose_tracker.function import utils
 
 logger = logging.getLogger(__name__)
 

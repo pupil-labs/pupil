@@ -9,11 +9,11 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import cv2
+import numpy as np
+from methods import denormalize
 from player_methods import transparent_circle
 from plugin import Plugin
-import numpy as np
-import cv2
-from methods import denormalize
 from pyglui import ui
 
 

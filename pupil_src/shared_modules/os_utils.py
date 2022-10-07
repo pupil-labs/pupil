@@ -9,11 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import platform, sys, os, time, traceback
-import subprocess as sp
-from version_utils import parse_version
-
 import logging
+import os
+import platform
+import subprocess as sp
+import sys
+import time
+import traceback
+
+from version_utils import parse_version
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +28,7 @@ if os_name == "Darwin":
 
 if os_name == "Darwin" and mac_version >= min_version:
 
-    class Prevent_Idle_Sleep(object):
+    class Prevent_Idle_Sleep:
         def __init__(self):
             self.caffeine_process = None
 
@@ -42,7 +46,7 @@ if os_name == "Darwin" and mac_version >= min_version:
 
 else:
 
-    class Prevent_Idle_Sleep(object):
+    class Prevent_Idle_Sleep:
         def __init__(self):
             self.caffeine_process = None
 
@@ -87,6 +91,7 @@ def patch_pyre_zhelper_cdll():
         return
 
     import ctypes.util
+
     import pyre.zhelper
 
     class AbsolutePathFallbackCDLL(ctypes.CDLL):

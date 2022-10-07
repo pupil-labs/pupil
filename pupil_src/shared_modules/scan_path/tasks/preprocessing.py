@@ -12,18 +12,17 @@ from collections import namedtuple
 from types import SimpleNamespace
 
 import numpy as np
-
 from observable import Observable
+from scan_path.utils import (
+    SCAN_PATH_GAZE_DATUM_DTYPE,
+    generate_frame_indices_with_deserialized_gaze,
+    scan_path_numpy_array_from,
+    scan_path_zeros_numpy_array,
+    sec_to_ns,
+    timestamp_ns,
+)
 
 from .base import _BaseTask
-from scan_path.utils import (
-    timestamp_ns,
-    sec_to_ns,
-    generate_frame_indices_with_deserialized_gaze,
-    SCAN_PATH_GAZE_DATUM_DTYPE,
-    scan_path_zeros_numpy_array,
-    scan_path_numpy_array_from,
-)
 
 
 class _BaseState:

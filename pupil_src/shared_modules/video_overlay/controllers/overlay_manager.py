@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+
 from storage import SingleFileStorage
 from video_overlay.models.config import Configuration
 from video_overlay.workers.overlay_renderer import OverlayRenderer

@@ -15,11 +15,10 @@ import os
 from observable import Observable
 from plugin import Plugin
 from video_capture.utils import VIDEO_EXTS
-
-from video_overlay.models.config import Configuration
 from video_overlay.controllers.overlay_manager import OverlayManager
-from video_overlay.ui.management import UIManagementGeneric
+from video_overlay.models.config import Configuration
 from video_overlay.ui.interactions import current_mouse_pos
+from video_overlay.ui.management import UIManagementGeneric
 
 
 class Video_Overlay(Observable, Plugin):

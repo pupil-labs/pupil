@@ -15,15 +15,14 @@ import typing as T
 from contextlib import contextmanager
 from itertools import chain
 
-import numpy as np
-import OpenGL.GL as gl
-import zmq
-
 import data_changed
 import file_methods as fm
 import gl_utils
+import numpy as np
+import OpenGL.GL as gl
 import player_methods as pm
 import pyglui.cygl.utils as cygl_utils
+import zmq
 import zmq_tools
 from observable import Observable
 from plugin import System_Plugin_Base
@@ -457,12 +456,12 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     def start_eye_process(self, eye_id):
         potential_locs = [
-            os.path.join(self.g_pool.rec_dir, "eye{}{}".format(eye_id, ext))
+            os.path.join(self.g_pool.rec_dir, f"eye{eye_id}{ext}")
             for ext in (".mjpeg", ".mp4", ".mkv")
         ]
         existing_locs = [loc for loc in potential_locs if os.path.exists(loc)]
         if not existing_locs:
-            logger.error("no eye video for eye '{}' found.".format(eye_id))
+            logger.error(f"no eye video for eye '{eye_id}' found.")
             self.detection_status[eye_id] = "No eye video found."
             return
         rec, file_ = os.path.split(existing_locs[0])
@@ -530,7 +529,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
                 if payload["subject"] == "file_source.video_finished":
                     for eye_id in (0, 1):
                         if self.eye_video_loc[eye_id] == payload["source_path"]:
-                            logger.debug("eye {} process complete".format(eye_id))
+                            logger.debug(f"eye {eye_id} process complete")
                             self.eye_frame_idx[eye_id] = self.eye_frame_num[eye_id]
                             self.detection_status[eye_id] = "complete"
                             self.stop_eye_process(eye_id)
@@ -576,7 +575,7 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
         session_data["version"] = self.session_data_version
         cache_path = os.path.join(self.data_dir, "offline_pupil.meta")
         fm.save_object(session_data, cache_path)
-        logger.info("Cached detected pupil data to {}".format(cache_path))
+        logger.info(f"Cached detected pupil data to {cache_path}")
 
     def redetect(self):
         self._pupil_data_store.clear()

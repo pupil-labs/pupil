@@ -16,9 +16,9 @@ import uuid
 
 import csv_utils
 from methods import get_system_info
+from version_utils import ParsedVersion, parse_version
 
 from .recording_info import RecordingInfoFile
-from version_utils import parse_version, ParsedVersion
 
 
 def string_from_recording_version(value: ParsedVersion) -> str:
@@ -81,7 +81,7 @@ def validator_optional_type(value_type) -> T.Callable[[T.Any], None]:
 def read_info_csv_file(rec_dir: str) -> dict:
     """Read `info.csv` file from recording."""
     file_path = os.path.join(rec_dir, "info.csv")
-    with open(file_path, "r") as file:
+    with open(file_path) as file:
         return csv_utils.read_key_value_file(file)
 
 
@@ -89,7 +89,7 @@ def read_info_json_file(rec_dir: str) -> dict:
     """Read `info.json` file from recording."""
     file_path = os.path.join(rec_dir, "info.json")
     # guaranteed to be utf-8 encoded
-    with open(file_path, "r", encoding="utf-8") as file:
+    with open(file_path, encoding="utf-8") as file:
         return json.load(file)
 
 
@@ -97,7 +97,7 @@ def read_info_invisible_json_file(rec_dir: str) -> dict:
     """Read `info.invisible.json` file from recording."""
     file_path = os.path.join(rec_dir, "info.invisible.json")
     # guaranteed to be utf-8 encoded
-    with open(file_path, "r", encoding="utf-8") as file:
+    with open(file_path, encoding="utf-8") as file:
         return json.load(file)
 
 
@@ -111,7 +111,7 @@ def read_pupil_invisible_info_file(rec_dir: str) -> dict:
 
 def parse_duration_string(duration_string: str) -> int:
     """Returns number of seconds from string 'HH:MM:SS'."""
-    H, M, S = [int(part) for part in duration_string.split(":")]
+    H, M, S = (int(part) for part in duration_string.split(":"))
     SECONDS_PER_H = 3600
     SECONDS_PER_M = 60
     return (H * SECONDS_PER_H) + (M * SECONDS_PER_M) + S

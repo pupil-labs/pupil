@@ -11,7 +11,6 @@ See COPYING and COPYING.LESSER for license details.
 import ctypes.util
 import functools
 
-
 print("Attempting to import OpenGL using patched `ctypes.util.find_library`...")
 _find_library_original = ctypes.util.find_library
 

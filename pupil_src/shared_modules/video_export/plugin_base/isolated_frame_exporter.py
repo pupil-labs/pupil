@@ -17,7 +17,7 @@ from types import SimpleNamespace
 import player_methods as pm
 from av_writer import MPEG_Writer
 from task_manager import ManagedTask
-from video_capture import File_Source, EndofVideoError
+from video_capture import EndofVideoError, File_Source
 from video_export.plugin_base.video_exporter import VideoExporter
 
 
@@ -37,7 +37,7 @@ class IsolatedFrameExporter(VideoExporter, abc.ABC):
         timestamp_export_format,
     ):
         os.makedirs(export_dir, exist_ok=True)
-        self.logger.info("Exporting to {}".format(export_dir))
+        self.logger.info(f"Exporting to {export_dir}")
 
         input_video_file = _find_video_file(self.g_pool.rec_dir, input_name)
         output_video_file = os.path.join(export_dir, output_name + ".mp4")
@@ -52,7 +52,7 @@ class IsolatedFrameExporter(VideoExporter, abc.ABC):
         task = ManagedTask(
             _convert_video_file,
             args=task_args,
-            heading="Export {} Video".format(input_name),
+            heading=f"Export {input_name} Video",
             min_progress=0.0,
             max_progress=100.0,
         )

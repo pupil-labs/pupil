@@ -9,9 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-
 import file_methods as fm
+import numpy as np
 import player_methods as pm
 from head_pose_tracker.function import solvepnp, utils
 

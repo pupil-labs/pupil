@@ -14,17 +14,16 @@ import os
 import typing as T
 
 import file_methods as fm
-from pyglui import ui
 from gaze_mapping import GazerHMD3D
+from pyglui import ui
 
 from .base_plugin import (
     CalibrationChoreographyPlugin,
-    ChoreographyNotification,
     ChoreographyAction,
     ChoreographyMode,
+    ChoreographyNotification,
     UnsupportedChoreographyModeError,
 )
-
 
 logger = logging.getLogger(__name__)
 

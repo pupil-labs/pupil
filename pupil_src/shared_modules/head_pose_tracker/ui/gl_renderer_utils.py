@@ -9,8 +9,8 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import OpenGL.GL as gl
 import numpy as np
+import OpenGL.GL as gl
 
 
 def set_rotate_center(matrix):

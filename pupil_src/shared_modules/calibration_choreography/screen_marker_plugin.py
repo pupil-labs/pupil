@@ -12,44 +12,40 @@ import logging
 import typing as T
 
 import cv2
-import numpy as np
-from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
-import OpenGL.GL as gl
-
 import glfw
-from gl_utils import GLFWErrorReporting
+import numpy as np
+import OpenGL.GL as gl
+from gl_utils import GLFWErrorReporting, adjust_gl_view, basic_gl_setup, clear_gl_screen
 
 GLFWErrorReporting.set_default()
 
-from circle_detector import CircleTracker
 from platform import system
 
 import audio
-
+from circle_detector import CircleTracker
 from pyglui import ui
-from pyglui.cygl.utils import draw_polyline, RGBA
+from pyglui.cygl.utils import RGBA, draw_polyline
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 
-from .mixin import MonitorSelectionMixin
+from .base_plugin import (
+    CalibrationChoreographyPlugin,
+    ChoreographyAction,
+    ChoreographyMode,
+    ChoreographyNotification,
+)
 from .controller import (
     GUIMonitor,
     MarkerWindowController,
-    MarkerWindowStateClosed,
-    MarkerWindowStateOpened,
-    MarkerWindowStateIdle,
-    MarkerWindowStateShowingMarker,
     MarkerWindowStateAnimatingInMarker,
     MarkerWindowStateAnimatingOutMarker,
+    MarkerWindowStateClosed,
+    MarkerWindowStateIdle,
+    MarkerWindowStateOpened,
+    MarkerWindowStateShowingMarker,
     UnhandledMarkerWindowStateError,
 )
-from .base_plugin import (
-    CalibrationChoreographyPlugin,
-    ChoreographyMode,
-    ChoreographyAction,
-    ChoreographyNotification,
-)
-
+from .mixin import MonitorSelectionMixin
 
 logger = logging.getLogger(__name__)
 
