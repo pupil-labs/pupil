@@ -841,6 +841,10 @@ def player_drop(
     logger = logging.getLogger(__name__)
 
     try:
+        from plugin import import_runtime_plugins
+
+        import_runtime_plugins(os.path.join(user_dir, "plugins", "recording-upgrades"))
+
         import glfw
         from gl_utils import GLFWErrorReporting
 
