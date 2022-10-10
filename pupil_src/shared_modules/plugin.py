@@ -516,6 +516,7 @@ def import_runtime_plugins(plugin_dir):
     """
 
     runtime_plugins = []
+    logger.debug(f"Searching {plugin_dir}...")
     if os.path.isdir(plugin_dir):
         # we prepend to give the plugin dir content precendece
         # over other modules with identical name.
@@ -543,6 +544,8 @@ def import_runtime_plugins(plugin_dir):
                 import traceback
 
                 logger.debug(traceback.format_exc())
+    else:
+        logger.debug(f"{plugin_dir} is not a directory. Skipping imports!")
     return runtime_plugins
 
 
