@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,21 +10,20 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
-import math
-import logging
 import collections
+import logging
+import math
 import multiprocessing as mp
 import os
 import typing as T
 from fractions import Fraction
 
+import audio_utils
 import av
 import numpy as np
 from av.packet import Packet
-
-import audio_utils
-from video_capture.utils import Video, InvalidContainerError
-from methods import iter_catch, container_decode
+from methods import container_decode, iter_catch
+from video_capture.utils import InvalidContainerError, Video
 
 logger = logging.getLogger(__name__)
 
@@ -67,11 +66,11 @@ def write_timestamps(file_loc, timestamps, output_format="npy"):
     """
     directory, video_file = os.path.split(file_loc)
     name, ext = os.path.splitext(video_file)
-    ts_file = "{}_timestamps".format(name)
+    ts_file = f"{name}_timestamps"
     ts_loc = os.path.join(directory, ts_file)
     ts = np.array(timestamps)
     if output_format not in ("npy", "csv", "all"):
-        raise ValueError("Unknown timestamp output format `{}`".format(output_format))
+        raise ValueError(f"Unknown timestamp output format `{output_format}`")
     if output_format in ("npy", "all"):
         np.save(ts_loc + ".npy", ts)
     if output_format in ("csv", "all"):
@@ -130,7 +129,7 @@ class AV_Writer(abc.ABC):
         # `ext` starts with a dot, so we need to remove it for the format to be
         # recongnized by pyav
         self.container = av.open(self.output_file_path_in_porgress, "w", format=ext[1:])
-        logger.debug("Opened '{}' for writing.".format(output_file_path))
+        logger.debug(f"Opened '{output_file_path}' for writing.")
 
         self.configured = False
         self.video_stream = self.container.add_stream(
@@ -315,9 +314,13 @@ class JPEG_Writer(AV_Writer):
 
     def encode_frame(self, input_frame, pts: int) -> T.Iterator[Packet]:
         # for JPEG we only get a single packet per frame
-        packet = Packet()
+        try:
+            packet = Packet()
+            packet.payload = input_frame.jpeg_buffer
+        except AttributeError:
+            packet = Packet(input_frame.jpeg_buffer)
+            # packet.update()
         packet.stream = self.video_stream
-        packet.payload = input_frame.jpeg_buffer
         packet.time_base = self.time_base
         packet.pts = pts
         # TODO: check if we still need dts here, as they were removed from MPEG_Writer
@@ -333,7 +336,10 @@ class MPEG_Audio_Writer(MPEG_Writer):
         stream = container.add_stream(
             codec_name=template.codec.name, rate=template.rate
         )
-        stream.layout = template.layout
+        try:
+            stream.layout = template.layout
+        except AttributeError:
+            pass
         return stream
 
     def __init__(self, *args, audio_dir: str, **kwargs):

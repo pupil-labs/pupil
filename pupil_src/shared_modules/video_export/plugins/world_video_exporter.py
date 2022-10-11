@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,9 +13,9 @@ import logging
 import os
 
 import player_methods as pm
+from pupil_recording import PupilRecording
 from task_manager import ManagedTask
 from video_export.plugin_base.video_exporter import VideoExporter
-from pupil_recording import PupilRecording
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,7 @@ class World_Video_Exporter(VideoExporter):
         return pre_computed
 
 
-class GlobalContainer(object):
+class GlobalContainer:
     pass
 
 
@@ -117,7 +117,7 @@ def _export_world_video(
     # Plug-ins
     from plugin import Plugin_List, import_runtime_plugins
     from video_capture import EndofVideoError, File_Source
-    from video_overlay.plugins import Video_Overlay, Eye_Overlay
+    from video_overlay.plugins import Eye_Overlay, Video_Overlay
     from vis_circle import Vis_Circle
     from vis_cross import Vis_Cross
     from vis_light_points import Vis_Light_Points
@@ -182,7 +182,7 @@ def _export_world_video(
         if os.path.isfile(out_file_path):
             logger.warning("Video out file already exsists. I will overwrite!")
             os.remove(out_file_path)
-        logger.debug("Saving Video to {}".format(out_file_path))
+        logger.debug(f"Saving Video to {out_file_path}")
 
         # Trim mark verification
         # make sure the trim marks (start frame, end frame) make sense:
@@ -274,7 +274,7 @@ def _export_world_video(
 
                 writer.write_video_frame(frame)
                 current_frame += 1
-                yield "Exporting with pid {}".format(PID), current_frame
+                yield f"Exporting with pid {PID}", current_frame
         except GeneratorExit:
             logger.warning(f"Video export with pid {PID} was canceled.")
             writer.close(timestamp_export_format=None, closed_suffix=".canceled")
@@ -290,7 +290,7 @@ def _export_world_video(
             f"This took {duration} seconds. "
             f"Exporter ran at {effective_fps} frames per second."
         )
-        yield "Export done. This took {:.0f} seconds.".format(duration), current_frame
+        yield f"Export done. This took {duration:.0f} seconds.", current_frame
 
     except GeneratorExit:
         logger.warning(f"Video export with pid {PID} was canceled.")

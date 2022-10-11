@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,8 +14,8 @@ import enum
 import logging
 import typing as T
 
-import square_marker_detect
 import pupil_apriltags
+import square_marker_detect
 
 from .surface_marker import Surface_Marker, Surface_Marker_Type
 

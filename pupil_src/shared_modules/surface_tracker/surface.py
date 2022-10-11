@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,9 +15,8 @@ import typing
 import uuid
 
 import cv2
-import numpy as np
-
 import methods
+import numpy as np
 from stdlib_utils import is_none, is_not_none
 
 from .surface_marker import Surface_Marker_UID
@@ -459,10 +458,8 @@ class Surface(abc.ABC):
                 self.registered_markers_dist[marker.uid].add_observation(uv_dist)
 
         num_observations = sum(
-            [
-                len(aggregate.observations)
-                for aggregate in self.registered_markers_undist.values()
-            ]
+            len(aggregate.observations)
+            for aggregate in self.registered_markers_undist.values()
         )
         self._avg_obs_per_marker = num_observations / len(
             self.registered_markers_undist

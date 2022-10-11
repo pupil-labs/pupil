@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -42,10 +42,10 @@ def available_detector_plugins() -> T.List[T.Type[PupilDetectorPlugin]]:
     try:
         from .pye3d_plugin import Pye3DPlugin
     except ImportError:
-        logger.info("Refraction corrected 3D pupil detector not available!")
+        logger.warning("Refraction corrected 3D pupil detector not available!")
         logger.debug(traceback.format_exc())
     else:
-        logger.info("Using refraction corrected 3D pupil detector.")
+        logger.debug("Using refraction corrected 3D pupil detector.")
         all_plugins.append(Pye3DPlugin)
 
     return all_plugins

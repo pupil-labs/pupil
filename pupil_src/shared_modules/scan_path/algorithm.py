@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -11,17 +11,16 @@ See COPYING and COPYING.LESSER for license details.
 import copy
 import functools
 
-import numpy as np
 import cv2
-
-import methods as m
 import file_methods as fm
+import methods as m
+import numpy as np
 
 from .utils import (
-    scan_path_numpy_array_from,
-    scan_path_zeros_numpy_array,
     np_denormalize,
     np_normalize,
+    scan_path_numpy_array_from,
+    scan_path_zeros_numpy_array,
 )
 
 

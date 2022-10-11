@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -35,23 +35,22 @@ from bisect import bisect_left, bisect_right
 from collections import deque
 from types import SimpleNamespace
 
+import background_helper as bh
 import cv2
+import data_changed
+import file_methods as fm
 import msgpack
 import numpy as np
+import player_methods as pm
+from hotkey import Hotkey
+from methods import denormalize
+from observable import Observable
+from plugin import Plugin
+from pupil_recording import PupilRecording, RecordingInfo
 from pyglui import ui
 from pyglui.cygl.utils import RGBA, draw_circle
 from pyglui.pyfontstash import fontstash
 from scipy.spatial.distance import pdist
-
-import background_helper as bh
-import data_changed
-import file_methods as fm
-from observable import Observable
-import player_methods as pm
-from methods import denormalize
-from plugin import Plugin
-from pupil_recording import PupilRecording, RecordingInfo
-from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +102,7 @@ def fixation_from_data(
     return fix
 
 
-class Fixation_Result_Factory(object):
+class Fixation_Result_Factory:
     __slots__ = ("_id_counter",)
 
     def __init__(self):
@@ -271,6 +270,17 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
     fixations will have their method field set to "gaze".
     """
 
+    CACHE_VERSION = 1
+
+    class VersionMismatchError(ValueError):
+        pass
+
+    class ConfigMismatchError(ValueError):
+        pass
+
+    class DataMismatchError(ValueError):
+        pass
+
     @classmethod
     def is_available_within_context(cls, g_pool) -> bool:
         if g_pool.app == "player":
@@ -298,17 +308,30 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
         self.max_duration = max_duration
         self.show_fixations = show_fixations
         self.current_fixation_details = None
-        self.fixation_data = deque()
+        self.fixation_data = []
         self.prev_index = -1
         self.bg_task = None
         self.status = ""
+        self.data_dir = os.path.join(g_pool.rec_dir, "offline_data")
         self._gaze_changed_listener = data_changed.Listener(
             "gaze_positions", g_pool.rec_dir, plugin=self
         )
         self._gaze_changed_listener.add_observer("on_data_changed", self._classify)
-        self.notify_all(
-            {"subject": "fixation_detector.should_recalculate", "delay": 0.5}
+        self._fixations_changed_announcer = data_changed.Announcer(
+            "fixations", g_pool.rec_dir, plugin=self
         )
+        try:
+            self.load_offline_data()
+        except (
+            FileNotFoundError,
+            self.VersionMismatchError,
+            self.ConfigMismatchError,
+            self.DataMismatchError,
+        ) as err:
+            logger.debug(f"Offline data not loaded: {err} ({type(err).__name__})")
+            self.notify_all(
+                {"subject": "fixation_detector.should_recalculate", "delay": 0.5}
+            )
 
     def init_ui(self):
         self.add_menu()
@@ -366,7 +389,16 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
             help_str = help_block.replace("\n", " ").replace("  ", "").strip()
             self.menu.append(ui.Info_Text(help_str))
         self.menu.append(
-            ui.Info_Text("Press the export button or type 'e' to start the export.")
+            ui.Info_Text(
+                "To start the export, wait until the detection has finished and press "
+                "the export button or type 'e'."
+            )
+        )
+        self.menu.append(
+            ui.Info_Text(
+                "Note: This plugin does not process fixations that have been calculated"
+                " and recorded in real time."
+            )
         )
 
         self.menu.append(
@@ -488,12 +520,13 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
             self.g_pool.min_data_confidence,
         )
 
-        self.fixation_data = deque()
-        self.fixation_start_ts = deque()
-        self.fixation_stop_ts = deque()
+        self.fixation_data = []
+        self.fixation_start_ts = []
+        self.fixation_stop_ts = []
         self.bg_task = bh.IPC_Logging_Task_Proxy(
             "Fixation detection", detect_fixations, args=generator_args
         )
+        self.publish_empty()
 
     def recent_events(self, events):
         if self.bg_task:
@@ -514,8 +547,8 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
                     )
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
-                self.status = "{} fixations detected".format(len(self.fixation_data))
-                self.correlate_and_publish()
+                self.status = f"{len(self.fixation_data)} fixations detected"
+                self.correlate_and_publish_new()
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.0
 
@@ -591,11 +624,85 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
             self.current_fixation_details.text = info
             self.prev_index = frame.index
 
-    def correlate_and_publish(self):
+    def correlate_and_publish_new(self):
         self.g_pool.fixations = pm.Affiliator(
             self.fixation_data, self.fixation_start_ts, self.fixation_stop_ts
         )
-        self.notify_all({"subject": "fixations_changed", "delay": 1})
+        self._fixations_changed_announcer.announce_new(
+            delay=0.3,
+            token_data=(
+                self._gaze_changed_listener._current_token,
+                self.max_dispersion,
+                self.min_duration,
+                self.max_duration,
+                self.g_pool.min_data_confidence,
+            ),
+        )
+        self.save_offline_data()
+
+    def publish_empty(self):
+        self.g_pool.fixations = pm.Affiliator([], [], [])
+        self._fixations_changed_announcer.announce_new(token_data=())
+
+    def correlate_and_publish_existing(self):
+        self.g_pool.fixations = pm.Affiliator(
+            self.fixation_data, self.fixation_start_ts, self.fixation_stop_ts
+        )
+        self._fixations_changed_announcer.announce_existing()
+
+    def save_offline_data(self):
+        with fm.PLData_Writer(self.data_dir, "fixations") as writer:
+            for timestamp, datum in zip(self.fixation_start_ts, self.fixation_data):
+                writer.append_serialized(timestamp, "fixation", datum.serialized)
+        path_stop_ts = os.path.join(self.data_dir, "fixations_stop_timestamps.npy")
+        np.save(path_stop_ts, self.fixation_stop_ts)
+        path_meta = os.path.join(self.data_dir, "fixations.meta")
+        fm.save_object(
+            {
+                "version": self.CACHE_VERSION,
+                "config": self._cache_config(),
+            },
+            path_meta,
+        )
+
+    def load_offline_data(self):
+        path_stop_ts = os.path.join(self.data_dir, "fixations_stop_timestamps.npy")
+        fixation_stop_ts = np.load(path_stop_ts)
+        path_meta = os.path.join(self.data_dir, "fixations.meta")
+        meta = fm.load_object(path_meta)
+        version_loaded = meta.get("version", -1)
+        if version_loaded != self.CACHE_VERSION:
+            raise self.VersionMismatchError(
+                f"Expected version {self.CACHE_VERSION}, got {version_loaded}"
+            )
+        config_loaded = meta.get("config", None)
+        config_expected = self._cache_config()
+        if config_loaded != config_expected:
+            raise self.ConfigMismatchError(
+                f"Expected config {config_expected}, got {config_loaded}"
+            )
+        fixations = fm.load_pldata_file(self.data_dir, "fixations")
+        if not (
+            len(fixations.data) == len(fixations.timestamps) == len(fixation_stop_ts)
+        ):
+            raise self.DataMismatchError(
+                f"Data inconsistent:\n"
+                f"\tlen(fixations.data)={len(fixations.data)}\n"
+                f"\tlen(fixations.timestamps)={len(fixations.timestamps)}\n"
+                f"\tlen(fixation_stop_ts)={len(fixation_stop_ts)}"
+            )
+        self.fixation_data = fixations.data
+        self.fixation_start_ts = fixations.timestamps
+        self.fixation_stop_ts = fixation_stop_ts
+        self.correlate_and_publish_existing()
+
+    def _cache_config(self):
+        return {
+            "max_dispersion": self.max_dispersion,
+            "min_duration": self.min_duration,
+            "max_duration": self.max_duration,
+            "min_data_confidence": self.g_pool.min_data_confidence,
+        }
 
     @classmethod
     def csv_representation_keys(self):
@@ -671,12 +778,10 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
         ) as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow(("fixation classifier", "Dispersion_Duration"))
-            csv_writer.writerow(
-                ("max_dispersion", "{:0.3f} deg".format(self.max_dispersion))
-            )
-            csv_writer.writerow(("min_duration", "{:.0f} ms".format(self.min_duration)))
-            csv_writer.writerow(("max_duration", "{:.0f} ms".format(self.max_duration)))
-            csv_writer.writerow((""))
+            csv_writer.writerow(("max_dispersion", f"{self.max_dispersion:0.3f} deg"))
+            csv_writer.writerow(("min_duration", f"{self.min_duration:.0f} ms"))
+            csv_writer.writerow(("max_duration", f"{self.max_duration:.0f} ms"))
+            csv_writer.writerow("")
             csv_writer.writerow(("fixation_count", len(fixations_in_section)))
             logger.info("Created 'fixation_report.csv' file.")
 

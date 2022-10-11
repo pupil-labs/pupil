@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,20 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 import os
-import pathlib as pl
 import typing as T
 from pathlib import Path
-import re
-
 
 import av
 import cv2
 import numpy as np
-
-
-import player_methods as pm
 from methods import container_decode
-
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +24,7 @@ VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "fake")
 VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 
-class Exposure_Time(object):
+class Exposure_Time:
     def __init__(self, max_ET, frame_rate, mode="manual"):
         self.mode = mode
         self.ET_thres = 1, min(10000 / frame_rate, max_ET)
@@ -85,7 +78,7 @@ class Exposure_Time(object):
                 return next_ET
 
 
-class Check_Frame_Stripes(object):
+class Check_Frame_Stripes:
     def __init__(
         self,
         check_freq_init=0.1,
@@ -213,7 +206,11 @@ class Video:
             return cont
 
     def _open_container(self):
-        cont = av.open(self.path)
+        cont = av.open(self.path, format=os.path.splitext(self.path)[-1][1:])
+        try:
+            cont.streams.video[0].thread_type = "AUTO"
+        except AttributeError:
+            pass
         return cont
 
     def load_ts(self):
@@ -228,6 +225,7 @@ class Video:
         packets = container.demux(video=0)
         # last pts is invalid
         self._pts = np.array([packet.pts for packet in packets][:-1])
+        self._pts.sort()
         return self._pts
 
     @property
@@ -485,145 +483,3 @@ class VideoSet:
         lookup.timestamp = timestamps
         lookup.container_idx = -1  # virtual container by default
         return lookup
-
-
-def pi_gaze_items(root_dir):
-    def find_timestamps_200hz_path(timestamps_path):
-        path = timestamps_path.with_name("gaze_200hz_timestamps.npy")
-        if path.is_file():
-            return path
-        else:
-            return None
-
-    def find_raw_path(timestamps_path):
-        name = timestamps_path.name.replace("_timestamps", "")
-        path = timestamps_path.with_name(name).with_suffix(".raw")
-        assert path.is_file(), f"The file does not exist at path: {path}"
-        return path
-
-    def find_raw_200hz_path(timestamps_path):
-        path = timestamps_path.with_name("gaze_200hz.raw")
-        if path.is_file():
-            return path
-        else:
-            return None
-
-    def find_worn_path(timestamps_path):
-        name = timestamps_path.name
-        name = name.replace("gaze", "worn")
-        name = name.replace("_timestamps", "")
-        path = timestamps_path.with_name(name).with_suffix(".raw")
-        if path.is_file():
-            return path
-        else:
-            return None
-
-    def find_worn_200hz_path(timestamps_path):
-        path = timestamps_path.with_name("worn_200hz.raw")
-        if path.is_file():
-            return path
-        else:
-            return None
-
-    def is_200hz(path: Path) -> bool:
-        return "200hz" in path.name
-
-    def load_timestamps_data(path):
-        timestamps = np.load(str(path))
-        return timestamps
-
-    def load_raw_data(path):
-        raw_data = np.fromfile(str(path), "<f4")
-        raw_data_dtype = raw_data.dtype
-        raw_data.shape = (-1, 2)
-        return np.asarray(raw_data, dtype=raw_data_dtype)
-
-    def load_worn_data(path):
-        if not (path and path.exists()):
-            return None
-
-        confidences = np.fromfile(str(path), "<u1") / 255.0
-        return np.clip(confidences, 0.0, 1.0)
-
-    # This pattern will match any filename that:
-    # - starts with "gaze ps"
-    # - is followed by one or more digits
-    # - ends with "_timestamps.npy"
-    gaze_timestamp_paths = matched_files_by_name_pattern(
-        pl.Path(root_dir), r"^gaze ps[0-9]+_timestamps.npy$"
-    )
-
-    for timestamps_path in gaze_timestamp_paths:
-        # Use 200hz data only if both gaze data and timestamps are available at 200hz
-        is_200hz_data_available = (find_raw_200hz_path(timestamps_path)) and (
-            find_timestamps_200hz_path(timestamps_path) is not None
-        )
-
-        if is_200hz_data_available:
-            raw_data = load_raw_data(find_raw_200hz_path(timestamps_path))
-        else:
-            raw_data = load_raw_data(find_raw_path(timestamps_path))
-
-        if is_200hz_data_available:
-            timestamps = load_timestamps_data(
-                find_timestamps_200hz_path(timestamps_path)
-            )
-        else:
-            timestamps = load_timestamps_data(timestamps_path)
-
-        if is_200hz_data_available:
-            ts_ = load_timestamps_data(timestamps_path)
-            ts_200hz_ = load_timestamps_data(
-                find_timestamps_200hz_path(timestamps_path)
-            )
-            densification_idc = pm.find_closest(ts_, ts_200hz_)
-        else:
-            densification_idc = np.asarray(range(len(raw_data)))
-
-        # Load confidence data when both 200hz gaze and 200hz confidence data is available
-        if (
-            is_200hz_data_available
-            and find_worn_200hz_path(timestamps_path) is not None
-        ):
-            conf_data = load_worn_data(find_worn_200hz_path(timestamps_path))
-        # Load and densify confidence data when 200hz gaze is available, but only non-200hz confidence is available
-        elif is_200hz_data_available and find_worn_path(timestamps_path) is not None:
-            conf_data = load_worn_data(find_worn_path(timestamps_path))
-            conf_data = conf_data[densification_idc]
-        # Load confidence data when both non-200hz gaze and non-200hz confidence is available
-        elif (
-            not is_200hz_data_available and find_worn_path(timestamps_path) is not None
-        ):
-            conf_data = load_worn_data(find_worn_path(timestamps_path))
-        # Otherwise, don't load confidence data
-        else:
-            conf_data = None
-
-        if len(raw_data) != len(timestamps):
-            logger.warning(
-                f"There is a mismatch between the number of raw data ({len(raw_data)}) "
-                f"and the number of timestamps ({len(timestamps)})!"
-            )
-            size = min(len(raw_data), len(timestamps))
-            raw_data = raw_data[:size]
-            timestamps = timestamps[:size]
-
-        if conf_data is not None and len(conf_data) != len(timestamps):
-            logger.warning(
-                f"There is a mismatch between the number of confidence data ({len(conf_data)}) "
-                f"and the number of timestamps ({len(timestamps)})! Not using confidence data."
-            )
-
-            conf_data = None
-
-        if conf_data is None:
-            conf_data = (1.0 for _ in range(len(raw_data)))
-
-        yield from zip(raw_data, timestamps, conf_data)
-
-
-def matched_files_by_name_pattern(parent_dir: Path, name_pattern: str) -> T.List[Path]:
-    # Get all non-recursive directory contents
-    contents = filter(Path.is_file, parent_dir.iterdir())
-    # Filter content that matches the name by regex pattern
-    return [c for c in contents if re.match(name_pattern, c.name) is not None]

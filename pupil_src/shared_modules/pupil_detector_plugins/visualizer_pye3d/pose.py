@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 
 
-class PosedObject(object):
+class PosedObject:
     def __init__(self, pose=np.eye(4), extrinsics=None, children=(), parents=()):
 
         self.parents = parents

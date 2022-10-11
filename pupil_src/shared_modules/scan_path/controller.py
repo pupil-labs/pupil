@@ -1,26 +1,24 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
 import abc
 import logging
+import os
 
 import numpy as np
-
 from file_methods import Persistent_Dict
 from observable import Observable
 from plugin import Plugin
 
 from .storage import ScanPathStorage
 from .tasks import ScanPathBackgroundTask, ScanPathPreprocessingTask
-
 
 logger = logging.getLogger(__name__)
 

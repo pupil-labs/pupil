@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,15 +10,15 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import functools
-from time import sleep
-from uvc import get_time_monotonic
+import logging
 import socket
 import socketserver
-import threading
 import struct
+import threading
 from random import random
+from time import sleep
 
-import logging
+from uvc import get_time_monotonic
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -67,7 +67,7 @@ class Time_Echo_Server(socketserver.ThreadingTCPServer):
         handler_class = functools.partial(Time_Echo, time_fn=time_fn)
         super().__init__((host, 0), handler_class, **kwargs)
         self.allow_reuse_address = True
-        logger.debug("Timer Server ready on port: {}".format(self.port))
+        logger.debug(f"Timer Server ready on port: {self.port}")
 
     @property
     def host(self) -> str:
@@ -163,9 +163,7 @@ class Clock_Sync_Follower(threading.Thread):
                         if self.jump_time(offset):
                             self.in_sync = True
                             self.offset_remains = False
-                            logger.debug(
-                                "Time adjusted by {}ms.".format(offset / self.ms)
-                            )
+                            logger.debug(f"Time adjusted by {offset / self.ms}ms.")
                         else:
                             self.in_sync = True
                             self.offset_remains = True
@@ -178,9 +176,7 @@ class Clock_Sync_Follower(threading.Thread):
                             # print offset/self.ms,slew_time/self.ms
                             self.slew_time(slew_time)
                             offset -= slew_time
-                            logger.debug(
-                                "Time slewed by: {}ms".format(slew_time / self.ms)
-                            )
+                            logger.debug(f"Time slewed by: {slew_time / self.ms}ms")
 
                             self.in_sync = not bool(offset)
                             self.offset_remains = not self.in_sync
@@ -220,17 +216,17 @@ class Clock_Sync_Follower(threading.Thread):
             times.sort(key=lambda t: t[2] - t[0])
             times = times[: int(len(times) * 0.69)]
             # delays = [t2-t0 for t0, t1, t2 in times]
-            offsets = [t0 - ((t1 + (t2 - t0) / 2)) for t0, t1, t2 in times]
+            offsets = [t0 - (t1 + (t2 - t0) / 2) for t0, t1, t2 in times]
             mean_offset = sum(offsets) / len(offsets)
-            offset_jitter = sum([abs(mean_offset - o) for o in offsets]) / len(offsets)
+            offset_jitter = sum(abs(mean_offset - o) for o in offsets) / len(offsets)
             # mean_delay = sum(delays)/len(delays)
             # delay_jitter = sum([abs(mean_delay-o)for o in delays])/len(delays)
 
             # logger.debug('offset: %s (%s),delay %s(%s)'%(mean_offset/self.ms,offset_jitter/self.ms,mean_delay/self.ms,delay_jitter/self.ms))
             return mean_offset, offset_jitter
 
-        except socket.error as e:
-            logger.debug("{} for {}:{}".format(e, self.host, self.port))
+        except OSError as e:
+            logger.debug(f"{e} for {self.host}:{self.port}")
             return None
         # except Exception as e:
         #     logger.error(str(e))
@@ -246,13 +242,13 @@ class Clock_Sync_Follower(threading.Thread):
     def __str__(self):
         if self.in_sync:
             if self.offset_remains:
-                return "NOT in sync with {}".format(self.host)
+                return f"NOT in sync with {self.host}"
             else:
                 return "Synced with {}:{} with  {:.2f}ms jitter".format(
                     self.host, self.port, self.sync_jitter / self.ms
                 )
         else:
-            return "Connecting to {}".format(self.host)
+            return f"Connecting to {self.host}"
 
 
 if __name__ == "__main__":

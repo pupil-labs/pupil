@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -26,7 +26,7 @@ It is a good starting point to build your own plugin.
 """
 
 
-class Plugin(object):
+class Plugin:
     """docstring for Plugin
     plugin is a base class
     it has all interfaces that will be called
@@ -53,6 +53,13 @@ class Plugin(object):
     # or custom loaded font name
     icon_font = "roboto"
     icon_chr = "?"  # character shown in menu icon
+    # icon placement and sizing:
+    # icon_pos_delta: (x, y) offset relative to default position
+    # icon_size_delta: negative values decrease font size, positive values increase it
+    # icon_line_height: distance between lines, only relevant for multi-line labels
+    icon_pos_delta = (0, 0)
+    icon_size_delta = 0
+    icon_line_height = 1.0
 
     def __init__(self, g_pool):
         self.g_pool = g_pool
@@ -288,6 +295,10 @@ class Plugin(object):
             self.menu,
             label=self.icon_chr,
             label_font=self.icon_font,
+            label_offset_size=self.icon_size_delta,
+            label_offset_x=self.icon_pos_delta[0],
+            label_offset_y=self.icon_pos_delta[1],
+            label_line_height=self.icon_line_height,
             on_val=False,
             off_val=True,
             setter=toggle_menu,
@@ -340,7 +351,7 @@ class Plugin(object):
 
 
 # Plugin manager classes and fns
-class Plugin_List(object):
+class Plugin_List:
     """This is the Plugin Manager
     It is a self sorting list with a few functions to manage adding and
     removing Plugins and lacking most other list methods.
@@ -398,11 +409,10 @@ class Plugin_List(object):
                 self.add(plugin, args)
 
     def __iter__(self):
-        for p in self._plugins:
-            yield p
+        yield from self._plugins
 
     def __str__(self):
-        return "Plugin List: {}".format(self._plugins)
+        return f"Plugin List: {self._plugins}"
 
     def add(self, new_plugin_cls, args={}):
         """
@@ -477,7 +487,7 @@ class Plugin_List(object):
                 ):
                     p.deinit_ui()
                 p.cleanup()
-                logger.debug("Unloaded Plugin: {}".format(p))
+                logger.debug(f"Unloaded Plugin: {p}")
                 self._plugins.remove(p)
 
     def get_initializers(self):
@@ -506,19 +516,20 @@ def import_runtime_plugins(plugin_dir):
     """
 
     runtime_plugins = []
+    logger.debug(f"Searching {plugin_dir}...")
     if os.path.isdir(plugin_dir):
         # we prepend to give the plugin dir content precendece
         # over other modules with identical name.
         sys.path.insert(0, plugin_dir)
         for d in os.listdir(plugin_dir):
-            logger.debug("Scanning: {}".format(d))
+            logger.debug(f"Scanning: {d}")
             try:
                 if os.path.isfile(os.path.join(plugin_dir, d)):
                     d, ext = d.rsplit(".", 1)
                     if ext not in ("py", "so", "dylib"):
                         continue
                 module = importlib.import_module(d)
-                logger.debug("Imported: {}".format(module))
+                logger.debug(f"Imported: {module}")
                 for name in dir(module):
                     member = getattr(module, name)
                     if (
@@ -526,13 +537,15 @@ def import_runtime_plugins(plugin_dir):
                         and issubclass(member, Plugin)
                         and member.__name__ != "Plugin"
                     ):
-                        logger.debug("Added: {}".format(member))
+                        logger.debug(f"Added: {member}")
                         runtime_plugins.append(member)
             except Exception as e:
-                logger.warning("Failed to load '{}'. Reason: '{}' ".format(d, e))
+                logger.warning(f"Failed to load '{d}'. Reason: '{e}' ")
                 import traceback
 
                 logger.debug(traceback.format_exc())
+    else:
+        logger.debug(f"{plugin_dir} is not a directory. Skipping imports!")
     return runtime_plugins
 
 

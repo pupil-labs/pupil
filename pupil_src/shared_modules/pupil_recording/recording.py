@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,7 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import collections
+import collections.abc
 import enum
 import logging
 import re
@@ -18,9 +18,9 @@ from pathlib import Path
 
 from .info.recording_info import RecordingInfoFile, RecordingInfoInvalidError
 from .recording_utils import (
+    VALID_VIDEO_EXTENSIONS,
     InvalidRecordingException,
     assert_valid_rec_dir,
-    VALID_VIDEO_EXTENSIONS,
 )
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ class PupilRecording:
 
         self._info_file = info_file
 
-    class FileFilter(collections.Sequence):
+    class FileFilter(collections.abc.Sequence):
         """Utility class for conveniently filtering files of the recording.
 
         Filters can be applied sequentially, since they return a filter again.
@@ -179,11 +179,11 @@ class PupilRecording:
             self.__files = sorted(filter(Path.is_file, Path(rec_dir).iterdir()))
 
         def __getitem__(self, key):
-            # Used for implementing collections.Sequence
+            # Used for implementing collections.abc.Sequence
             return self.__files[key]
 
         def __len__(self):
-            # Used for implementing collections.Sequence
+            # Used for implementing collections.abc.Sequence
             return len(self.__files)
 
         def filter_patterns(self, *patterns: str) -> FilterType:

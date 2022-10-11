@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,9 +13,8 @@ import abc
 import os
 import weakref
 
-from pyglui import ui
-
 from observable import Observable
+from pyglui import ui
 
 
 def make_scale_slider(config):
@@ -88,7 +87,7 @@ class GenericOverlayMenuRenderer(OverlayMenuRenderer):
     def _generic_overlay_elements(self):
         config = self.overlay().config
         return (
-            ui.Info_Text("Loaded video: {}".format(config.video_path)),
+            ui.Info_Text(f"Loaded video: {config.video_path}"),
             make_scale_slider(config),
             make_alpha_slider(config),
             make_hflip_switch(config),
@@ -98,7 +97,7 @@ class GenericOverlayMenuRenderer(OverlayMenuRenderer):
     def _not_valid_video_elements(self):
         video_path = self.overlay().config.video_path
         return (
-            ui.Info_Text("No valid overlay video found at {}".format(video_path)),
+            ui.Info_Text(f"No valid overlay video found at {video_path}"),
             ui.Info_Text(
                 "Valid overlay videos conform to the Pupil data format and "
                 "their timestamps are in sync with the opened recording."
@@ -114,6 +113,4 @@ class EyesOverlayMenuRenderer(OverlayMenuRenderer):
     def _not_valid_video_elements(self):
         video_path = self.overlay().config.video_path
         video_name = os.path.basename(video_path)
-        return (
-            ui.Info_Text("{} was not recorded or cannot be found.".format(video_name)),
-        )
+        return (ui.Info_Text(f"{video_name} was not recorded or cannot be found."),)

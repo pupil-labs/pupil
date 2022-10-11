@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -59,6 +59,35 @@ def convert_matrix_to_extrinsic(extrinsic_matrix):
     return merge_extrinsics(rotation, translation)
 
 
+def rod_to_euler(rotation_pose):
+    """
+    :param rotation_pose: Compact Rodrigues rotation vector, representing
+    the rotation axis with its length encoding the angle in radians to rotate
+    :return: x,y,z: Orientation in the Pitch, Roll and Yaw axes as Euler angles
+    according to 'right hand' convention
+    """
+    # convert Rodrigues rotation vector to matrix
+    rot = cv2.Rodrigues(rotation_pose)[0]
+
+    # rotate 180 degrees in y- and z-axes (corresponds to yaw and roll) to align
+    # with right hand rule (relative to the coordinate system of the origin marker
+    rot_mat = np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]])
+    rot = np.matmul(rot, rot_mat)
+
+    # convert to euler angles
+    sin_y = np.sqrt(rot[0, 0] * rot[0, 0] + rot[1, 0] * rot[1, 0])
+    if not sin_y < 1e-6:
+        x = np.arctan2(rot[2, 1], rot[2, 2])
+        y = -np.arctan2(-rot[2, 0], sin_y)
+        z = -np.arctan2(rot[1, 0], rot[0, 0])
+    else:
+        x = np.arctan2(-rot[1, 2], rot[1, 1])
+        y = -np.arctan2(-rot[2, 0], sin_y)
+        z = 0
+
+    return np.rad2deg([x, y, z])
+
+
 def get_camera_pose(camera_extrinsics):
     if camera_extrinsics is None:
         return get_none_camera_extrinsics()
@@ -67,7 +96,8 @@ def get_camera_pose(camera_extrinsics):
     rotation_pose = -rotation_ext
     translation_pose = np.matmul(-cv2.Rodrigues(rotation_ext)[0].T, translation_ext)
     camera_pose = merge_extrinsics(rotation_pose, translation_pose)
-    return camera_pose
+    euler_orientation = rod_to_euler(rotation_pose)
+    return camera_pose, euler_orientation
 
 
 def convert_marker_extrinsics_to_points_3d(marker_extrinsics):
@@ -144,11 +174,11 @@ def timer(func):
         t2 = time.perf_counter()
         run_time = t2 - t1
         if run_time > 1:
-            logger.info("{0} took {1:.2f} s".format(func.__name__, run_time))
+            logger.info(f"{func.__name__} took {run_time:.2f} s")
         elif run_time > 1e-3:
-            logger.info("{0} took {1:.2f} ms".format(func.__name__, run_time * 1e3))
+            logger.info(f"{func.__name__} took {run_time * 1e3:.2f} ms")
         else:
-            logger.info("{0} took {1:.2f} µs".format(func.__name__, run_time * 1e6))
+            logger.info(f"{func.__name__} took {run_time * 1e6:.2f} µs")
 
         return value
 

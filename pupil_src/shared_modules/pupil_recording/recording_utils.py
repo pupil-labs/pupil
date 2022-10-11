@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,6 +10,7 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import enum
+import os
 from pathlib import Path
 
 from .info import recording_info_utils
@@ -74,7 +75,14 @@ def assert_valid_rec_dir(rec_dir: str):
         - rec_dir does not exist
         - rec_dir points to a video file instead of the directory
         - rec_dir points to a file in general
+        - rec_dir is readable and writable
     """
+    if not os.access(rec_dir, os.R_OK):
+        raise InvalidRecordingException(
+            reason=f"Player does not have sufficient permissions to read the directory",
+            recovery="",
+        )
+
     rec_dir = Path(rec_dir).resolve()
 
     def normalize_extension(ext: str) -> str:
@@ -94,19 +102,28 @@ def assert_valid_rec_dir(rec_dir: str):
 
     if not rec_dir.exists():
         raise InvalidRecordingException(
-            reason=f"Target at path does not exist: {rec_dir}", recovery=""
+            reason=f"Target at path does not exist:\n{rec_dir}", recovery=""
         )
 
     if not rec_dir.is_dir():
         if is_video_file(rec_dir):
             raise InvalidRecordingException(
                 reason=f"The provided path is a video, not a recording directory",
-                recovery="Please provide a recording directory",
+                recovery="Please provide a recording directory.",
             )
         else:
             raise InvalidRecordingException(
-                reason=f"Target at path is not a directory: {rec_dir}", recovery=""
+                reason=f"Target at path is not a directory:\n{rec_dir}", recovery=""
             )
+
+    if not os.access(rec_dir, os.W_OK):
+        _attempt_changing_file_owners_on_macOS(rec_dir)
+
+    if not os.access(rec_dir, os.W_OK):
+        raise InvalidRecordingException(
+            reason=f"Player must be able to write files to\n{rec_dir}",
+            recovery="Please change the file permission accordingly.",
+        )
 
 
 # NOTE: The following functions are actually not correct given their name, only in the
@@ -154,3 +171,52 @@ def _is_old_style_player_recording(rec_dir: str) -> bool:
     is_newer_old_style = "Data Format Version" in info_csv
     is_not_pupil_mobile = info_csv.get("Capture Software", "") != "Pupil Mobile"
     return is_newer_old_style or is_not_pupil_mobile
+
+
+def _attempt_changing_file_owners_on_macOS(rec_dir: str):
+    """Attempts to change the ownership of the recording directory to the current user.
+
+    This is a workaround for macOS permissions issues.
+    """
+    import platform
+
+    if platform.system() != "Darwin":
+        return
+
+    import getpass
+    import logging
+    import subprocess
+    import textwrap
+
+    logger = logging.getLogger(__name__)
+    user = getpass.getuser()
+    ask_for_permissions_to_change_ownership = textwrap.dedent(
+        f"""
+        set theDialogText to "Pupil Player does not have sufficient file permissions to process this recording. If you proceed Player will change the file ownership to get the neccessary access."
+        set continueText to "Proceed with administrator privileges"
+        set cancelText to "Cancel"
+        display dialog theDialogText buttons {{cancelText, continueText}} default button continueText cancel button cancelText
+        do shell script "chown -R {user} '{rec_dir}'" with administrator privileges
+        """
+    )
+
+    try:
+        logger.debug(
+            "Attempt to change file ownership using osascript:\n"
+            f"{ask_for_permissions_to_change_ownership}"
+        )
+        subprocess.run(
+            ["osascript", "-ss"],
+            input=ask_for_permissions_to_change_ownership,
+            encoding="utf-8",
+            check=True,
+            capture_output=True,
+        )
+    except subprocess.CalledProcessError as exc:
+        logger.exception(
+            f"Attempt to change file ownership failed: {exc.stderr.strip()}"
+        )
+        raise InvalidRecordingException(
+            reason=f"Player was not able to change the file ownership for\n{rec_dir}",
+            recovery="Please change the file permissions manually.",
+        ) from exc

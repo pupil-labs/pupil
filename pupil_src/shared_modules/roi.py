@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,14 +12,13 @@ import logging
 import typing as T
 from enum import Enum
 
+import glfw
 import numpy as np
+from gl_utils import GLFWErrorReporting
 from OpenGL.GL import GL_LINE_LOOP
 from pyglui.cygl.utils import RGBA as cygl_rgba
 from pyglui.cygl.utils import draw_points as cygl_draw_points
 from pyglui.cygl.utils import draw_polyline as cygl_draw_polyline
-
-import glfw
-from gl_utils import GLFWErrorReporting
 
 GLFWErrorReporting.set_default()
 

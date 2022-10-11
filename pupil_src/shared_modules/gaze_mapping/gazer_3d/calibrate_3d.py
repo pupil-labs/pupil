@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,7 +12,7 @@ See COPYING and COPYING.LESSER for license details.
 import cv2
 import numpy as np
 
-from . import utils, bundle_adjustment
+from . import bundle_adjustment, utils
 
 # Fixed eyeball positions are assumed for all users
 eye0_hardcoded_translation = np.array([20, 15, -20])

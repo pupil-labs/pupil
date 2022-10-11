@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,16 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from plugin import Plugin
-import numpy as np
-
 import cv2
-
-from pyglui import ui
-from observable import Observable
-from methods import denormalize
+import numpy as np
 from data_changed import Listener
-
+from methods import denormalize
+from observable import Observable
+from plugin import Plugin
+from pyglui import ui
 from scan_path import ScanPathController
 from scan_path.utils import np_denormalize
 

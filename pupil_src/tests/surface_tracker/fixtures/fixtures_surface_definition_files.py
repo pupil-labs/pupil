@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -17,7 +17,6 @@ import uuid
 from file_methods import Persistent_Dict
 
 from . import surfaces_serialized_v00_square, surfaces_serialized_v01_mixed
-
 
 __all__ = [
     "surface_definition_v00_dir",

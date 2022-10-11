@@ -1,7 +1,8 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
+
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
@@ -16,18 +17,17 @@ import time
 import typing
 import typing as T
 
-import numpy as np
-import OpenGL.GL as gl
-from pyglui import pyfontstash, ui
-from pyglui.cygl import utils as cygl_utils
-
 import background_helper as bh
 import csv_utils
 import file_methods as fm
 import gl_utils
+import numpy as np
+import OpenGL.GL as gl
 import player_methods as pm
 from plugin import Plugin
 from pupil_recording import PupilRecording, RecordingInfo
+from pyglui import pyfontstash, ui
+from pyglui.cygl import utils as cygl_utils
 from raw_data_exporter import _Base_Positions_Exporter
 
 logger = logging.getLogger(__name__)
@@ -89,7 +89,7 @@ def merge_arrays(arr1, arr2):
     return new_array
 
 
-class Fusion(object):
+class Fusion:
     """
     Class provides sensor fusion estimating pitch and roll using Madgwick's algorithm:
     https://www.x-io.co.uk/res/doc/madgwick_internal_report.pdf
@@ -691,10 +691,8 @@ class Imu_Bisector(pm.Bisector):
     def __init__(self, data=(), data_ts=()):
         if len(data) != len(data_ts):
             raise ValueError(
-                (
-                    "Each element in 'data' requires a corresponding"
-                    " timestamp in `data_ts`"
-                )
+                "Each element in 'data' requires a corresponding"
+                " timestamp in `data_ts`"
             )
 
         elif not len(data):

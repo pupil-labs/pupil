@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,22 +9,22 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-
 import file_methods as fm
+import numpy as np
 import player_methods as pm
 from head_pose_tracker.function import solvepnp, utils
 
 
 def get_pose_data(extrinsics, timestamp):
     if extrinsics is not None:
-        camera_poses = utils.get_camera_pose(extrinsics)
+        camera_poses, euler_orientation = utils.get_camera_pose(extrinsics)
         camera_pose_matrix = utils.convert_extrinsic_to_matrix(camera_poses)
         return {
             "camera_extrinsics": extrinsics.tolist(),
             "camera_poses": camera_poses.tolist(),
             "camera_trace": camera_poses[3:6].tolist(),
             "camera_pose_matrix": camera_pose_matrix.tolist(),
+            "euler_orientation": euler_orientation.tolist(),
             "timestamp": timestamp,
         }
     else:
@@ -33,6 +33,7 @@ def get_pose_data(extrinsics, timestamp):
             "camera_poses": [np.nan, np.nan, np.nan, np.nan, np.nan, np.nan],
             "camera_trace": [np.nan, np.nan, np.nan],
             "camera_pose_matrix": None,
+            "euler_orientation": [np.nan, np.nan, np.nan],
             "timestamp": timestamp,
         }
 

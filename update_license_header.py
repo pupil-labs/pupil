@@ -1,13 +1,14 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2020 Pupil Labs
+Copyright (C) 2012-2021 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import argparse
 import fnmatch
 import os
 import re
@@ -15,7 +16,7 @@ import re
 license_txt = """\
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -25,7 +26,7 @@ See COPYING and COPYING.LESSER for license details.
 
 
 pattern = re.compile(
-    "(\"{3}|'{3}|[/][*])\n\([*]\)~(.+?)~\([*]\)\n(\"{3}|'{3}|[*][/])",
+    "(\"{3}|'{3}|[/][*])\n\\([*]\\)~(.+?)~\\([*]\\)\n(\"{3}|'{3}|[*][/])(\r\n|\r|\n)*",
     re.DOTALL | re.MULTILINE,
 )
 
@@ -44,6 +45,7 @@ excludes = [
     ".gitignore",
     "version_utils.py",
     "update_license_header.py",
+    ".venv*",
 ]
 
 # transform glob patterns to regular expressions
@@ -69,7 +71,7 @@ def get_files(start_dir, includes, excludes):
     return match_files
 
 
-def write_header(file_name, license_txt):
+def write_header(file_name, license_txt, delete_header=False):
     # find and replace license header
     # or add new header if not existing
     c_comment = ["/*\n", "\n*/\n"]
@@ -83,29 +85,33 @@ def write_header(file_name, license_txt):
     else:
         raise Exception("Dont know how to deal with this filetype")
 
-    with open(file_name, "r") as original:
-        data = original.read()
+    try:
+        with open(file_name) as original:
+            data = original.read()
+    except UnicodeDecodeError:
+        return
 
     with open(file_name, "w") as modified:
         if re.findall(pattern, data):
+            if delete_header:
+                license_txt = ""
             # if header already exists, then update, but dont add the last newline.
             modified.write(re.sub(pattern, license_txt[:-1], data))
-            modified.close()
         else:
             # else write the license header
             modified.write(license_txt + data)
-            modified.close()
 
 
 if __name__ == "__main__":
-
-    # find out the cwd and change to the top level Pupil folder
-    cwd = os.getcwd()
-    pupil_dir = cwd
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-d", "--directory", default=".")
+    parser.add_argument("--delete", action="store_true")
+    args = parser.parse_args()
 
     # Add a license/docstring header to selected files
-    match_files = get_files(pupil_dir, includes, excludes)
-    print(len(match_files))
+    match_files = get_files(args.directory, includes, excludes)
+    print(f"Number of files to check: {len(match_files)}")
 
     for f in match_files:
-        write_header(f, license_txt)
+        print(f"Checking {f}")
+        write_header(f, license_txt, delete_header=args.delete)

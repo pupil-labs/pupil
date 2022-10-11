@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,14 +10,13 @@ See COPYING and COPYING.LESSER for license details.
 """
 import logging
 
-from pyglui import ui
-
-from gaze_producer import ui as plugin_ui
 from gaze_mapping import (
     gazer_labels_by_class_names,
     registered_gazer_classes,
     user_selectable_gazer_classes_posthoc,
 )
+from gaze_producer import ui as plugin_ui
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 

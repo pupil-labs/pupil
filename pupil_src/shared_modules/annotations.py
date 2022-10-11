@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -11,18 +11,19 @@ See COPYING and COPYING.LESSER for license details.
 
 import abc
 import csv
+import json
 import logging
 import os
+import traceback
+import typing as T
 from collections import namedtuple
-
-from pyglui import ui
 
 import file_methods as fm
 import player_methods as pm
 import zmq_tools
-from plugin import Plugin
 from hotkey import Hotkey
-
+from plugin import Plugin
+from pyglui import ui
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,9 @@ def create_annotation(label, timestamp, duration=0.0, **custom_fields):
     }
 
 
-AnnotationDefinition = namedtuple("AnnotationDefinition", "label hotkey")
+class AnnotationDefinition(T.NamedTuple):
+    label: str
+    hotkey: str
 
 
 class AnnotationPlugin(Plugin, abc.ABC):
@@ -74,9 +77,12 @@ class AnnotationPlugin(Plugin, abc.ABC):
         self._new_annotation_label = "new annotation label"
         self._new_annotation_hotkey = Hotkey.ANNOTATION_EVENT_DEFAULT_HOTKEY()
 
+    @property
+    def annotation_definitions(self):
+        return tuple(self._definition_to_buttons.keys())
+
     def get_init_dict(self):
-        annotation_definitions = list(self._definition_to_buttons.keys())
-        return {"annotation_definitions": annotation_definitions}
+        return {"annotation_definitions": self.annotation_definitions}
 
     def init_ui(self):
         self.add_menu()
@@ -160,7 +166,7 @@ class AnnotationPlugin(Plugin, abc.ABC):
 
         label = annotation_definition.label
         hotkey = annotation_definition.hotkey
-        return ui.Button(label="{} <{}>".format(label, hotkey), function=make_remove)
+        return ui.Button(label=f"{label} <{hotkey}>", function=make_remove)
 
     def _append_button_quickbar(self, button_quickbar):
         current_buttons = self.g_pool.quickbar.elements
@@ -238,8 +244,29 @@ class Annotation_Player(AnnotationPlugin, Plugin):
     Pupil Player plugin to view, edit, and add annotations.
     """
 
+    _FILE_DEFINITIONS_VERSION = 1
+    _FILE_DEFINITIONS_NAME = "annotation_definitions.json"
+
+    class VersionMismatchError(ValueError):
+        pass
+
     def __init__(self, g_pool, *args, **kwargs):
         super().__init__(g_pool, *args, **kwargs)
+        str_use_session_settings = " Using session settings."
+        try:
+            definitions = self.deserialize_definitions_from_recording()
+            logger.debug(f"Using annotation definitions from recording: {definitions}")
+            self._initial_annotation_definitions = definitions
+        except FileNotFoundError:
+            logger.debug("No annotation definitions found." + str_use_session_settings)
+        except Annotation_Player.VersionMismatchError as err:
+            logger.warning(str(err) + str_use_session_settings)
+        except (json.JSONDecodeError, AttributeError, KeyError):
+            logger.warning(
+                "Could not read annotation definitions." + str_use_session_settings
+            )
+            logger.debug(traceback.format_exc())
+
         self.annotations = self.load_annotations("annotation_player")
         no_or_empty_player_data_file = len(self.annotations) == 0
         if no_or_empty_player_data_file:
@@ -252,15 +279,14 @@ class Annotation_Player(AnnotationPlugin, Plugin):
         annotations = pm.Mutable_Bisector(
             annotation_pldata.data, annotation_pldata.timestamps
         )
-        logger.info(
-            "Loaded {} annotations from {}.pldata".format(len(annotations), file_name)
-        )
+        logger.info(f"Loaded {len(annotations)} annotations from {file_name}.pldata")
         return annotations
 
     def cleanup(self):
         with fm.PLData_Writer(self.g_pool.rec_dir, "annotation_player") as writer:
             for ts, annotation in zip(self.annotations.timestamps, self.annotations):
                 writer.append_serialized(ts, "annotation", annotation.serialized)
+        self.serialize_definitions_to_recording()
 
     def customize_menu(self):
         self.menu.label = "View and Edit Annotations"
@@ -333,7 +359,7 @@ class Annotation_Player(AnnotationPlugin, Plugin):
             csv_writer.writerow(csv_keys)
             for annotation, idx in zip(annotation_section["data"], annotation_idc):
                 csv_row = [idx]
-                csv_row.extend((annotation.get(k, "") for k in csv_keys[1:]))
+                csv_row.extend(annotation.get(k, "") for k in csv_keys[1:])
                 csv_writer.writerow(csv_row)
             logger.info("Created 'annotations.csv' file.")
 
@@ -356,3 +382,66 @@ class Annotation_Player(AnnotationPlugin, Plugin):
     @staticmethod
     def _annotation_description(label, world_index) -> str:
         return f"{label} annotation @ frame index {world_index}"
+
+    @property
+    def file_definitions_path(self):
+        return os.path.join(
+            self.g_pool.rec_dir, "offline_data", self._FILE_DEFINITIONS_NAME
+        )
+
+    def deserialize_definitions_from_recording(self) -> T.Tuple[T.Tuple[str, str], ...]:
+        """Read annotation definitions from a json file.
+
+        The file is expected to be at `self.file_definitions_path`
+
+        Raises:
+            FileNotFoundError: Default, if the recording is being opened for the first
+              time
+            json.JSONDecodeError: If the file cannot be parsed
+            VersionMisMatchError: If the file has an unexpected format version
+            KeyError: If the `definitions` field is not present
+            AttributeError: If the `definitions` field is not a mapping
+
+        Returns:
+            T.Tuple[T.Tuple[str, str], ...]: Tuple of annotation definitions, each being
+              a label-hotkey tuple.
+        """
+        with open(self.file_definitions_path) as json_file:
+            return self._deserialize_definitions_from_file(
+                readable_json_file=json_file,
+                expected_version=self._FILE_DEFINITIONS_VERSION,
+            )
+
+    @staticmethod
+    def _deserialize_definitions_from_file(
+        readable_json_file, expected_version: int
+    ) -> T.Tuple[T.Tuple[str, str], ...]:
+        content = json.load(readable_json_file)
+        content_version = content.get("version", "unspecified")
+        if content_version != expected_version:
+            raise Annotation_Player.VersionMismatchError(
+                f"Version mismatch: Encountered {content_version}, "
+                f"expected {expected_version}"
+            )
+        content_definitions: T.Dict[str, str] = content["definitions"]
+        return tuple(content_definitions.items())
+
+    def serialize_definitions_to_recording(self):
+        """Write annotation definitions to a json file.
+
+        The file is expected to be at `self.file_definitions_path`
+        """
+        with open(self.file_definitions_path, "w") as writable_file:
+            self._serialize_definitions_to_file(
+                writable_file,
+                definitions=self.annotation_definitions,
+                version=self._FILE_DEFINITIONS_VERSION,
+            )
+
+    @staticmethod
+    def _serialize_definitions_to_file(
+        writable_file, definitions: T.Iterable[T.Tuple[str, str]], version: int
+    ):
+        definitions = {label: hotkey for label, hotkey in definitions}
+        content = {"version": version, "definitions": definitions}
+        json.dump(content, writable_file)

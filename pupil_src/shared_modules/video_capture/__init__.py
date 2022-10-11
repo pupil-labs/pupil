@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -46,7 +46,7 @@ source_classes = [File_Source, UVC_Source, HMD_Streaming_Source]
 manager_classes = [File_Manager, UVC_Manager]
 
 try:
-    from .ndsi_backend import NDSI_Source, NDSI_Manager
+    from .ndsi_backend import NDSI_Manager, NDSI_Source
 except ImportError:
     logger.info("Install pyndsi to use the Pupil Mobile backend")
 else:

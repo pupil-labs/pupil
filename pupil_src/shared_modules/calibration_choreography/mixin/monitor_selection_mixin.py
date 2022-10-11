@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,7 +12,6 @@ import logging
 import typing as T
 
 from calibration_choreography.controller import GUIMonitor
-
 
 logger = logging.getLogger(__name__)
 

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,9 +13,8 @@ import logging
 import os
 import re
 
-import numpy as np
-
 import file_methods as fm
+import numpy as np
 from head_pose_tracker.function import utils
 
 logger = logging.getLogger(__name__)
@@ -205,7 +204,7 @@ class OptimizationStorage(Markers3DModel):
 
     @property
     def _plmodel_file_name(self):
-        return "{}.{}".format(self.name, self._plmodel_suffix)
+        return f"{self.name}.{self._plmodel_suffix}"
 
     @property
     def _plmodel_file_path(self):

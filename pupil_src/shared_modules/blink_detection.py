@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,23 +12,23 @@ See COPYING and COPYING.LESSER for license details.
 import csv
 import logging
 import os
+import time
 from collections import deque
-
-import numpy as np
-import OpenGL.GL as gl
-import pyglui.cygl.utils as cygl_utils
-from pyglui import ui
-from pyglui.pyfontstash import fontstash as fs
-from scipy.signal import fftconvolve
 
 import csv_utils
 import data_changed
 import file_methods as fm
 import gl_utils
+import numpy as np
+import OpenGL.GL as gl
 import player_methods as pm
+import pyglui.cygl.utils as cygl_utils
 from observable import Observable
 from plugin import Plugin
 from pupil_recording import PupilRecording, RecordingInfo
+from pyglui import ui
+from pyglui.pyfontstash import fontstash as fs
+from scipy.signal import fftconvolve
 
 logger = logging.getLogger(__name__)
 
@@ -263,7 +263,10 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             self.recalculate()
         elif notification["subject"] == "blinks_changed":
             self.cache_activation()
-            self.timeline.refresh()
+            try:
+                self.timeline.refresh()
+            except AttributeError:
+                pass
         elif notification["subject"] == "should_export":
             self.export(notification["ts_window"], notification["export_dir"])
 
@@ -333,9 +336,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             logger.info("Created 'blink_detection_report.csv' file.")
 
     def recalculate(self):
-        import time
-
-        t0 = time.time()
+        t0 = time.perf_counter()
         all_pp = self._pupil_data()
         if not all_pp:
             self.filter_response = []
@@ -372,7 +373,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
 
         self.consolidate_classifications()
 
-        tm1 = time.time()
+        tm1 = time.perf_counter()
         logger.debug(
             "Recalculating took\n\t{:.4f}sec for {} pp\n\t{} pp/sec\n\tsize: {}".format(
                 tm1 - t0, len(all_pp), len(all_pp) / (tm1 - t0), filter_size
@@ -513,7 +514,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
         legend_height = 13.0 * scale
         pad = 10 * scale
 
-        self.glfont.draw_text(width, legend_height, "Activaty")
+        self.glfont.draw_text(width, legend_height, "Activity")
         cygl_utils.draw_polyline(
             [
                 (pad, legend_height + pad * 2 / 3),
@@ -587,7 +588,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
     def csv_representation_for_blink(self, b, header):
         data = [b[k] for k in header if k not in ("filter_response", "base_data")]
         try:
-            resp = " ".join(["{}".format(val) for val in b["filter_response"]])
+            resp = " ".join([f"{val}" for val in b["filter_response"]])
             data.insert(header.index("filter_response"), resp)
         except IndexError:
             pass

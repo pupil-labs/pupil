@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import errno
-
 import glob
 import logging
 import os
@@ -18,27 +17,23 @@ import uuid
 from shutil import copy2
 from time import gmtime, localtime, strftime, time
 
-import psutil
-from ndsi import H264Writer
-from pyglui import ui
-
 import csv_utils
-from av_writer import MPEG_Writer, JPEG_Writer, NonMonotonicTimestampError
+import psutil
+from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
 from file_methods import PLData_Writer, load_object
-from methods import get_system_info, timer
-from video_capture.ndsi_backend import NDSI_Source
-
-from pupil_recording.info import RecordingInfoFile
-
 from gaze_mapping.notifications import (
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
 )
+from hotkey import Hotkey
+from methods import get_system_info, timer
+from ndsi import H264Writer
 
 # from scipy.interpolate import UnivariateSpline
 from plugin import System_Plugin_Base
-
-from hotkey import Hotkey
+from pupil_recording.info import RecordingInfoFile
+from pyglui import ui
+from video_capture.ndsi_backend import NDSI_Source
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +90,7 @@ class Recorder(System_Plugin_Base):
                     logger.error("Could not create Rec dir")
                     raise e
             else:
-                logger.info(
-                    'Created standard Rec dir at "{}"'.format(default_rec_root_dir)
-                )
+                logger.info(f'Created standard Rec dir at "{default_rec_root_dir}"')
             self.rec_root_dir = default_rec_root_dir
 
         self.raw_jpeg = raw_jpeg
@@ -181,7 +174,7 @@ class Recorder(System_Plugin_Base):
         )
         self.menu.append(
             ui.Info_Text(
-                "Recording the raw eye video is optional. We use it for debugging."
+                "Enable/disable recording of eye and world video with these toggles"
             )
         )
         self.menu.append(
@@ -288,7 +281,7 @@ class Recorder(System_Plugin_Base):
             if self.running:
                 self.stop()
             else:
-                logger.info("Recording already stopped!")
+                logger.debug("Recording already stopped!")
 
     def get_rec_time_str(self):
         rec_time = gmtime(time() - self.start_time)
@@ -322,7 +315,7 @@ class Recorder(System_Plugin_Base):
         session = os.path.join(self.rec_root_dir, self.session_name)
         try:
             os.makedirs(session, exist_ok=True)
-            logger.debug("Created new recordings session dir {}".format(session))
+            logger.debug(f"Created new recordings session dir {session}")
         except OSError:
             logger.error(
                 "Could not start recording. Session dir {} not writable.".format(
@@ -340,16 +333,25 @@ class Recorder(System_Plugin_Base):
         # set up self incrementing folder within session folder
         counter = 0
         while True:
-            self.rec_path = os.path.join(session, "{:03d}/".format(counter))
+            self.rec_path = os.path.join(session, f"{counter:03d}/")
             try:
                 os.mkdir(self.rec_path)
-                logger.debug("Created new recording dir {}".format(self.rec_path))
+                logger.debug(f"Created new recording dir {self.rec_path}")
                 break
             except FileExistsError:
                 logger.debug(
                     "We dont want to overwrite data, incrementing counter & trying to make new data folder"
                 )
                 counter += 1
+            except PermissionError:
+                logger.error(
+                    "No sufficient permissions to create new recording at "
+                    f"{self.rec_path}"
+                )
+                self.running = False
+                self.menu.read_only = False
+
+                return
 
         self.meta_info = RecordingInfoFile.create_empty_file(self.rec_path)
         self.meta_info.recording_software_name = (
@@ -495,8 +497,8 @@ class Recorder(System_Plugin_Base):
             # explicit release of VideoWriter
             try:
                 self.writer.release()
-            except RuntimeError:
-                logger.error("No world video recorded")
+            except (RuntimeError, FileNotFoundError):
+                logger.warning("No world video recorded")
             else:
                 logger.debug("Closed media container")
                 self.g_pool.capture.intrinsics.save(self.rec_path, custom_name="world")
@@ -517,10 +519,6 @@ class Recorder(System_Plugin_Base):
                 _, filename = os.path.split(source_path)
                 target_path = os.path.join(self.rec_path, filename)
                 copy2(source_path, target_path)
-        else:
-            logger.info(
-                "No surface_definitions data found. You may want this if you do marker tracking."
-            )
 
         self.meta_info.duration_s = duration_s
         self.meta_info.save_file()
@@ -564,7 +562,7 @@ class Recorder(System_Plugin_Base):
             return False
         # elif not os.access(n_path, os.W_OK):
         elif not writable_dir(n_path):
-            logger.warning("Do not have write access to '{}'.".format(n_path))
+            logger.warning(f"Do not have write access to '{n_path}'.")
             return False
         else:
             return n_path
@@ -588,7 +586,7 @@ class Recorder(System_Plugin_Base):
 def writable_dir(n_path):
     try:
         open(os.path.join(n_path, "dummpy_tmp"), "w")
-    except IOError:
+    except OSError:
         return False
     else:
         os.remove(os.path.join(n_path, "dummpy_tmp"))

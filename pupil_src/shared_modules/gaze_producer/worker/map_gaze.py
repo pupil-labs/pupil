@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,7 +14,6 @@ import tasklib
 from gaze_mapping import gazer_classes_by_class_name, registered_gazer_classes
 
 from .fake_gpool import FakeGPool
-
 
 g_pool = None  # set by the plugin
 

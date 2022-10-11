@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,29 +13,22 @@ import logging
 import typing as T
 
 import cv2
-import numpy as np
-
 import math_helper
-
+import numpy as np
 from gaze_mapping.gazer_base import (
+    FitDidNotConvergeError,
     GazerBase,
     Model,
     NotEnoughDataError,
-    FitDidNotConvergeError,
 )
-
 from methods import normalize
-from .calibrate_3d import (
-    calibrate_binocular,
-    calibrate_monocular,
-)
+
+from .calibrate_3d import calibrate_binocular, calibrate_monocular
 from .utils import (
+    _clamp_norm_point,
     calculate_nearest_points_to_targets,
     get_eye_cam_pose_in_world,
 )
-
-from .utils import _clamp_norm_point
-
 
 logger = logging.getLogger(__name__)
 

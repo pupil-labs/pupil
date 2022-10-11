@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -87,6 +87,12 @@ class PupilArgParser:
             parser.add_argument("-P", "--port", type=int, help="port for Pupil Remote")
             parser.add_argument(
                 "--hide-ui", action="store_true", help="hide ui on startup"
+            )
+            parser.add_argument(
+                "-skip-driv",
+                "--skip-driver-installation",
+                action="store_true",
+                help="skip automatic driver installation on Windows",
             )
 
         if app == "player":

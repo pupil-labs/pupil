@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,7 +15,6 @@ import signal
 from ctypes import c_bool
 
 import zmq
-
 import zmq_tools
 
 logger = logging.getLogger(__name__)
@@ -175,9 +174,10 @@ if __name__ == "__main__":
     )
 
     def example_generator(mu=0.0, sigma=1.0, steps=100):
-        """samples `N(\mu, \sigma^2)`"""
-        import numpy as np
+        r"""samples `N(\mu, \sigma^2)`"""
         from time import sleep
+
+        import numpy as np
 
         for i in range(steps):
             # yield progress, datum
@@ -189,14 +189,14 @@ if __name__ == "__main__":
         "Background", example_generator, args=(5.0, 3.0), kwargs={"steps": 100}
     )
 
-    from time import time, sleep
+    from time import sleep, time
 
     start = time()
     maximal_duration = 2.0
     while time() - start < maximal_duration:
         # fetch all available results
         for progress, random_number in task.fetch():
-            logger.debug("[{:3.0f}%] {:0.2f}".format(progress * 100, random_number))
+            logger.debug(f"[{progress * 100:3.0f}%] {random_number:0.2f}")
 
         # test if task is completed
         if task.completed:

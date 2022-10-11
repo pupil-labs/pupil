@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -216,11 +216,11 @@ def make_coord_system_norm_based(flip=False):
     glLoadIdentity()
 
 
-class Coord_System(object):
+class Coord_System:
     """docstring for Coord_System"""
 
     def __init__(self, left, right, bottom, top):
-        super(Coord_System, self).__init__()
+        super().__init__()
         if left == right:
             left -= 1
             right += 1

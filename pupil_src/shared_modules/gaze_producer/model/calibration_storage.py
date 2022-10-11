@@ -1,37 +1,36 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from collections import namedtuple
 import copy
 import logging
 import os
 import pathlib
+from collections import namedtuple
 
 import file_methods as fm
 import make_unique
-
-from storage import Storage
-from gaze_producer import model
-from observable import Observable
 from gaze_mapping import (
     default_gazer_class,
+    gazer_classes_by_class_name,
     registered_gazer_classes,
     user_selectable_gazer_classes,
     gazer_classes_by_class_name,
     user_selectable_gazer_classes_posthoc,
 )
 from gaze_mapping.notifications import (
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
 )
-
+from gaze_producer import model
+from observable import Observable
+from storage import Storage
 
 logger = logging.getLogger(__name__)
 

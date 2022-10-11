@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,13 +9,13 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import numpy as np
-from numpy import linalg as LA
 import cv2
+import numpy as np
 from methods import dist_pts_ellipse, normalize
+from numpy import linalg as LA
 
 
-class CircleTracker(object):
+class CircleTracker:
     def __init__(self, wait_interval=30, roi_wait_interval=120):
         self.wait_interval = wait_interval
         self.roi_wait_interval = roi_wait_interval
@@ -707,7 +707,9 @@ if __name__ == "__main__":
             cv2.waitKey(1)
             # return
 
-    import cProfile, subprocess, os
+    import cProfile
+    import os
+    import subprocess
 
     cProfile.runctx("bench()", {}, locals(), "world.pstats")
     loc = os.path.abspath(__file__).rsplit("pupil_src", 1)

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,12 +12,11 @@ import logging
 import socket
 from time import sleep
 
+import os_utils
 import zmq
 import zmq_tools
-from pyre import zhelper
-
-import os_utils
 from observable import Observable
+from pyre import zhelper
 
 os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
@@ -291,7 +290,7 @@ class PupilRemoteController(Observable):
             try:
                 target = float(msg[2:])
             except Exception:
-                response = "'{}' cannot be converted to float.".format(msg[2:])
+                response = f"'{msg[2:]}' cannot be converted to float."
             else:
                 raw_time = self.g_pool.get_now()
                 self.g_pool.timebase.value = raw_time - target
@@ -299,8 +298,8 @@ class PupilRemoteController(Observable):
         elif msg[0] == "t":
             response = repr(self.g_pool.get_timestamp())
         elif msg[0] == "v":
-            response = "{}".format(self.g_pool.version)
+            response = f"{self.g_pool.version}"
         else:
             response = "Unknown command."
         remote.send_string(response)
-        logger.debug("Request: '{}', Response: '{}'".format(msg, response))
+        logger.debug(f"Request: '{msg}', Response: '{response}'")

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -11,7 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 
 import cv2
 import numpy as np
-from scipy import optimize as scipy_optimize, sparse as scipy_sparse
+from scipy import optimize as scipy_optimize
+from scipy import sparse as scipy_sparse
 
 from . import utils
 
@@ -132,7 +133,7 @@ class BundleAdjustment:
             vectors = gaze_targets - translation
             norms = np.linalg.norm(vectors, axis=1)
             block = -np.einsum("ki,kj->kij", vectors, vectors)
-            block /= (norms ** 3)[:, np.newaxis, np.newaxis]
+            block /= (norms**3)[:, np.newaxis, np.newaxis]
             ones = np.eye(3)[np.newaxis] / norms[:, np.newaxis, np.newaxis]
             block += ones
             return block

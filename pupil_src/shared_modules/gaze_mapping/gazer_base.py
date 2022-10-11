@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -15,23 +15,18 @@ import logging
 import os
 import typing as T
 
-import numpy as np
-
-from plugin import Plugin
 import file_methods as fm
+import numpy as np
+from plugin import Plugin
 
 from .matching import RealtimeMatcher
 from .notifications import (
-    CalibrationSuccessNotification,
     CalibrationFailureNotification,
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
+    CalibrationSuccessNotification,
 )
-from .utils import (
-    _filter_pupil_list_by_confidence,
-    _match_data_batch,
-)
-
+from .utils import _filter_pupil_list_by_confidence, _match_data_batch
 
 logger = logging.getLogger(__name__)
 

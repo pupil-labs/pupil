@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,8 +12,9 @@ import logging
 import platform
 import typing as T
 
-import glfw
 import gl_utils
+import glfw
+
 from .utils import GLFWErrorReporting
 
 GLFWErrorReporting.set_default()

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,8 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-from head_pose_tracker import ui as plugin_ui, controller, storage
+from head_pose_tracker import controller, storage
+from head_pose_tracker import ui as plugin_ui
 from tasklib.manager import PluginTaskManager
+
 from .base_head_pose_tracker import Head_Pose_Tracker_Base
 
 

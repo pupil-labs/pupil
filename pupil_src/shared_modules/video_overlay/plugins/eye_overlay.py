@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -120,7 +120,7 @@ class Eye_Overlay(Observable, Plugin):
         if eye_videos:
             return str(eye_videos[0])
         else:
-            return "/not/found/eye{}.mp4".format(eye_id)
+            return f"/not/found/eye{eye_id}.mp4"
 
     def get_init_dict(self):
         return {

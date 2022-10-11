@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,11 +12,8 @@ import logging
 
 from plugin import Plugin
 
-from .controller import FramePublisherController
-from .controller import PupilRemoteController
-from .ui import FramePublisherMenu
-from .ui import PupilRemoteMenu
-
+from .controller import FramePublisherController, PupilRemoteController
+from .ui import FramePublisherMenu, PupilRemoteMenu
 
 logger = logging.getLogger(__name__)
 

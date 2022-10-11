@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,45 +10,41 @@ See COPYING and COPYING.LESSER for license details.
 """
 import enum
 import logging
-from platform import system
 import typing as T
-
-import cv2
-import numpy as np
+from platform import system
 
 import audio
+import cv2
+import glfw
+import numpy as np
+import OpenGL.GL as gl
+from circle_detector import CircleTracker
+from gl_utils import GLFWErrorReporting, adjust_gl_view, basic_gl_setup, clear_gl_screen
+from plugin import Plugin
 from pyglui import ui
-from pyglui.cygl.utils import draw_polyline, RGBA
+from pyglui.cygl.utils import RGBA, draw_polyline
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
-from plugin import Plugin
-from circle_detector import CircleTracker
-from gl_utils import adjust_gl_view, clear_gl_screen, basic_gl_setup
-import OpenGL.GL as gl
-
-import glfw
-from gl_utils import GLFWErrorReporting
 
 GLFWErrorReporting.set_default()
 
-from .mixin import MonitorSelectionMixin
+from .base_plugin import (
+    CalibrationChoreographyPlugin,
+    ChoreographyAction,
+    ChoreographyMode,
+)
 from .controller import (
     GUIMonitor,
     MarkerWindowController,
-    MarkerWindowStateClosed,
-    MarkerWindowStateOpened,
-    MarkerWindowStateIdle,
-    MarkerWindowStateShowingMarker,
     MarkerWindowStateAnimatingInMarker,
     MarkerWindowStateAnimatingOutMarker,
+    MarkerWindowStateClosed,
+    MarkerWindowStateIdle,
+    MarkerWindowStateOpened,
+    MarkerWindowStateShowingMarker,
     UnhandledMarkerWindowStateError,
 )
-from .base_plugin import (
-    CalibrationChoreographyPlugin,
-    ChoreographyMode,
-    ChoreographyAction,
-)
-
+from .mixin import MonitorSelectionMixin
 
 logger = logging.getLogger(__name__)
 

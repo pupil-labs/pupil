@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,11 +14,10 @@ import typing as T
 from enum import IntEnum, auto
 from time import monotonic, sleep
 
-import numpy as np
-from pyglui import cygl, ui
-
 import gl_utils
+import numpy as np
 from plugin import Plugin
+from pyglui import cygl, ui
 
 logger = logging.getLogger(__name__)
 
@@ -246,7 +245,7 @@ class Base_Source(Plugin):
         )
 
     @property
-    def name(self):
+    def name(self) -> str:
         raise NotImplementedError()
 
     def get_init_dict(self):
@@ -363,7 +362,7 @@ class Playback_Source(Base_Source):
             "external",
             "own",
             None,
-        ), "invalid timing argument: {}".format(timing)
+        ), f"invalid timing argument: {timing}"
         self.timing = timing
         self.finished_sleep = 0.0
         self._recent_wait_ts = -1

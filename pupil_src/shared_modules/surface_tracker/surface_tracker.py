@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -14,19 +14,18 @@ import typing as T
 from abc import ABCMeta, abstractmethod
 
 import numpy as np
-from pyglui import ui
-
+from hotkey import Hotkey
 from plugin import Plugin
+from pyglui import ui
 
 from . import gui
 from .surface_file_store import Surface_File_Store
 from .surface_marker_detector import (
+    ApriltagFamily,
     MarkerDetectorController,
     MarkerDetectorMode,
     MarkerType,
-    ApriltagFamily,
 )
-from hotkey import Hotkey
 
 logger = logging.getLogger(__name__)
 
@@ -308,7 +307,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
             names = [x.name for x in self.surfaces]
             if val in names:
-                logger.warning("The name '{}' is already in use!".format(val))
+                logger.warning(f"The name '{val}' is already in use!")
                 return
 
             self.notify_all(
@@ -360,7 +359,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             val *= 3
             surface._heatmap_blur_factor = max((1 - val), 0)
             res_exponent = max(val, 0.35)
-            surface._heatmap_resolution = int(10 ** res_exponent)
+            surface._heatmap_resolution = int(10**res_exponent)
             self.notify_all(
                 {
                     "subject": "surface_tracker.heatmap_params_changed",
@@ -374,7 +373,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
         if surface.deprecated_definition:
             displayed_name = "Deprecated!! - " + displayed_name
 
-        s_menu = ui.Growing_Menu("{}".format(displayed_name))
+        s_menu = ui.Growing_Menu(f"{displayed_name}")
         s_menu.collapsed = True
 
         if surface.deprecated_definition:
@@ -486,10 +485,12 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 )
 
                 surface_event = {
-                    "topic": "surfaces.{}".format(surface.name),
+                    "topic": f"surfaces.{surface.name}",
                     "name": surface.name,
                     "surf_to_img_trans": surface.surf_to_img_trans.tolist(),
                     "img_to_surf_trans": surface.img_to_surf_trans.tolist(),
+                    "surf_to_dist_img_trans": surface.surf_to_dist_img_trans.tolist(),
+                    "dist_img_to_surf_trans": surface.dist_img_to_surf_trans.tolist(),
                     "gaze_on_surfaces": gaze_on_surf,
                     "fixations_on_surfaces": fixations_on_surf,
                     "timestamp": timestamp,
@@ -507,9 +508,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
 
     def on_add_surface_click(self, _=None):
         if self.markers:
-            surface = self.Surface_Class(
-                name="Surface {:}".format(len(self.surfaces) + 1)
-            )
+            surface = self.Surface_Class(name=f"Surface {len(self.surfaces) + 1}")
             self.add_surface(surface)
         else:
             logger.warning("Can not add a new surface: No markers found in the image!")

@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,9 +16,8 @@ import typing as T
 from itertools import chain
 
 import cv2
-import numpy as np
-
 import file_methods as fm
+import numpy as np
 import player_methods as pm
 
 logger = logging.getLogger(__name__)
@@ -36,16 +35,14 @@ def exact_window(timestamps, index_range):
     return (timestamps[index_range[0]], timestamps[end_index])
 
 
-class Bisector(object):
+class Bisector:
     """Stores data with associated timestamps, both sorted by the timestamp."""
 
     def __init__(self, data=(), data_ts=()):
         if len(data) != len(data_ts):
             raise ValueError(
-                (
-                    "Each element in `data` requires a corresponding"
-                    " timestamp in `data_ts`"
-                )
+                "Each element in `data` requires a corresponding"
+                " timestamp in `data_ts`"
             )
         elif not len(data):
             self.data = np.array([], dtype=object)
@@ -322,6 +319,10 @@ class PupilDataBisector:
 
     def __bool__(self):
         return any(self._bisectors.values())
+
+    def __iter__(self):
+        all_bisectors = self._bisectors.values()
+        return iter(self.combine_bisectors(all_bisectors))
 
     @staticmethod
     def combine_bisectors(bisectors: T.Iterable[pm.Bisector]) -> pm.Bisector:

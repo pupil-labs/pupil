@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,14 +16,14 @@ import re
 import sys
 import tempfile
 import time
+import traceback
 from pathlib import Path
 
-import numpy as np
-from pyglui import cygl, ui
-
 import gl_utils
+import numpy as np
 import uvc
 from camera_models import Camera_Model
+from pyglui import cygl, ui
 from version_utils import parse_version
 
 from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
@@ -75,7 +75,10 @@ class UVC_Source(Base_Source):
         assert name or preferred_names or uid
 
         if platform.system() == "Windows":
-            self.verify_drivers()
+            if g_pool.skip_driver_installation:
+                logger.debug("Skipping driver installation")
+            else:
+                self.verify_drivers()
 
         self.devices = uvc.Device_List()
 
@@ -87,14 +90,12 @@ class UVC_Source(Base_Source):
                 self.uvc_capture = uvc.Capture(uid)
             except uvc.OpenError:
                 logger.warning(
-                    "No avalilable camera found that matched {}".format(preferred_names)
+                    f"Camera matching {preferred_names} found but not available"
                 )
             except uvc.InitError:
                 logger.error("Camera failed to initialize.")
             except uvc.DeviceNotFoundError:
-                logger.warning(
-                    "No camera found that matched {}".format(preferred_names)
-                )
+                logger.warning(f"No camera found that matched {preferred_names}")
 
         # otherwise we use name or preffered_names
         else:
@@ -143,9 +144,7 @@ class UVC_Source(Base_Source):
             self.name_backup = (self.name,)
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
-            controls_dict = dict(
-                [(c.display_name, c) for c in self.uvc_capture.controls]
-            )
+            controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
             try:
                 self.exposure_time_backup = controls_dict[
                     "Absolute Exposure Time"
@@ -246,7 +245,7 @@ class UVC_Source(Base_Source):
                         print(elevation_cmd)
                         logger.debug(elevation_cmd)
                         subprocess.Popen(elevation_cmd).wait()
-                except PermissionError as e:
+                except PermissionError:
                     # This can be raised when cleaning up the TemporaryDirectory, if the
                     # process was started from a non-admin shell for a non-admin user
                     # and has only been elevated for the powershell commands. The files
@@ -256,9 +255,15 @@ class UVC_Source(Base_Source):
                         "Pupil was not run as administrator. If the drivers do not "
                         "work, please try running as administrator again!"
                     )
-                    logger.debug(e)
+                    logger.debug(traceback.format_exc())
+                except Exception:
+                    logger.error(
+                        "An error was encountered during the automatic driver "
+                        "installation. Please consider installing them manually."
+                    )
+                    logger.debug(traceback.format_exc())
 
-            logger.warning("Done updating drivers!")
+            logger.info("Done updating drivers!")
 
     def configure_capture(self, frame_size, frame_rate, uvc_controls):
         # Set camera defaults. Override with previous settings afterwards
@@ -279,15 +284,14 @@ class UVC_Source(Base_Source):
                 # use hardware timestamps
                 self.ts_offset = None
         else:
-            logger.info(
-                "Hardware timestamps not supported for {}. Using software timestamps.".format(
-                    self.uvc_capture.name
-                )
+            logger.debug(
+                f"Hardware timestamps not supported for {self.uvc_capture.name}. "
+                "Using software timestamps."
             )
             self.ts_offset = -0.1
 
         # UVC setting quirks:
-        controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+        controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
 
         if (
             ("Pupil Cam2" in self.uvc_capture.name)
@@ -353,9 +357,7 @@ class UVC_Source(Base_Source):
             if self.exposure_mode == "auto":
                 # special settings apply to both, Pupil Cam2 and Cam3
                 special_settings = {200: 28, 180: 31}
-                controls_dict = dict(
-                    [(c.display_name, c) for c in self.uvc_capture.controls]
-                )
+                controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
                 self.preferred_exposure_time = Exposure_Time(
                     max_ET=special_settings.get(self.frame_rate, 32),
                     frame_rate=self.frame_rate,
@@ -394,9 +396,7 @@ class UVC_Source(Base_Source):
             try:
                 c.value = uvc_controls[c.display_name]
             except KeyError:
-                logger.debug(
-                    'No UVC setting "{}" found from settings.'.format(c.display_name)
-                )
+                logger.debug(f'No UVC setting "{c.display_name}" found from settings.')
 
         if self.should_check_stripes:
             self.stripe_detector = Check_Frame_Stripes()
@@ -423,22 +423,20 @@ class UVC_Source(Base_Source):
         for d in self.devices:
             for name in names:
                 if d["name"] == name:
-                    logger.info("Found device. {}.".format(name))
+                    logger.info(f"Found device. {name}.")
                     if self.uvc_capture:
                         self._re_init_capture(d["uid"])
                     else:
                         self._init_capture(d["uid"], backup_uvc_controls)
                     return
         raise InitialisationError(
-            "Could not find Camera {} during re initilization.".format(names)
+            f"Could not find Camera {names} during re initilization."
         )
 
     def _restart_logic(self):
         if self._restart_in <= 0:
             if self.uvc_capture:
-                logger.warning(
-                    "Capture failed to provide frames. Attempting to reinit."
-                )
+                logger.warning("Camera disconnected. Reconnecting...")
                 self.name_backup = (self.uvc_capture.name,)
                 self.backup_uvc_controls = self._get_uvc_controls()
                 self.uvc_capture = None
@@ -475,9 +473,9 @@ class UVC_Source(Base_Source):
             if self.stripe_detector and self.stripe_detector.require_restart(frame):
                 # set the self.frame_rate in order to restart
                 self.frame_rate = self.frame_rate
-                logger.info("Stripes detected")
+                logger.debug("Stripes detected")
 
-        except uvc.StreamError:
+        except (uvc.StreamError, TimeoutError):
             self._recent_frame = None
             self._restart_logic()
         except (AttributeError, uvc.InitError):
@@ -613,9 +611,7 @@ class UVC_Source(Base_Source):
     def exposure_time(self):
         if self.uvc_capture:
             try:
-                controls_dict = dict(
-                    [(c.display_name, c) for c in self.uvc_capture.controls]
-                )
+                controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
                 return controls_dict["Absolute Exposure Time"].value
             except KeyError:
                 return None
@@ -625,9 +621,7 @@ class UVC_Source(Base_Source):
     @exposure_time.setter
     def exposure_time(self, new_et):
         try:
-            controls_dict = dict(
-                [(c.display_name, c) for c in self.uvc_capture.controls]
-            )
+            controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
             if abs(new_et - controls_dict["Absolute Exposure Time"].value) >= 1:
                 controls_dict["Absolute Exposure Time"].value = new_et
         except KeyError:
@@ -726,9 +720,8 @@ class UVC_Source(Base_Source):
                     self.preferred_exposure_time = None
 
                 logger.info(
-                    "Exposure mode for camera {0} is now set to {1} mode".format(
-                        self.uvc_capture.name, exposure_mode
-                    )
+                    f"Exposure mode for camera {self.uvc_capture.name} is now set to "
+                    f"{exposure_mode} mode"
                 )
                 self.update_menu()
 
@@ -837,17 +830,13 @@ class UVC_Source(Base_Source):
                 self.enable_stripe_checks = enable_stripe_checks
                 if self.enable_stripe_checks:
                     self.stripe_detector = Check_Frame_Stripes()
-                    logger.info(
-                        "Check Stripes for camera {} is now on".format(
-                            self.uvc_capture.name
-                        )
+                    logger.debug(
+                        f"Check Stripes for camera {self.uvc_capture.name} is now on"
                     )
                 else:
                     self.stripe_detector = None
-                    logger.info(
-                        "Check Stripes for camera {} is now off".format(
-                            self.uvc_capture.name
-                        )
+                    logger.debug(
+                        f"Check Stripes for camera {self.uvc_capture.name} is now off"
                     )
 
             ui_elements.append(
@@ -949,6 +938,7 @@ class UVC_Manager(Base_Manager):
                 return
         except ValueError as ve:
             logger.error(str(ve))
+            logger.debug(traceback.format_exc())
             return
 
         settings = {

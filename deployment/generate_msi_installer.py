@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -148,7 +148,7 @@ class SoftwareComponent:
 
     def icon_data(self) -> str:
         cap = self.name.capitalize()
-        return f"""
+        return rf"""
         <Icon Id="{cap}Icon.exe" SourceFile="{self.dir.name}\pupil_{self.name}.exe" />"""
 
 
@@ -187,7 +187,7 @@ template = f"""
                 <Directory Id="ProgramMenuDir" Name="{product_name}">
                     <Component Id="ProgramMenuDir" Guid="{new_guid()}">
                         <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
-                        <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]\{version}' Type='string' Value='' KeyPath='yes' />
+                        <RegistryValue Root='HKCU' Key='Software\\[Manufacturer]\\[ProductName]\\{version}' Type='string' Value='' KeyPath='yes' />
                     </Component>
                 </Directory>
             </Directory>

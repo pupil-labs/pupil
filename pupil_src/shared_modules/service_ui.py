@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,22 +9,20 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
-import platform
 import logging
+import platform
 import socket
 
-import numpy as np
-
-from OpenGL.GL import GL_COLOR_BUFFER_BIT
-
-import glfw
 import gl_utils
+import glfw
+import numpy as np
 from gl_utils import GLFWErrorReporting
+from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
 GLFWErrorReporting.set_default()
 
-from pyglui import ui, cygl
 from plugin import System_Plugin_Base
+from pyglui import cygl, ui
 
 # UI Platform tweaks
 if platform.system() == "Linux":
@@ -137,9 +135,17 @@ class Service_UI(System_Plugin_Base):
 
         g_pool.menubar.append(ui.Button("Reset window size", set_window_size))
 
-        pupil_remote_addr = "{}:{}".format(
-            socket.gethostbyname(socket.gethostname()), g_pool.preferred_remote_port
-        )
+        for *_, (ip, port, *_) in socket.getaddrinfo(
+            "localhost",
+            g_pool.preferred_remote_port,
+            family=socket.AF_INET,
+            type=socket.SOCK_STREAM,
+        ):
+            pupil_remote_addr = f"{ip}:{port}"
+            break
+        else:
+            pupil_remote_addr = "unknown"
+
         g_pool.menubar.append(
             ui.Text_Input(
                 "pupil_remote_addr",
@@ -165,9 +171,7 @@ class Service_UI(System_Plugin_Base):
             )
         )
 
-        g_pool.menubar.append(
-            ui.Info_Text("Service Version: {}".format(g_pool.version))
-        )
+        g_pool.menubar.append(ui.Info_Text(f"Service Version: {g_pool.version}"))
 
         g_pool.menubar.append(ui.Button("Restart with default settings", reset_restart))
 
@@ -254,12 +258,12 @@ class Service_UI(System_Plugin_Base):
     def start_stop_eye(self, eye_id, make_alive):
         if make_alive:
             n = {
-                "subject": "eye_process.should_start.{}".format(eye_id),
+                "subject": f"eye_process.should_start.{eye_id}",
                 "eye_id": eye_id,
             }
         else:
             n = {
-                "subject": "eye_process.should_stop.{}".format(eye_id),
+                "subject": f"eye_process.should_stop.{eye_id}",
                 "eye_id": eye_id,
                 "delay": 0.2,
             }

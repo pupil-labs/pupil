@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -171,7 +171,7 @@ class OfflineOptimizationMenu:
         try:
             new_id = int(new_id)
         except ValueError:
-            logger.info("'{}' is not a valid input".format(new_id))
+            logger.info(f"'{new_id}' is not a valid input")
             return
 
         if self._general_settings.user_defined_origin_marker_id != new_id:

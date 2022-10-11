@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -10,7 +10,6 @@ See COPYING and COPYING.LESSER for license details.
 """
 import ctypes.util
 import functools
-
 
 print("Attempting to import OpenGL using patched `ctypes.util.find_library`...")
 _find_library_original = ctypes.util.find_library

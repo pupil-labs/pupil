@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,7 +16,6 @@ import typing as T
 
 import cv2
 import numpy as np
-
 from file_methods import load_object, save_object
 
 logger = logging.getLogger(__name__)
@@ -345,9 +344,8 @@ class Camera_Model(abc.ABC):
         intrinsics_dict[str(self.resolution)] = intrinsics
 
         save_object(intrinsics_dict, save_path)
-        logger.info(
-            f"Intrinsics for camera {cam_name} at resolution {self.resolution} saved"
-            f" to {save_path}"
+        logger.debug(
+            f"Saved camera intrinsics for {cam_name} {self.resolution} to {save_path}"
         )
 
     @staticmethod
@@ -380,7 +378,7 @@ class Camera_Model(abc.ABC):
                 )
 
             intrinsics = intrinsics_dict[str(resolution)]
-            logger.info("Loading previously recorded intrinsics...")
+            logger.debug("Loading previously recorded intrinsics...")
             return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
         except Exception:
             logger.debug(
@@ -401,7 +399,7 @@ class Camera_Model(abc.ABC):
             cam_name in default_intrinsics
             and str(resolution) in default_intrinsics[cam_name]
         ):
-            logger.info("Loading default intrinsics!")
+            logger.debug("Loading default intrinsics!")
             intrinsics = default_intrinsics[cam_name][str(resolution)]
             return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
         else:
@@ -500,8 +498,8 @@ class Fisheye_Dist_Camera(Camera_Model):
         theta_d = np.linalg.norm(pw, ord=2, axis=1)
         theta = theta_d
         for j in range(10):
-            theta2 = theta ** 2
-            theta4 = theta2 ** 2
+            theta2 = theta**2
+            theta4 = theta2**2
             theta6 = theta4 * theta2
             theta8 = theta6 * theta2
             theta = theta_d / (

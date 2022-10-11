@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -12,10 +12,9 @@ import logging
 from typing import Dict, Tuple
 
 import cv2
-from pyglui.cygl.utils import RGBA, draw_polyline
 from gl_utils import draw_circle_filled_func_builder
-
 from pupil_detector_plugins import color_scheme
+from pyglui.cygl.utils import RGBA, draw_polyline
 
 logger = logging.getLogger(__name__)
 

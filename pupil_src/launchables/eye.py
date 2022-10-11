@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -16,7 +16,7 @@ import time
 from types import SimpleNamespace
 
 
-class Is_Alive_Manager(object):
+class Is_Alive_Manager:
     """
     A context manager to wrap the is_alive flag.
     Is alive will stay true as long is the eye process is running.
@@ -40,7 +40,7 @@ class Is_Alive_Manager(object):
             import traceback as tb
 
             self.logger.error(
-                "Process Eye{} crashed with trace:\n".format(self.eye_id)
+                f"Process Eye{self.eye_id} crashed with trace:\n"
                 + "".join(tb.format_exception(etype, value, traceback))
             )
 
@@ -66,6 +66,7 @@ def eye(
     debug=False,
     pub_socket_hwm=None,
     parent_application="capture",
+    skip_driver_installation=False,
 ):
     """reads eye video and detects the pupil.
 
@@ -119,43 +120,47 @@ def eye(
     with Is_Alive_Manager(is_alive_flag, ipc_socket, eye_id, logger):
         # general imports
         import traceback
-        import numpy as np
-        import cv2
 
-        from OpenGL.GL import GL_COLOR_BUFFER_BIT
+        import cv2
 
         # display
         import glfw
+        import numpy as np
         from gl_utils import GLFWErrorReporting
+        from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
         GLFWErrorReporting.set_default()
 
-        from pyglui import ui, graph, cygl
-        from pyglui.cygl.utils import Named_Texture
         import gl_utils
-        from gl_utils import basic_gl_setup, adjust_gl_view, clear_gl_screen
-        from gl_utils import make_coord_system_pixel_based
-        from gl_utils import make_coord_system_norm_based
-        from gl_utils import is_window_visible, glViewport
 
         # monitoring
         import psutil
+        from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
+        from background_helper import IPC_Logging_Task_Proxy
+        from file_methods import Persistent_Dict
+        from gl_utils import (
+            adjust_gl_view,
+            basic_gl_setup,
+            clear_gl_screen,
+            glViewport,
+            is_window_visible,
+            make_coord_system_norm_based,
+            make_coord_system_pixel_based,
+        )
+        from methods import denormalize, normalize, timer
+        from ndsi import H264Writer
 
         # Plug-ins
         from plugin import Plugin_List
+        from pupil_detector_plugins import EVENT_KEY, available_detector_plugins
+        from pyglui import cygl, graph, ui
+        from pyglui.cygl.utils import Named_Texture
+        from roi import Roi
 
         # helpers/utils
         from uvc import get_time_monotonic
-        from file_methods import Persistent_Dict
         from version_utils import parse_version
-        from methods import normalize, denormalize, timer
-        from av_writer import JPEG_Writer, MPEG_Writer, NonMonotonicTimestampError
-        from ndsi import H264Writer
-        from video_capture import source_classes, manager_classes
-        from roi import Roi
-
-        from background_helper import IPC_Logging_Task_Proxy
-        from pupil_detector_plugins import available_detector_plugins, EVENT_KEY
+        from video_capture import manager_classes, source_classes
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
@@ -196,6 +201,7 @@ def eye(
         g_pool.process = f"eye{eye_id}"
         g_pool.timebase = timebase
         g_pool.camera_render_size = None
+        g_pool.skip_driver_installation = skip_driver_installation
 
         g_pool.zmq_ctx = zmq_ctx
         g_pool.ipc_pub = ipc_socket
@@ -399,10 +405,10 @@ def eye(
 
         # load session persistent settings
         session_settings = Persistent_Dict(
-            os.path.join(g_pool.user_dir, "user_settings_eye{}".format(eye_id))
+            os.path.join(g_pool.user_dir, f"user_settings_eye{eye_id}")
         )
         if parse_version(session_settings.get("version", "0.0")) != g_pool.version:
-            logger.info(
+            logger.debug(
                 "Session setting are from a different version of this app. I will not use those."
             )
             session_settings.clear()
@@ -436,7 +442,7 @@ def eye(
         glfw.window_hint(glfw.SCALE_TO_MONITOR, glfw.TRUE)
         if hide_ui:
             glfw.window_hint(glfw.VISIBLE, 0)  # hide window
-        title = "Pupil Capture - eye {}".format(eye_id)
+        title = f"Pupil Capture - eye {eye_id}"
 
         # Pupil Cam1 uses 4:3 resolutions. Pupil Cam2 and Cam3 use 1:1 resolutions.
         # As all Pupil Core and VR/AR add-ons are shipped with Pupil Cam2 and Cam3
@@ -539,7 +545,7 @@ def eye(
 
         # Add runtime plugins to the list of plugins to load with default arguments,
         # if not already restored from session settings
-        plugins_to_load_names = set(name for name, _ in plugins_to_load)
+        plugins_to_load_names = {name for name, _ in plugins_to_load}
         for runtime_detector in runtime_detectors:
             runtime_name = runtime_detector.__name__
             if runtime_name not in plugins_to_load_names:
@@ -607,7 +613,7 @@ def eye(
         def window_should_update():
             return next(window_update_timer)
 
-        logger.warning("Process started.")
+        logger.debug("Process started.")
 
         frame = None
 
@@ -636,10 +642,8 @@ def eye(
                         g_pool.rec_path = notification["rec_path"]
                         raw_mode = notification["compression"]
                         start_time_synced = notification["start_time_synced"]
-                        logger.info(f"Will save eye video to: {g_pool.rec_path}")
-                        video_path = os.path.join(
-                            g_pool.rec_path, "eye{}.mp4".format(eye_id)
-                        )
+                        logger.debug(f"Saving eye video to: {g_pool.rec_path}")
+                        video_path = os.path.join(g_pool.rec_path, f"eye{eye_id}.mp4")
                         if raw_mode and frame and g_pool.capture.jpeg_support:
                             g_pool.writer = JPEG_Writer(video_path, start_time_synced)
                         elif hasattr(g_pool.capture._recent_frame, "h264_buffer"):
@@ -653,11 +657,11 @@ def eye(
                             g_pool.writer = MPEG_Writer(video_path, start_time_synced)
                 elif subject == "recording.stopped":
                     if g_pool.writer:
-                        logger.info("Done recording.")
+                        logger.debug("Done recording.")
                         try:
                             g_pool.writer.release()
                         except RuntimeError:
-                            logger.error("No eye video recorded")
+                            logger.info("No eye video recorded")
                         else:
                             # TODO: wrap recording logic into plugin
                             g_pool.capture.intrinsics.save(
@@ -669,7 +673,7 @@ def eye(
                     ipc_socket.notify(
                         {
                             "subject": "meta.doc",
-                            "actor": "eye{}".format(eye_id),
+                            "actor": f"eye{eye_id}",
                             "doc": eye.__doc__,
                         }
                     )
@@ -734,7 +738,7 @@ def eye(
                         frame_publish_format_recent_warning = False
                         pupil_socket.send(
                             {
-                                "topic": "frame.eye.{}".format(eye_id),
+                                "topic": f"frame.eye.{eye_id}",
                                 "width": frame.width,
                                 "height": frame.height,
                                 "index": frame.index,
@@ -780,7 +784,7 @@ def eye(
 
         # in case eye recording was still runnnig: Save&close
         if g_pool.writer:
-            logger.info("Done recording eye.")
+            logger.debug("Done recording eye.")
             g_pool.writer.release()
             g_pool.writer = None
 
@@ -815,7 +819,7 @@ def eye(
     glfw.destroy_window(main_window)
     g_pool.gui.terminate()
     glfw.terminate()
-    logger.info("Process shutting down.")
+    logger.debug("Process shutting down.")
 
 
 def eye_profiled(
@@ -832,29 +836,35 @@ def eye_profiled(
     debug=False,
     pub_socket_hwm=None,
     parent_application="capture",
+    skip_driver_installation=False,
 ):
     import cProfile
-    import subprocess
     import os
+    import subprocess
+    from textwrap import dedent
+
     from .eye import eye
 
     cProfile.runctx(
-        (
-            "eye("
-            "timebase, "
-            "is_alive_flag, "
-            "ipc_pub_url, "
-            "ipc_sub_url, "
-            "ipc_push_url, "
-            "user_dir, "
-            "version, "
-            "eye_id, "
-            "overwrite_cap_settings, "
-            "hide_ui, "
-            "debug, "
-            "pub_socket_hwm, "
-            "parent_application, "
-            ")"
+        dedent(
+            """
+            eye(
+                timebase,
+                is_alive_flag,
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                version,
+                eye_id,
+                overwrite_cap_settings,
+                hide_ui,
+                debug,
+                pub_socket_hwm,
+                parent_application,
+                skip_driver_installation
+            )
+            """
         ),
         {
             "timebase": timebase,
@@ -870,9 +880,10 @@ def eye_profiled(
             "debug": debug,
             "pub_socket_hwm": pub_socket_hwm,
             "parent_application": parent_application,
+            "skip_driver_installation": skip_driver_installation,
         },
         locals(),
-        "eye{}.pstats".format(eye_id),
+        f"eye{eye_id}.pstats",
     )
     loc = os.path.abspath(__file__).rsplit("pupil_src", 1)
     gprof2dot_loc = os.path.join(loc[0], "pupil_src", "shared_modules", "gprof2dot.py")

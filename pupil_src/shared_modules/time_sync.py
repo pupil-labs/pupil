@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -9,17 +9,17 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 
+import logging
+import random
+from heapq import heappush
+from socket import gethostname
+from urllib.parse import urlparse
+
+import os_utils
+from network_time_sync import Clock_Sync_Follower, Clock_Sync_Master
 from plugin import Plugin
 from pyglui import ui
-from socket import gethostname
-from heapq import heappush
 from pyre import Pyre
-from urllib.parse import urlparse
-from network_time_sync import Clock_Sync_Master, Clock_Sync_Follower
-import random
-
-import logging
-import os_utils
 
 os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ logger.setLevel(logging.DEBUG)
 try:
     from pyre import __version__
 
-    assert __version__ >= "0.3.1"
+    assert __version__ >= "0.3.4"
 except (ImportError, AssertionError):
     raise Exception("Pyre version is to old. Please upgrade")
 
@@ -36,18 +36,18 @@ except (ImportError, AssertionError):
 __protocol_version__ = "v1"
 
 
-class Clock_Service(object):
+class Clock_Service:
     """Represents a remote clock service and is sortable by rank."""
 
     def __init__(self, uuid, name, rank, port):
-        super(Clock_Service, self).__init__()
+        super().__init__()
         self.uuid = uuid
         self.rank = rank
         self.port = port
         self.name = name
 
     def __repr__(self):
-        return "{:.2f}:{}".format(self.rank, self.name)
+        return f"{self.rank:.2f}:{self.name}"
 
     def __lt__(self, other):
         # "smallest" object has highest rank
@@ -157,7 +157,7 @@ class Time_Sync(Plugin):
                         evt.peer_uuid, evt.peer_name, float(evt.msg[0]), int(evt.msg[1])
                     )
                 except Exception as e:
-                    logger.debug("Garbage raised `{}` -- dropping.".format(e))
+                    logger.debug(f"Garbage raised `{e}` -- dropping.")
                 self.evaluate_leaderboard()
             elif evt.type == "JOIN" and evt.group == self.sync_group:
                 should_announce = True
@@ -194,13 +194,13 @@ class Time_Sync(Plugin):
         # clock service was not encountered before or has changed adding it to leaderboard
         cs = Clock_Service(uuid, name, rank, port)
         heappush(self.leaderboard, cs)
-        logger.debug("{} added".format(cs))
+        logger.debug(f"{cs} added")
 
     def remove_from_leaderboard(self, uuid):
         for cs in self.leaderboard:
             if cs.uuid == uuid:
                 self.leaderboard.remove(cs)
-                logger.debug("{} removed".format(cs))
+                logger.debug(f"{cs} removed")
                 break
 
     def evaluate_leaderboard(self):
@@ -237,7 +237,7 @@ class Time_Sync(Plugin):
 
         if not self.has_been_master:
             self.has_been_master = 1.0
-            logger.debug("Become clock master with rank {}".format(self.rank))
+            logger.debug(f"Become clock master with rank {self.rank}")
             self.announce_clock_master_info()
 
     def insert_sync_group_member(self, uuid, name):
@@ -300,7 +300,7 @@ class Time_Sync(Plugin):
                     break
         if ok_to_change:
             self.slew_time(offset)
-            logger.info("Pupil Sync has adjusted the clock by {}s".format(offset))
+            logger.info(f"Pupil Sync has adjusted the clock by {offset}s")
             return True
         else:
             return False

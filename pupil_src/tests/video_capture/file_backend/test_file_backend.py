@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -13,12 +13,12 @@ import logging
 from multiprocessing import cpu_count
 from types import SimpleNamespace
 
-import pytest
-
 import av
-from ..common import broken_data, multiple_data, single_data
+import pytest
 from video_capture.base_backend import NoMoreVideoError
 from video_capture.file_backend import Decoder, File_Source, OnDemandDecoder
+
+from ..common import broken_data, multiple_data, single_data
 
 
 @pytest.fixture

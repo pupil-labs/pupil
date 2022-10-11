@@ -1,7 +1,7 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2021 Pupil Labs
+Copyright (C) 2012-2022 Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
@@ -132,20 +132,16 @@ class GazeMapperController(Observable):
     def _create_gaze_bisector_from_all_enabled_mappers(self):
         gaze_data = list(
             chain.from_iterable(
-                (
-                    mapper.gaze
-                    for mapper in self._gaze_mapper_storage
-                    if mapper.activate_gaze
-                )
+                mapper.gaze
+                for mapper in self._gaze_mapper_storage
+                if mapper.activate_gaze
             )
         )
         gaze_ts = list(
             chain.from_iterable(
-                (
-                    mapper.gaze_ts
-                    for mapper in self._gaze_mapper_storage
-                    if mapper.activate_gaze
-                )
+                mapper.gaze_ts
+                for mapper in self._gaze_mapper_storage
+                if mapper.activate_gaze
             )
         )
         return player_methods.Bisector(gaze_data, gaze_ts)
