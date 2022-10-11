@@ -21,7 +21,6 @@ from gaze_mapping import (
     gazer_classes_by_class_name,
     registered_gazer_classes,
     user_selectable_gazer_classes,
-    gazer_classes_by_class_name,
     user_selectable_gazer_classes_posthoc,
 )
 from gaze_mapping.notifications import (
