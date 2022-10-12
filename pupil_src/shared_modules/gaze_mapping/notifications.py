@@ -48,7 +48,7 @@ class _SerializedNamedTupleMixin:
             dict_ = cls.sanitize_serialized_dict(dict_)
             return cls(**dict_)
         except Exception as err:
-            raise ValueError from err
+            raise ValueError(f"{err}") from err
 
     @classmethod
     def sanitize_serialized_dict(cls, dict_: dict) -> dict:

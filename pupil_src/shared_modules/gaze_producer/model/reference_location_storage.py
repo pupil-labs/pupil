@@ -38,8 +38,9 @@ class ReferenceLocationStorage(SingleFileStorage, Observable):
             self._load_from_recorded_notifications()
 
     def _load_from_recorded_notifications(self):
-        intrinsics, timestamps = self._load_world_intrinsics_and_timestamps()
         notifications = fm.load_pldata_file(self._rec_dir, "notify")
+        intrinsics, timestamps = self._load_world_intrinsics_and_timestamps()
+        logger.debug(f"Using {intrinsics} to project eventual 3d reference data")
         for topic, data in zip(notifications.topics, notifications.data):
             if topic.startswith("notify."):
                 # Remove "notify." prefix
