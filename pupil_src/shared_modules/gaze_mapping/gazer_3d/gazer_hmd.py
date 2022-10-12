@@ -136,12 +136,16 @@ class GazerHMD3D(Gazer3D):
 
     def _init_left_model(self) -> Model:
         return ModelHMD3D_Monocular(
-            intrinsics=self._gpool_capture_intrinsics_if_available
+            intrinsics=self._gpool_capture_intrinsics_if_available,
+            initial_eye_translation=self.__eye_translations,
+            initial_depth=self.ref_depth_hardcoded,
         )
 
     def _init_right_model(self) -> Model:
         return ModelHMD3D_Monocular(
-            intrinsics=self._gpool_capture_intrinsics_if_available
+            intrinsics=self._gpool_capture_intrinsics_if_available,
+            initial_eye_translation=self.__eye_translations,
+            initial_depth=self.ref_depth_hardcoded,
         )
 
     def fit_on_calib_data(self, calib_data):
