@@ -241,6 +241,13 @@ class Camera_Model(abc.ABC):
         self.K = np.array(K)
         self.D = np.array(D)
 
+    def __str__(self) -> str:
+        return (
+            f"<{type(self).__name__} {self.name} @ "
+            f"{self.resolution[0]}x{self.resolution[1]} "
+            f"K={self.K.tolist()} D={self.D.tolist()}>"
+        )
+
     def update_camera_matrix(self, camera_matrix):
         self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
 
