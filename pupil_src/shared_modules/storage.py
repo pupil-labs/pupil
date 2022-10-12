@@ -14,6 +14,7 @@ import os
 import random
 import re
 import uuid
+from typing import ClassVar
 
 import file_methods as fm
 
@@ -27,10 +28,7 @@ assert UUID_NAMESPACE_PUPIL_LABS == uuid.UUID("8ea5d78e-e022-5ee4-a198-1bc002516
 
 
 class StorageItem(abc.ABC):
-    @property
-    @abc.abstractmethod
-    def version(self):
-        pass
+    version: ClassVar[int]
 
     @staticmethod
     @abc.abstractmethod
@@ -100,12 +98,19 @@ class Storage(abc.ABC):
     def _save_data_to_file(self, filepath, data):
         dict_representation = {"version": self._item_class.version, "data": data}
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
-        fm.save_object(dict_representation, filepath)
+        try:
+            fm.save_object(dict_representation, filepath)
+        except TypeError:
+            logger.debug(
+                f"Attempting to serialize {dict_representation!r} to {filepath}"
+            )
+            raise
 
     def _load_data_from_file(self, filepath):
         try:
             dict_representation = fm.load_object(filepath, allow_legacy=False)
         except FileNotFoundError:
+            logger.debug(f"{filepath} not found")
             return None
         if dict_representation.get("version", None) != self._item_class.version:
             logger.warning(
