@@ -13,6 +13,8 @@ from __future__ import annotations
 import sys
 import typing as T
 
+from typing_extensions import Self, TypedDict
+
 if sys.version_info < (3, 9):
 
     def get_type_hints(cls):
@@ -40,7 +42,7 @@ class _SerializedNamedTupleMixin:
         return dict(self._asdict())
 
     @classmethod
-    def from_dict(cls, dict_: dict) -> T.NamedTuple:
+    def from_dict(cls, dict_: dict) -> Self:
         dict_ = {**cls._field_defaults, **dict_}
         try:
             dict_ = cls.sanitize_serialized_dict(dict_)
@@ -127,10 +129,15 @@ class _CalibrationFailureFields(T.NamedTuple):
     subject: str = f"calibration.failed"
 
 
+class CalibrationData(TypedDict):
+    ref_list: T.List
+    pupil_list: T.List
+
+
 class _CalibrationSetupFields(T.NamedTuple):
     gazer_class_name: str
     timestamp: float
-    calib_data: dict
+    calib_data: CalibrationData
     record: bool = False
 
     # Meta
