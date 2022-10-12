@@ -382,8 +382,8 @@ class Camera_Model(abc.ABC):
             return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
         except Exception:
             logger.debug(
-                f"No recorded intrinsics found for camera {cam_name} at resolution"
-                f" {resolution}"
+                f"No recorded intrinsics found in {file_path} for camera {cam_name} at"
+                f"resolution {resolution}"
             )
             return Camera_Model.from_default(cam_name, resolution)
 

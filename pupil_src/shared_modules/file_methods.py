@@ -160,7 +160,8 @@ def load_pldata_file(directory, topic):
             ):
                 data.append(Serialized_Dict(msgpack_bytes=payload))
                 topics.append(topic)
-    except FileNotFoundError:
+    except FileNotFoundError as err:
+        logger.debug(err)
         data = []
         data_ts = []
         topics = []
