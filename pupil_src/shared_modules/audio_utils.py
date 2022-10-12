@@ -72,7 +72,7 @@ def _load_audio_single(file_path, return_pts_based_timestamps=False):
     try:
         container = av.open(str(file_path))
         stream = next(iter(container.streams.audio))
-        logger.debug("Loaded audiostream: %s" % stream)
+        logger.debug(f"Loaded audiostream: {stream} from {file_path}")
     except (av.AVError, StopIteration):
         return None
 
