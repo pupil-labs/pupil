@@ -117,9 +117,9 @@ class GazerHMD3D(Gazer3D):
     def _gazer_description_text(cls) -> str:
         return "Gaze mapping built specifically for HMD-Eyes."
 
-    def __init__(self, g_pool, *, eye_translations=None, calib_data=None, params=None):
+    def __init__(self, g_pool, *args, eye_translations=None, **kwargs):
         self.__eye_translations = eye_translations
-        super().__init__(g_pool, calib_data=calib_data, params=params)
+        super().__init__(g_pool, *args, **kwargs)
 
     @property
     def _gpool_capture_intrinsics_if_available(self) -> T.Optional[T.Any]:
@@ -186,13 +186,40 @@ class GazerHMD3D(Gazer3D):
         }
 
 
-class PosthocGazerHMD3D(Gazer3D):
+class PosthocGazerHMD3D(GazerHMD3D):
     label = "Post-hoc HMD 3D"
 
     eye0_hardcoded_translation = 33.35, 0, 0
     eye1_hardcoded_translation = -33.35, 0, 0
     ref_depth_hardcoded = 20
 
+    def __init__(self, g_pool, *args, **kwargs):
+        super().__init__(
+            g_pool,
+            eye_translations=(
+                self.eye0_hardcoded_translation,
+                self.eye1_hardcoded_translation,
+            ),
+            *args,
+            **kwargs
+        )
+
     @classmethod
     def _gazer_description_text(cls) -> str:
         return "Gaze mapping built specifically for HMD-Eyes."
+
+    def _extract_reference_features(self, ref_data) -> np.ndarray:
+        ref_3d = np.array(
+            [
+                ref["mm_pos"]
+                if ref["mm_pos"] is not None
+                else self.g_pool.capture.intrinsics.unprojectPoints(
+                    ref["screen_pos"], normalize=True
+                ).reshape(-1)
+                for ref in ref_data
+            ]
+        )
+        assert ref_3d.shape == (len(ref_data), 3), ref_3d
+        from rich import print
+
+        return ref_3d
