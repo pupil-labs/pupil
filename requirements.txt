@@ -1,33 +1,31 @@
-###
-### Third-party
-###
+# CPyhton backports
+typing_extensions>=4.1.0
+
+dataclasses ; python_version<"3.7"
+
+# Third-party
 av
+glfw>=2.0.0
 msgpack>=1.0.0
 numexpr
+opencv-python
 packaging>=20.0
 psutil
-sounddevice
 pyopengl
 pyzmq
 rich
 scikit-learn
 scipy
-glfw>=2.0.0
+sounddevice
 zeromq-pyre>=0.3.4  # Gracefully handle https://github.com/pupil-labs/pupil/issues/2174
-typing_extensions>=4.1.0
-dataclasses ; python_version<"3.7"
 
 cysignals ; platform_system != "Windows"
-
 win_inet_pton ; platform_system == "Windows"
-opencv-python
 
-###
-### Pupil-Labs
-###
+# Pupil-Labs
 ndsi==1.4.*
 pupil-apriltags==1.0.*
 pupil-detectors>=2.0.2rc2
+pupil-labs-uvc
 pye3d==0.3.*
 pyglui>=1.31.0
-pupil-labs-uvc
