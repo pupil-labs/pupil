@@ -5,9 +5,11 @@ dataclasses ; python_version<"3.7"
 
 # Third-party
 av
+click
 glfw>=2.0.0
 msgpack>=1.0.0
 numexpr
+numpy>=1.20.0
 opencv-python
 packaging>=20.0
 psutil
