@@ -18,7 +18,6 @@ from itertools import chain
 import cv2
 import file_methods as fm
 import numpy as np
-import player_methods as pm
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +55,9 @@ class Bisector:
             self.sorted_idc = np.argsort(self.data_ts)
             self.data_ts = self.data_ts[self.sorted_idc]
             self.data = self.data[self.sorted_idc]
+
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__} len={len(self)}>"
 
     def copy(self):
         copy = type(self)()
@@ -258,7 +260,11 @@ class PupilTopic:
 
 
 class PupilDataBisector:
-    def __init__(self, data: T.Optional[fm.PLData] = None, bisectors=None):
+    def __init__(
+        self,
+        data: T.Optional[fm.PLData] = None,
+        bisectors: T.Optional[T.Dict[str, Bisector]] = None,
+    ):
         if bisectors is not None:
             self._bisectors = bisectors
         else:
@@ -266,12 +272,15 @@ class PupilDataBisector:
                 data = fm.PLData([], [], [])
             self._bisectors = self._bisectors_from_data(data)
 
-    def _bisectors_from_data(self, data: fm.PLData):
-        _bisectors = {}
+    def __repr__(self) -> str:
+        return f"<{type(self).__name__} topics={list(self._bisectors.keys())}>"
+
+    def _bisectors_from_data(self, data: fm.PLData) -> T.Dict[str, Bisector]:
+        _bisectors: T.Dict[str, Bisector] = {}
         for pupil_topic, data in self._group_data_by_pupil_topic(data).items():
             assert pupil_topic not in _bisectors
             assert len(data.topics) == len(data.data) == len(data.timestamps)
-            bisector = pm.Bisector(data.data, data.timestamps)
+            bisector = Bisector(data.data, data.timestamps)
             _bisectors[pupil_topic] = bisector
         return _bisectors
 
@@ -294,7 +303,7 @@ class PupilDataBisector:
     @functools.lru_cache(32)
     def __getitem__(
         self, key: T.Tuple[PupilTopic.EyeIdFilterKey, PupilTopic.DetectorTagFilterKey]
-    ) -> pm.Bisector:
+    ) -> Bisector:
         bisectors = [
             B for topic, B in self._bisectors.items() if PupilTopic.match(topic, *key)
         ]
@@ -303,7 +312,7 @@ class PupilDataBisector:
     def by_ts_window(self, ts_window):
         bisectors = self._bisectors.values()
         init_dicts = [b.init_dict_for_window(ts_window) for b in bisectors]
-        bisectors = [pm.Bisector(**init_dict) for init_dict in init_dicts]
+        bisectors = [Bisector(**init_dict) for init_dict in init_dicts]
         combined = self.combine_bisectors(bisectors)
         return combined
 
@@ -325,10 +334,10 @@ class PupilDataBisector:
         return iter(self.combine_bisectors(all_bisectors))
 
     @staticmethod
-    def combine_bisectors(bisectors: T.Iterable[pm.Bisector]) -> pm.Bisector:
+    def combine_bisectors(bisectors: T.Iterable[Bisector]) -> Bisector:
         data = list(chain.from_iterable(b.data for b in bisectors))
         data_ts = list(chain.from_iterable(b.data_ts for b in bisectors))
-        return pm.Bisector(data, data_ts)
+        return Bisector(data, data_ts)
 
     @classmethod
     def load_from_file(cls, dir_path, filename) -> "PupilDataBisector":
