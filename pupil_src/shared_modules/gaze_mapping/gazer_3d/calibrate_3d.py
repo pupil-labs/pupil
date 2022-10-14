@@ -160,7 +160,9 @@ def calibrate_monocular(
     return success, poses_in_world, gaze_targets_in_world
 
 
-def calibrate_hmd(ref_points_3d, pupil0_normals, pupil1_normals, eye_translations):
+def calibrate_hmd(
+    ref_points_3d, pupil0_normals, pupil1_normals, eye_translations, y_flip_factor=-1.0
+):
     """Determine the poses of the eyes and 3d gaze points by solving a specific
     least-squares minimization
 
@@ -180,7 +182,7 @@ def calibrate_hmd(ref_points_3d, pupil0_normals, pupil1_normals, eye_translation
     smallest_residual = 1000
     scales = list(np.linspace(0.7, 10, 5))  # TODO: change back to 50
     for s in scales:
-        scaled_ref_points_3d = ref_points_3d * (1, -1, s)
+        scaled_ref_points_3d = ref_points_3d * (1, y_flip_factor, s)
 
         # Find initial guess for the poses in eye coordinates
         initial_rotation0 = utils.get_initial_eye_camera_rotation(

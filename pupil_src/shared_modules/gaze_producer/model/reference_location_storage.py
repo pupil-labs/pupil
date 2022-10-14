@@ -72,10 +72,15 @@ class ReferenceLocationStorage(SingleFileStorage, Observable):
 
     def _add_recorded_reference(self, intrinsics: Camera_Model, reference) -> None:
         if "mm_pos" in reference:
+            # Unity uses a left-handed coordinate system while Pupil Core software
+            # assumes a right-handed coordinate system. This is important to get the
+            # 3d bundle adjustment correct as well as the projection into the 2d plane.
+            mm_pos = np.array(reference["mm_pos"])
+            mm_pos[1] *= -1.0
+
+            reference["mm_pos"] = tuple(mm_pos.tolist())
             reference["screen_pos"] = tuple(
-                intrinsics.projectPoints(np.array(reference["mm_pos"]))
-                .reshape(-1)
-                .tolist()
+                intrinsics.projectPoints(mm_pos).reshape(-1).tolist()
             )
         ref_fields = fields(model.ReferenceLocation)
         ref_loc = {  # required fields

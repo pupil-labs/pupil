@@ -53,9 +53,10 @@ class MissingEyeTranslationsError(CalibrationError):
 
 
 class ModelHMD3D_Binocular(Model3D_Binocular):
-    def __init__(self, *, intrinsics, eye_translations):
+    def __init__(self, *, intrinsics, eye_translations, y_flip_factor=-1.0):
         self.intrinsics = intrinsics
         self.eye_translations = eye_translations
+        self.y_flip_factor = y_flip_factor
         self._is_fitted = False
 
     def _fit(self, X, Y):
@@ -82,6 +83,7 @@ class ModelHMD3D_Binocular(Model3D_Binocular):
             pupil0_normals,
             pupil1_normals,
             self.eye_translations,
+            self.y_flip_factor,
         )
         success, poses_in_world, gaze_targets_in_world = res
         if not success:
@@ -112,6 +114,7 @@ class ModelHMD3D_Monocular(Model3D_Monocular):
 
 class GazerHMD3D(Gazer3D):
     label = "HMD 3D"
+    y_flip_factor = -1.0
 
     @classmethod
     def _gazer_description_text(cls) -> str:
@@ -132,6 +135,7 @@ class GazerHMD3D(Gazer3D):
         return ModelHMD3D_Binocular(
             intrinsics=self._gpool_capture_intrinsics_if_available,
             eye_translations=self.__eye_translations,
+            y_flip_factor=self.y_flip_factor,
         )
 
     def _init_left_model(self) -> Model:
@@ -192,6 +196,7 @@ class PosthocGazerHMD3D(GazerHMD3D):
     eye0_hardcoded_translation = 33.35, 0, 0
     eye1_hardcoded_translation = -33.35, 0, 0
     ref_depth_hardcoded = 20
+    y_flip_factor = 1.0
 
     def __init__(self, g_pool, *args, **kwargs):
         super().__init__(
@@ -220,6 +225,4 @@ class PosthocGazerHMD3D(GazerHMD3D):
             ]
         )
         assert ref_3d.shape == (len(ref_data), 3), ref_3d
-        from rich import print
-
         return ref_3d
