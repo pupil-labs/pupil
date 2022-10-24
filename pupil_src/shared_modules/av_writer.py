@@ -405,27 +405,31 @@ class _AudioPacketIterator:
         for audio_frame in audio_frames_iterator:
             frame, raw_ts = audio_frame.raw_frame, audio_frame.start_time
 
-            for packet in self.audio_export_stream.encode(frame):
-                if not packet:
-                    continue
+            try:
+                for packet in self.audio_export_stream.encode(frame):
+                    if not packet:
+                        continue
 
-                audio_ts = raw_ts - self.start_time
-                audio_pts = int(audio_ts / self.audio_export_stream.time_base)
+                    audio_ts = raw_ts - self.start_time
+                    audio_pts = int(audio_ts / self.audio_export_stream.time_base)
 
-                # ensure strong monotonic pts
-                audio_pts = max(audio_pts, last_audio_pts + 1)
-                last_audio_pts = audio_pts
+                    # ensure strong monotonic pts
+                    audio_pts = max(audio_pts, last_audio_pts + 1)
+                    last_audio_pts = audio_pts
 
-                packet.pts = audio_pts
-                packet.dts = audio_pts
-                packet.stream = self.audio_export_stream
+                    packet.pts = audio_pts
+                    packet.dts = audio_pts
+                    packet.stream = self.audio_export_stream
 
-                if audio_ts < 0:
-                    logger.debug(f"Seeking audio: {audio_ts} -> {self.start_time}")
-                    # discard all packets before start time
-                    return None
+                    if audio_ts < 0:
+                        logger.debug(f"Seeking audio: {audio_ts} -> {self.start_time}")
+                        # discard all packets before start time
+                        return None
 
-                yield packet
+                    yield packet
+            except ValueError as exc:
+                # TODO: investigate cause
+                logger.debug(f"Failed encoding audio frames {frame} due to {exc}")
 
     # Private
 
