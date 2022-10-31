@@ -151,7 +151,16 @@ def load_pldata_file(directory, topic, track_progress_in_console: bool = True):
     try:
         data = collections.deque()
         topics = collections.deque()
-        data_ts = np.load(ts_file)
+        extract_ts = False
+        try:
+            data_ts = np.load(ts_file)
+        except FileNotFoundError:
+            data_ts = []
+            extract_ts = True
+            logger.warning(
+                f"Timestamp file not found at expected location `{ts_file}`."
+                " Attempting to fallback to msgpack-serialized timestamps."
+            )
         with open(msgpack_file, "rb") as fh:
             unpacker = msgpack.Unpacker(fh, use_list=False, strict_map_key=False)
             if track_progress_in_console:
@@ -159,8 +168,11 @@ def load_pldata_file(directory, topic, track_progress_in_console: bool = True):
                     unpacker, description=f"Loading {topic} data", total=len(data_ts)
                 )
             for topic, payload in unpacker:
-                data.append(Serialized_Dict(msgpack_bytes=payload))
+                datum = Serialized_Dict(msgpack_bytes=payload)
+                data.append(datum)
                 topics.append(topic)
+                if extract_ts:
+                    data_ts.append(datum["timestamp"])
     except FileNotFoundError as err:
         logger.debug(err)
         data = []
