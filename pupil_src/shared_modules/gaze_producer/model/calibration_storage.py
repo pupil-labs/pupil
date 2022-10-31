@@ -21,6 +21,7 @@ from gaze_mapping import (
     gazer_classes_by_class_name,
     registered_gazer_classes,
     user_selectable_gazer_classes,
+    user_selectable_gazer_classes_posthoc,
 )
 from gaze_mapping.notifications import (
     CalibrationResultNotification,
@@ -113,7 +114,7 @@ class CalibrationStorage(Storage, Observable):
             and calibration.is_offline_calibration
         )
         if is_calib_editable:
-            available_gazer_classes = user_selectable_gazer_classes()
+            available_gazer_classes = user_selectable_gazer_classes_posthoc()
         else:
             available_gazer_classes = registered_gazer_classes()
         gazer_class_names = gazer_classes_by_class_name(available_gazer_classes).keys()

@@ -153,6 +153,9 @@ def _generator_wrapper(
     except Exception as e:
         import traceback
 
+        from rich import print
+
+        print(traceback.format_exc())
         pipe_send.send(_TaskExceptionSignal(e, traceback.format_exc()))
     else:
         pipe_send.send(_TaskCompletedSignal(return_value=None))

@@ -47,10 +47,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
     def pupil_detector(self):
         return self.detector
 
-    def __init__(
-        self,
-        g_pool=None,
-    ):
+    def __init__(self, g_pool=None, **kwargs):
         super().__init__(g_pool=g_pool)
         self.camera = CameraModel(
             focal_length=self.g_pool.capture.intrinsics.focal_length,
@@ -63,7 +60,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
             else DetectorMode.blocking
         )
         logger.debug(f"Running {mode.name} in {g_pool.app}")
-        self.detector = Detector3D(camera=self.camera, long_term_mode=mode)
+        self.detector = Detector3D(camera=self.camera, long_term_mode=mode, **kwargs)
 
         method_suffix = {
             DetectorMode.asynchronous: "real-time",

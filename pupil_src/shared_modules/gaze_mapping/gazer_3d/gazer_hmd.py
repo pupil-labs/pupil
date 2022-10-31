@@ -53,9 +53,10 @@ class MissingEyeTranslationsError(CalibrationError):
 
 
 class ModelHMD3D_Binocular(Model3D_Binocular):
-    def __init__(self, *, intrinsics, eye_translations):
+    def __init__(self, *, intrinsics, eye_translations, y_flip_factor=-1.0):
         self.intrinsics = intrinsics
         self.eye_translations = eye_translations
+        self.y_flip_factor = y_flip_factor
         self._is_fitted = False
 
     def _fit(self, X, Y):
@@ -82,6 +83,7 @@ class ModelHMD3D_Binocular(Model3D_Binocular):
             pupil0_normals,
             pupil1_normals,
             self.eye_translations,
+            self.y_flip_factor,
         )
         success, poses_in_world, gaze_targets_in_world = res
         if not success:
@@ -112,14 +114,15 @@ class ModelHMD3D_Monocular(Model3D_Monocular):
 
 class GazerHMD3D(Gazer3D):
     label = "HMD 3D"
+    y_flip_factor = -1.0
 
     @classmethod
     def _gazer_description_text(cls) -> str:
         return "Gaze mapping built specifically for HMD-Eyes."
 
-    def __init__(self, g_pool, *, eye_translations=None, calib_data=None, params=None):
+    def __init__(self, g_pool, *args, eye_translations=None, **kwargs):
         self.__eye_translations = eye_translations
-        super().__init__(g_pool, calib_data=calib_data, params=params)
+        super().__init__(g_pool, *args, **kwargs)
 
     @property
     def _gpool_capture_intrinsics_if_available(self) -> T.Optional[T.Any]:
@@ -132,16 +135,21 @@ class GazerHMD3D(Gazer3D):
         return ModelHMD3D_Binocular(
             intrinsics=self._gpool_capture_intrinsics_if_available,
             eye_translations=self.__eye_translations,
+            y_flip_factor=self.y_flip_factor,
         )
 
     def _init_left_model(self) -> Model:
         return ModelHMD3D_Monocular(
-            intrinsics=self._gpool_capture_intrinsics_if_available
+            intrinsics=self._gpool_capture_intrinsics_if_available,
+            initial_eye_translation=self.__eye_translations,
+            initial_depth=self.ref_depth_hardcoded,
         )
 
     def _init_right_model(self) -> Model:
         return ModelHMD3D_Monocular(
-            intrinsics=self._gpool_capture_intrinsics_if_available
+            intrinsics=self._gpool_capture_intrinsics_if_available,
+            initial_eye_translation=self.__eye_translations,
+            initial_depth=self.ref_depth_hardcoded,
         )
 
     def fit_on_calib_data(self, calib_data):
@@ -180,3 +188,41 @@ class GazerHMD3D(Gazer3D):
             **super().get_init_dict(),
             "eye_translations": self.__eye_translations,
         }
+
+
+class PosthocGazerHMD3D(GazerHMD3D):
+    label = "Post-hoc HMD 3D"
+
+    eye0_hardcoded_translation = 33.35, 0, 0
+    eye1_hardcoded_translation = -33.35, 0, 0
+    ref_depth_hardcoded = 20
+    y_flip_factor = 1.0
+
+    def __init__(self, g_pool, *args, **kwargs):
+        super().__init__(
+            g_pool,
+            eye_translations=(
+                self.eye0_hardcoded_translation,
+                self.eye1_hardcoded_translation,
+            ),
+            *args,
+            **kwargs
+        )
+
+    @classmethod
+    def _gazer_description_text(cls) -> str:
+        return "Gaze mapping built specifically for HMD-Eyes."
+
+    def _extract_reference_features(self, ref_data) -> np.ndarray:
+        ref_3d = np.array(
+            [
+                ref["mm_pos"]
+                if ref["mm_pos"] is not None
+                else self.g_pool.capture.intrinsics.unprojectPoints(
+                    ref["screen_pos"], normalize=True
+                ).reshape(-1)
+                for ref in ref_data
+            ]
+        )
+        assert ref_3d.shape == (len(ref_data), 3), ref_3d
+        return ref_3d

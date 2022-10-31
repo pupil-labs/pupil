@@ -57,11 +57,12 @@ def create_task(calibration, all_reference_locations):
     return tasklib.background.create(name, _create_calibration, args=args)
 
 
-def _create_ref_dict(ref):
+def _create_ref_dict(ref: model.ReferenceLocation):
     return {
         "screen_pos": ref.screen_pos,
         "norm_pos": normalize(ref.screen_pos, g_pool.capture.frame_size, flip_y=True),
         "timestamp": ref.timestamp,
+        "mm_pos": ref.mm_pos,
     }
 
 

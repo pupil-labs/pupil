@@ -10,4 +10,4 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 from .gazer_headset import Gazer3D
-from .gazer_hmd import GazerHMD3D
+from .gazer_hmd import GazerHMD3D, PosthocGazerHMD3D

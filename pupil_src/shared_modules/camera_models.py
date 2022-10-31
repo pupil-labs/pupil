@@ -10,20 +10,36 @@ See COPYING and COPYING.LESSER for license details.
 """
 
 import abc
+import ast
 import logging
 import os
+import pathlib
 import typing as T
 
+import click
 import cv2
 import numpy as np
+import numpy.typing as npt
 from file_methods import load_object, save_object
+from typing_extensions import TypedDict
 
 logger = logging.getLogger(__name__)
 __version__ = 1
 
+
+class RawIntrinsics(TypedDict):
+    dist_coefs: T.List[T.List[float]]
+    camera_matrix: T.List[T.List[float]]
+    cam_type: str
+
+
+RawIntrinsicsByResolution = T.Dict[str, T.Union[int, RawIntrinsics]]
+RawIntrinsicsByResolutionByName = T.Dict[str, RawIntrinsicsByResolution]
+
+
 # These are camera intrinsics that we recorded. They are estimates and generalize our
 # setup. Its always better to estimate intrinsics for each camera again.
-default_intrinsics = {
+default_intrinsics: RawIntrinsicsByResolutionByName = {
     "Pupil Cam1 ID2": {
         "version": 1,
         "(640, 480)": {
@@ -233,58 +249,78 @@ for eye_id in (0, 1):
 
 
 class Camera_Model(abc.ABC):
-    cam_type = ...  # overwrite in subclasses, used for saving/loading
+    cam_type: T.ClassVar[str]  # overwrite in subclasses, used for saving/loading
 
-    def __init__(self, name, resolution, K, D):
+    def __init__(
+        self,
+        name: str,
+        resolution: T.Tuple[int, int],
+        K: npt.ArrayLike,
+        D: npt.ArrayLike,
+    ):
         self.name = name
         self.resolution = resolution
-        self.K = np.array(K)
-        self.D = np.array(D)
+        self.K: npt.NDArray[np.float64] = np.array(K)
+        self.D: npt.NDArray[np.float64] = np.array(D)
 
-    def update_camera_matrix(self, camera_matrix):
+    def __repr__(self) -> str:
+        return (
+            f"<{type(self).__name__} {self.name} @ "
+            f"{self.resolution[0]}x{self.resolution[1]} "
+            f"K={self.K.tolist()} D={self.D.tolist()}>"
+        )
+
+    def update_camera_matrix(self, camera_matrix: npt.ArrayLike):
         self.K = np.asanyarray(camera_matrix).reshape(self.K.shape)
 
-    def update_dist_coefs(self, dist_coefs):
+    def update_dist_coefs(self, dist_coefs: npt.ArrayLike):
         self.D = np.asanyarray(dist_coefs).reshape(self.D.shape)
 
     @property
-    def focal_length(self):
+    def focal_length(self) -> float:
         fx = self.K[0, 0]
         fy = self.K[1, 1]
         return (fx + fy) / 2
 
     @abc.abstractmethod
-    def undistort(self, img: np.ndarray) -> np.ndarray:
+    def undistort(self, img: npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]:
         ...
 
     @abc.abstractmethod
     def unprojectPoints(
-        self, pts_2d: np.ndarray, use_distortion: bool = True, normalize: bool = False
-    ) -> np.ndarray:
+        self,
+        pts_2d: npt.NDArray[np.float64],
+        use_distortion: bool = True,
+        normalize: bool = False,
+    ) -> npt.NDArray[np.float64]:
         ...
 
     @abc.abstractmethod
     def projectPoints(
         self,
         object_points,
-        rvec: T.Optional[np.ndarray] = None,
-        tvec: T.Optional[np.ndarray] = None,
+        rvec: T.Optional[npt.NDArray[np.float64]] = None,
+        tvec: T.Optional[npt.NDArray[np.float64]] = None,
         use_distortion: bool = True,
     ):
         ...
 
     @abc.abstractmethod
     def undistort_points_to_ideal_point_coordinates(
-        self, points: np.ndarray
-    ) -> np.ndarray:
+        self, points: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         ...
 
-    def undistort_points_on_image_plane(self, points):
+    def undistort_points_on_image_plane(
+        self, points: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         points = self.unprojectPoints(points, use_distortion=True)
         points = self.projectPoints(points, use_distortion=False)
         return points
 
-    def distort_points_on_image_plane(self, points):
+    def distort_points_on_image_plane(
+        self, points: npt.NDArray[np.float64]
+    ) -> npt.NDArray[np.float64]:
         points = self.unprojectPoints(points, use_distortion=False)
         points = self.projectPoints(points, use_distortion=True)
         return points
@@ -301,12 +337,12 @@ class Camera_Model(abc.ABC):
     ):
         ...
 
-    subclass_by_cam_type = dict()
+    subclass_by_cam_type: T.Dict[str, T.Type["Camera_Model"]] = dict()
 
     def __init_subclass__(cls, *args, **kwargs):
         super().__init_subclass__(*args, **kwargs)
         # register subclasses by cam_type
-        if cls.cam_type == ...:
+        if not hasattr(cls, "cam_type"):
             raise NotImplementedError("Subclass needs to define 'cam_type'!")
         if cls.cam_type in Camera_Model.subclass_by_cam_type:
             raise ValueError(
@@ -316,7 +352,7 @@ class Camera_Model(abc.ABC):
             )
         Camera_Model.subclass_by_cam_type[cls.cam_type] = cls
 
-    def save(self, directory, custom_name=None):
+    def save(self, directory: str, custom_name: T.Optional[str] = None):
         """
         Saves the current intrinsics to corresponding camera's intrinsics file. For each
         unique camera name we maintain a single file containing all intrinsics
@@ -350,7 +386,7 @@ class Camera_Model(abc.ABC):
 
     @staticmethod
     def from_file(
-        directory: str, cam_name: str, resolution: T.Tuple[int]
+        directory: str, cam_name: str, resolution: T.Tuple[int, int]
     ) -> "Camera_Model":
         """
         Loads recorded intrinsics for the given camera and resolution. If no recorded
@@ -364,31 +400,54 @@ class Camera_Model(abc.ABC):
             directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
         )
         try:
-            intrinsics_dict = load_object(file_path, allow_legacy=False)
-
-            if intrinsics_dict["version"] < __version__:
-                logger.warning("Deprecated camera intrinsics found.")
-                logger.info(
-                    "Please recalculate the camera intrinsics using the Camera"
-                    " Intrinsics Estimation."
-                )
-                os.rename(
-                    file_path,
-                    "{}.deprecated.v{}".format(file_path, intrinsics_dict["version"]),
-                )
-
-            intrinsics = intrinsics_dict[str(resolution)]
-            logger.debug("Loading previously recorded intrinsics...")
-            return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
+            return Camera_Model.all_from_file(directory, cam_name)[resolution]
         except Exception:
             logger.debug(
-                f"No recorded intrinsics found for camera {cam_name} at resolution"
-                f" {resolution}"
+                f"No recorded intrinsics found in {directory} for camera {cam_name} at"
+                f"resolution {resolution}"
             )
             return Camera_Model.from_default(cam_name, resolution)
 
     @staticmethod
-    def from_default(cam_name: str, resolution: T.Tuple[int]) -> "Camera_Model":
+    def all_from_file(
+        directory: str, cam_name: str
+    ) -> T.Dict[T.Tuple[int, int], "Camera_Model"]:
+        """
+        Loads recorded intrinsics for the given camera and resolution. If no recorded
+        intrinsics are available we fall back to default values. If no default values
+        are available, we use dummy intrinsics.
+        :param directory: The directory in which to look for the intrinsincs file.
+        :param cam_name: Name of the camera, e.g. 'Pupil Cam 1 ID2'.
+        :param resolution: Camera resolution.
+        """
+        logger.debug("Loading previously recorded intrinsics...")
+        file_path = os.path.join(
+            directory, "{}.intrinsics".format(cam_name.replace(" ", "_"))
+        )
+        raw_intrinsics_dict: RawIntrinsicsByResolution = load_object(
+            file_path, allow_legacy=False
+        )
+
+        if raw_intrinsics_dict["version"] < __version__:
+            logger.warning("Deprecated camera intrinsics found.")
+            logger.info(
+                "Please recalculate the camera intrinsics using the Camera"
+                " Intrinsics Estimation."
+            )
+            os.rename(
+                file_path, f"{file_path}.deprecated.v{raw_intrinsics_dict['version']}"
+            )
+
+        del raw_intrinsics_dict["version"]
+        return {
+            ast.literal_eval(resolution): Camera_Model._from_raw_intrinsics(
+                cam_name, ast.literal_eval(resolution), intrinsics
+            )
+            for resolution, intrinsics in raw_intrinsics_dict.items()
+        }
+
+    @staticmethod
+    def from_default(cam_name: str, resolution: T.Tuple[int, int]) -> "Camera_Model":
         """
         Loads default intrinsics for the given camera and resolution. If no default
         values are available, we use dummy intrinsics.
@@ -415,7 +474,9 @@ class Camera_Model(abc.ABC):
             return Dummy_Camera(cam_name, resolution)
 
     @staticmethod
-    def _from_raw_intrinsics(cam_name, resolution, intrinsics):
+    def _from_raw_intrinsics(
+        cam_name: str, resolution: T.Tuple[int, int], intrinsics: RawIntrinsics
+    ):
         cam_type = intrinsics["cam_type"]
         if cam_type not in Camera_Model.subclass_by_cam_type:
             logger.warning(
@@ -737,3 +798,41 @@ class Dummy_Camera(Radial_Dist_Camera):
         ]
         dist_coefs = D or [[0.0, 0.0, 0.0, 0.0, 0.0]]
         super().__init__(name, resolution, camera_matrix, dist_coefs)
+
+
+@click.command()
+@click.argument(
+    "directory",
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, path_type=pathlib.Path
+    ),
+)
+@click.option("-c", "--camera-name", type=str, default="[!.]*")
+def cli(directory: pathlib.Path, camera_name: str):
+    from rich import print
+    from rich.table import Table
+
+    models_by_name = {
+        path.stem: Camera_Model.all_from_file(path.parent, path.stem)
+        for path in directory.glob(f"{camera_name}.intrinsics")
+    }
+
+    table = Table(title="Camera Models")
+
+    table.add_column("Camera Name", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Resolution", style="magenta")
+    table.add_column("Camera Matrix", justify="left", style="green")
+    table.add_column("Distortion Coefficients", justify="left", style="green")
+
+    for name, models_by_resolution in models_by_name.items():
+        for resolution, model in models_by_resolution.items():
+            table.add_row(
+                name, f"{resolution[0]} x {resolution[1]}", str(model.K), str(model.D)
+            )
+
+    print(table)
+
+
+if __name__ == "__main__":
+    logging.basicConfig()
+    cli()

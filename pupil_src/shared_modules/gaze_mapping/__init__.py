@@ -9,9 +9,10 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 from typing import Dict, List, Type
+
 from . import gazer_base, matching
 from .gazer_2d import Gazer2D
-from .gazer_3d import Gazer3D, GazerHMD3D
+from .gazer_3d import Gazer3D, GazerHMD3D, PosthocGazerHMD3D
 from .gazer_base import CalibrationError
 
 
@@ -21,7 +22,13 @@ def registered_gazer_classes() -> List[Type[gazer_base.GazerBase]]:
 
 def user_selectable_gazer_classes() -> List[Type[gazer_base.GazerBase]]:
     gazers = registered_gazer_classes()
-    gazers = filter(lambda g: g is not GazerHMD3D, gazers)
+    gazers = filter(lambda g: g not in (GazerHMD3D, PosthocGazerHMD3D), gazers)
+    return list(gazers)
+
+
+def user_selectable_gazer_classes_posthoc() -> list:
+    gazers = registered_gazer_classes()
+    gazers = filter(lambda g: g not in (GazerHMD3D,), gazers)
     return list(gazers)
 
 

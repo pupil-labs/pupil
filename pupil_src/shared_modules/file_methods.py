@@ -145,7 +145,7 @@ class Incremental_Legacy_Pupil_Data_Loader:
             yield self.unpacker.unpack()
 
 
-def load_pldata_file(directory, topic):
+def load_pldata_file(directory, topic, track_progress_in_console: bool = True):
     ts_file = os.path.join(directory, topic + "_timestamps.npy")
     msgpack_file = os.path.join(directory, topic + ".pldata")
     try:
@@ -153,14 +153,16 @@ def load_pldata_file(directory, topic):
         topics = collections.deque()
         data_ts = np.load(ts_file)
         with open(msgpack_file, "rb") as fh:
-            for topic, payload in track(
-                msgpack.Unpacker(fh, use_list=False, strict_map_key=False),
-                description=f"Loading {topic} data",
-                total=len(data_ts),
-            ):
+            unpacker = msgpack.Unpacker(fh, use_list=False, strict_map_key=False)
+            if track_progress_in_console:
+                unpacker = track(
+                    unpacker, description=f"Loading {topic} data", total=len(data_ts)
+                )
+            for topic, payload in unpacker:
                 data.append(Serialized_Dict(msgpack_bytes=payload))
                 topics.append(topic)
-    except FileNotFoundError:
+    except FileNotFoundError as err:
+        logger.debug(err)
         data = []
         data_ts = []
         topics = []
