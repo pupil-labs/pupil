@@ -149,7 +149,7 @@ class GazerBase(abc.ABC, Plugin):
         return True
 
     @staticmethod
-    def registered_gazer_classes() -> T.List["GazerBase"]:
+    def registered_gazer_classes() -> T.List[T.Type["GazerBase"]]:
         return list(GazerBase.__registered_gazer_plugins.values())
 
     __registered_gazer_plugins = collections.OrderedDict()
