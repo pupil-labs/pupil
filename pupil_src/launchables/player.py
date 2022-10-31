@@ -1005,6 +1005,7 @@ def player_drop(
 
     except Exception:
         logger.exception("Process player_drop crashed with trace:")
+        raise
 
     finally:
         sleep(1.0)
