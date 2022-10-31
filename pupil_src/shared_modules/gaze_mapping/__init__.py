@@ -9,6 +9,7 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 from typing import Dict, List, Type
+
 from . import gazer_base, matching
 from .gazer_2d import Gazer2D
 from .gazer_3d import Gazer3D, GazerHMD3D, PosthocGazerHMD3D
