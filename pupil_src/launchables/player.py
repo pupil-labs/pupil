@@ -8,9 +8,11 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import asyncio
 import os
 import platform
 import signal
+from functools import partial
 from types import SimpleNamespace
 
 # UI Platform tweaks
@@ -955,7 +957,7 @@ def player_drop(
                 try:
                     assert_valid_recording_type(rec_dir)
                     logger.info(f"Starting new session with '{rec_dir}'")
-                    text = "Updating recording format."
+                    text = "Updating recording format\n."
                     tip = "This may take a while!"
                 except InvalidRecordingException as err:
                     logger.exception(str(err))
@@ -976,7 +978,36 @@ def player_drop(
 
             if rec_dir:
                 try:
-                    update_recording(rec_dir)
+
+                    async def update_ui():
+                        nonlocal text
+                        indefinitive_progress = 0
+                        base_text = text
+                        while True:
+                            text = base_text + "." * indefinitive_progress
+                            indefinitive_progress += 1
+                            indefinitive_progress %= 3
+
+                            gl_utils.clear_gl_screen()
+                            top_y = display_multiline_string(
+                                text, font_size=51, top_y=216
+                            )
+                            display_multiline_string(
+                                tip, font_size=42, top_y=top_y + 50
+                            )
+                            glfw.swap_buffers(window)
+                            glfw.poll_events()
+                            await asyncio.sleep(1.0)
+
+                    async def update_recording_without_blocking_ui():
+                        updating_ui = asyncio.create_task(update_ui())
+
+                        loop = asyncio.get_running_loop()
+                        update_this_recording = partial(update_recording, rec_dir)
+                        await loop.run_in_executor(None, update_this_recording)
+
+                    asyncio.run(update_recording_without_blocking_ui())
+
                 except AssertionError as err:
                     logger.exception(str(err))
                     tip = "Oops! There was an error updating the recording."
