@@ -220,7 +220,7 @@ def launcher():
                 ch.setLevel(logging.INFO)
         logger.addHandler(ch)
         # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
-        sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=("logging",))
+        sub = zmq_tools.Msg_Receiver(zmq.Context(), ipc_sub_url, topics=("logging",))
         while True:
             topic, msg = sub.recv()
             record = logging.makeLogRecord(msg)
