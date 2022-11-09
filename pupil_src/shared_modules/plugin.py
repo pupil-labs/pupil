@@ -16,9 +16,6 @@ import sys
 import types
 from time import time
 
-from OpenGL.GL import glGetError
-from OpenGL.GLU import gluErrorString
-
 logger = logging.getLogger(__name__)
 """
 A simple example Plugin: 'display_recent_gaze.py'
@@ -335,6 +332,9 @@ class Plugin:
         # instance. This will return potentially overwritten implementations
         # from child classes.
         unpatched_gl_display = self.__class__.gl_display
+
+        from OpenGL.GL import glGetError
+        from OpenGL.GLU import gluErrorString
 
         # Create wrapper method including a glGetError check
         def wrapper(_self):

@@ -14,23 +14,28 @@ from .base_plugin import (
     ChoreographyMode,
     ChoreographyNotification,
 )
-from .hmd_plugin import HMD3DChoreographyPlugin
-from .natural_feature_plugin import NaturalFeatureChoreographyPlugin
-from .screen_marker_plugin import ScreenMarkerChoreographyPlugin
-from .single_marker_plugin import SingleMarkerChoreographyPlugin
+
+
+def import_builtin_choreography_plugins():
+    from .hmd_plugin import HMD3DChoreographyPlugin
+    from .natural_feature_plugin import NaturalFeatureChoreographyPlugin
+    from .screen_marker_plugin import ScreenMarkerChoreographyPlugin
+    from .single_marker_plugin import SingleMarkerChoreographyPlugin
 
 
 def available_calibration_choreography_plugins():
+    import_builtin_choreography_plugins()
     return list(
         CalibrationChoreographyPlugin.registered_choreographies_by_label().values()
     )
 
 
 def default_calibration_choreography_plugin(app: str):
+    registered = CalibrationChoreographyPlugin.registered_choreographies_by_label()
     if app == "capture":
-        return ScreenMarkerChoreographyPlugin
+        return registered["Screen Marker Calibration"]  # ScreenMarkerChoreographyPlugin
     if app == "service":
-        return HMD3DChoreographyPlugin
+        return registered["HMD 3D Calibration"]  # HMD3DChoreographyPlugin
     if app == "player":
         raise NotImplementedError()
     raise ValueError(f'Unknown app "{app}"')
