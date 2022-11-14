@@ -58,6 +58,7 @@ dependencies.
 ```sh
 git clone https://github.com/pupil-labs/pupil.git
 cd pupil
+git checkout develop
 python -m pip install -r requirements.txt
 ```
 
