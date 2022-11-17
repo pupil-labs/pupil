@@ -19,6 +19,10 @@ logging.getLogger().handlers = [RichHandler()]
 sys.path.append(os.path.join("../", "pupil_src", "shared_modules"))
 from version_utils import get_tag_commit, pupil_version, write_version_file
 
+CODESIGN_IDENTITY = (
+    "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
+)
+
 
 def main():
     cwd = SPECPATH
@@ -29,24 +33,12 @@ def main():
     all_binaries = []
     all_hidden_imports = []
     for name in ("zmq", "pyre", "pyglui", "ndsi", "pupil_apriltags", "pye3d"):
-        # dll_dir = None
-        # if current_platform == SupportedPlatform.windows:
-        #     site_path: pathlib.Path = files(name)
-        #     libs_path = site_path.with_name(site_path.name + ".libs")
-        #     if libs_path.is_dir():
-        #         dll_dir = os.add_dll_directory(str(libs_path))
-
         datas, binaries, hiddenimports = collect_all(
             name, exclude_datas=["**/__pycache__"]
         )
-        logging.info(f"Collected {name} {datas=}")
-        logging.info(f"Collected {name} {binaries=}")
-        logging.info(f"Collected {name} {hiddenimports=}")
         all_datas.extend(datas)
         all_binaries.extend(binaries)
         all_hidden_imports.extend(hiddenimports)
-        # if dll_dir:
-        #     dll_dir.close()
 
     a = Analysis(
         ["../pupil_src/main.py"],
@@ -71,21 +63,28 @@ def main():
             strip=False,
             upx=True,
             console=True,
-            target_arch="x86",
             icon=str(icon_path),
             resources=[f"{icon_path},ICON"],
+            target_arch="x86_64",
+            codesign_identity=CODESIGN_IDENTITY,
+            entitlements_file="entitlements.plist",
         )
 
         extras = []
-        if current_platform == SupportedPlatform.windows:
-            # Add binaries that are not being collected automatically
-            glfw_bin = files("glfw") / "glfw3.dll"
-            extras.append((glfw_bin.name, str(glfw_bin), "BINARY"))
-            apriltags: pathlib.Path = files("pupil_apriltags")
-            apriltags = apriltags.with_name(apriltags.name + ".libs")
-            for dll in apriltags.glob("*.dll"):
-                extras.append((dll.name, str(dll), "BINARY"))
+        # Add binaries that are not being collected automatically
+        extras.extend(
+            (bin_path.name, str(bin_path), "BINARY")
+            for bin_path in files("glfw").rglob("*" + lib_ext[current_platform])
+        )
 
+        apriltags: pathlib.Path = files("pupil_apriltags")
+        apriltags = apriltags.with_name(apriltags.name + ".libs")
+        extras.extend(
+            (bin_path.name, str(bin_path), "BINARY")
+            for bin_path in apriltags.rglob("*" + lib_ext[current_platform])
+        )
+
+        if current_platform == SupportedPlatform.windows:
             extras.append(
                 ("PupilDrvInst.exe", "../pupil_external/PupilDrvInst.exe", "BINARY")
             )
@@ -110,8 +109,7 @@ def main():
             info_plist={"NSHighResolutionCapable": "True"},
         )
 
-        if current_platform == SupportedPlatform.windows:
-            write_version_file(os.path.join(DISTPATH, app_name))
+        write_version_file(os.path.join(DISTPATH, app_name))
 
 
 class SupportedPlatform(enum.Enum):

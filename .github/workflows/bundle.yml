@@ -17,11 +17,28 @@ jobs:
       matrix:
         platform:
           - windows-latest
+          - macos-latest
+          - ubuntu-latest
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+      - name: Prepare codesign identity on macOS
+        if: runner.os == 'macOS'
+        # https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
+        env:
+          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
+          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+          MACOS_KEYCHAIN_PWD: ${{ secrets.MACOS_KEYCHAIN_PWD }}
+        run: |
+          echo $MACOS_CERTIFICATE | base64 —decode > certificate.p12
+          security create-keychain -p $MACOS_KEYCHAIN_PWD build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p $MACOS_KEYCHAIN_PWD build.keychain
+          security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MACOS_KEYCHAIN_PWD build.keychain
+          security find-identity -v
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -43,4 +60,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: bundle-${{ matrix.platform }}
-          path: "deployment/*.rar"
+          path: "deployment/*.(rar|dmg)"
