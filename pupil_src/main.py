@@ -182,6 +182,7 @@ def launcher():
     # Recv log records from other processes.
     def log_loop(ipc_sub_url, log_level_debug):
         import logging
+
         from rich.logging import RichHandler
 
         # Get the root logger
