@@ -32,7 +32,7 @@ jobs:
         if: ${{ matrix.platform != "windows-latest"}}
         run: deployment\reproducible_build.sh
       - name: Upload build as artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: bundle-${{ matrix.os }}
-          path: *.rar
+          path: "*.rar"
