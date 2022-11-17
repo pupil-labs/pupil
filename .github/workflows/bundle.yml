@@ -24,15 +24,19 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
+      - name: Install Pupil Core dependencies
+        run: python -m pip install -r requirements.txt PyInstaller
       - name: Bundle on Windows
         if: runner.os == 'Windows'
-        run: deployment\reproducible_build.ps1
+        run: .\reproducible_build.ps1
         shell: powershell
+        working-directory: deployment
       - name: Bundle on Unix
         if: runner.os != 'Windows'
-        run: deployment\reproducible_build.sh
+        run: ./reproducible_build.sh
+        working-directory: deployment
       - name: Upload build as artifact
         uses: actions/upload-artifact@v3
         with:
           name: bundle-${{ matrix.os }}
-          path: "*.rar"
+          path: "deployment/*.rar"
