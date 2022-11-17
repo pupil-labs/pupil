@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import re
 import shutil
+import subprocess
 import textwrap
 from pathlib import Path
 from typing import List
@@ -263,13 +264,17 @@ with wix_file.open("w") as f:
 
 os.chdir(str(base_dir))
 print("Running candle")
-os.system(
-    r"C:\Program Files (x86)\WiX Toolset v3.11\bin\candle.exe" f' "{base_dir.name}.wxs"'
+subprocess.call(
+    [r"C:\Program Files (x86)\WiX Toolset v3.11\bin\candle.exe", f"{base_dir.name}.wxs"]
 )
 print("Running light")
-os.system(
-    r"C:\Program Files (x86)\WiX Toolset v3.11\bin\light.exe "
-    f'-ext WixUIExtension "{base_dir.name}.wixobj"'
+subprocess.call(
+    [
+        r"C:\Program Files (x86)\WiX Toolset v3.11\bin\light.exe",
+        "-ext",
+        "WixUIExtension",
+        f"{base_dir.name}.wixobj",
+    ]
 )
 print("Done.")
 
