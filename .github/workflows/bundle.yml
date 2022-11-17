@@ -42,5 +42,5 @@ jobs:
       - name: Upload build as artifact
         uses: actions/upload-artifact@v3
         with:
-          name: bundle-${{ matrix.os }}
+          name: bundle-${{ matrix.platform }}
           path: "deployment/*.rar"
