@@ -111,7 +111,7 @@ def main():
         )
 
         if current_platform == SupportedPlatform.windows:
-            write_version_file(os.path.join("dist", app_name))
+            write_version_file(os.path.join(DISTPATH, app_name))
 
 
 class SupportedPlatform(enum.Enum):

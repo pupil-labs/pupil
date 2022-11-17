@@ -1,0 +1,38 @@
+name: Bundle Pupil Core
+
+on:
+  pull_request:
+  push:
+    branches:
+      - develop
+    tags:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  Bundle:
+    name: Bundle ${{ matrix.platform }}
+    strategy:
+      fail-fast: False
+      matrix:
+        platform:
+          - windows-latest
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Bundle on Windows
+        if: ${{ matrix.platform == "windows-latest"}}
+        run: deployment\reproducible_build.ps1
+        shell: powershell
+      - name: Bundle on Unix
+        if: ${{ matrix.platform != "windows-latest"}}
+        run: deployment\reproducible_build.sh
+      - name: Upload build as artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: bundle-${{ matrix.os }}
+          path: *.rar

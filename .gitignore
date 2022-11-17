@@ -58,3 +58,4 @@ win_drv
 
 # pyenv local config
 .python-version
+*.exe

@@ -59,11 +59,7 @@ class SoftwareComponent:
 
     def __init__(self, base_dir: Path, name: str, version: str):
         self.name = name
-        self.base_dir = base_dir
-        for p in self.base_dir.iterdir():
-            if p.is_dir() and p.name.startswith(f"pupil_{self.name}_windows_x64"):
-                self.dir = p
-                break
+        self.dir = base_dir / f"Pupil {name.capitalize()}"
 
         self.display_name = f"Pupil {self.name.capitalize()} {version}"
 
