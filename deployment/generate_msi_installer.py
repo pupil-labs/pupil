@@ -263,9 +263,14 @@ with wix_file.open("w") as f:
 
 os.chdir(str(base_dir))
 print("Running candle")
-os.system(f'candle.exe "{base_dir.name}.wxs"')
+os.system(
+    r"C:\Program Files (x86)\WiX Toolset v3.11\bin\candle.exe" f' "{base_dir.name}.wxs"'
+)
 print("Running light")
-os.system(f'light.exe -ext WixUIExtension "{base_dir.name}.wixobj"')
+os.system(
+    r"C:\Program Files (x86)\WiX Toolset v3.11\bin\light.exe "
+    f'-ext WixUIExtension "{base_dir.name}.wixobj"'
+)
 print("Done.")
 
 print("Copy Installer")
