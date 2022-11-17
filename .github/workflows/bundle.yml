@@ -25,11 +25,11 @@ jobs:
         with:
           python-version: "3.11"
       - name: Bundle on Windows
-        if: ${{ matrix.platform == "windows-latest"}}
+        if: runner.os == 'Windows'
         run: deployment\reproducible_build.ps1
         shell: powershell
       - name: Bundle on Unix
-        if: ${{ matrix.platform != "windows-latest"}}
+        if: runner.os != 'Windows'
         run: deployment\reproducible_build.sh
       - name: Upload build as artifact
         uses: actions/upload-artifact@v3
