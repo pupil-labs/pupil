@@ -7,6 +7,7 @@ import subprocess
 import textwrap
 from pathlib import Path
 from typing import List
+from uuid import UUID
 from uuid import uuid4 as new_guid
 
 from . import ParsedVersion
@@ -60,9 +61,10 @@ def generate_msi_installer(base_dir: Path, parsed_version: ParsedVersion):
 
     wix_file = base_dir / f"{base_dir.name}.wxs"
     logging.debug(f"Generating WiX file at {wix_file}")
+
     with wix_file.open("w") as f:
         f.write(
-            TEMPLATE.strip().format(
+            fill_template(
                 capture_data=capture_data,
                 player_data=player_data,
                 service_data=service_data,
@@ -198,7 +200,20 @@ class SoftwareComponent:
         <Icon Id="{cap}Icon.exe" SourceFile="{self.dir.name}\pupil_{self.name}.exe" />"""
 
 
-TEMPLATE = """
+def fill_template(
+    capture_data: SoftwareComponent,
+    player_data: SoftwareComponent,
+    service_data: SoftwareComponent,
+    company_short: str,
+    manufacturer: str,
+    package_description: str,
+    product_name: str,
+    product_guid: str | UUID,
+    product_upgrade_code: str | UUID,
+    raw_version: str,
+    version: str,
+):
+    return f"""
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
     <Product Name='{product_name}' Id='{product_guid}' UpgradeCode='{product_upgrade_code}'
