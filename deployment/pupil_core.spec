@@ -1,6 +1,5 @@
 # -*- mode: python -*-
 
-import enum
 import logging
 import os
 import pathlib
@@ -16,12 +15,25 @@ from rich.traceback import install
 install(suppress=[PyInstaller])
 logging.getLogger().handlers = [RichHandler()]
 
-sys.path.append(os.path.join("../", "pupil_src", "shared_modules"))
-from version_utils import get_tag_commit, pupil_version, write_version_file
+sys.path.append(os.path.join("..", "pupil_src", "shared_modules"))
+sys.path.append(".")
+
+from _packaging import (
+    ICON_EXT,
+    LIB_EXT,
+    SupportedPlatform,
+    macos,
+    pupil_version,
+    windows,
+    write_version_file,
+)
 
 CODESIGN_IDENTITY = (
     "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
 )
+
+SPECPATH: str
+DISTPATH: str
 
 
 def main():
@@ -46,12 +58,12 @@ def main():
         datas=all_datas,
         binaries=all_binaries,
         hiddenimports=all_hidden_imports,
-        runtime_hooks=["pupil_core_hooks.py"],
+        # runtime_hooks=["pupil_core_hooks.py"],
     )
     pyz = PYZ(a.pure)
 
     for name in ("capture", "player", "service"):
-        icon_name = "pupil-" + name + icon_ext[current_platform]
+        icon_name = "pupil-" + name + ICON_EXT[current_platform]
         icon_path = (deployment_root / "icons" / icon_name).resolve()
 
         exe = EXE(
@@ -70,18 +82,19 @@ def main():
             entitlements_file="entitlements.plist",
         )
 
-        extras = []
+        extras: list[tuple[str, str, str]] = []
         # Add binaries that are not being collected automatically
+        glfw: pathlib.Path = files("glfw")
         extras.extend(
             (bin_path.name, str(bin_path), "BINARY")
-            for bin_path in files("glfw").rglob("*" + lib_ext[current_platform])
+            for bin_path in glfw.rglob("*" + LIB_EXT[current_platform])
         )
 
         apriltags: pathlib.Path = files("pupil_apriltags")
         apriltags = apriltags.with_name(apriltags.name + ".libs")
         extras.extend(
             (bin_path.name, str(bin_path), "BINARY")
-            for bin_path in apriltags.rglob("*" + lib_ext[current_platform])
+            for bin_path in apriltags.rglob("*" + LIB_EXT[current_platform])
         )
 
         if current_platform == SupportedPlatform.windows:
@@ -109,28 +122,23 @@ def main():
             info_plist={"NSHighResolutionCapable": "True"},
         )
 
-        write_version_file(os.path.join(DISTPATH, app_name))
+        target_path_components: dict[SupportedPlatform, tuple[str, ...]] = {
+            SupportedPlatform.windows: (DISTPATH, app_name),
+            SupportedPlatform.linux: (DISTPATH, app_name),
+            SupportedPlatform.macos: (DISTPATH, f"{app_name}.app", "Contents", "MacOS"),
+        }
+        version_file_target = os.path.join(*target_path_components[current_platform])
+        logging.debug(f"Writing version file to {version_file_target}")
+        write_version_file(version_file_target)
+
+    bundle_postprocessing = {
+        SupportedPlatform.windows: windows.create_compressed_msi,
+        SupportedPlatform.macos: macos.package_bundles_as_dmg,
+    }
+    bundle_postprocessing[current_platform](pathlib.Path(DISTPATH), pupil_version())
 
 
-class SupportedPlatform(enum.Enum):
-    macos = "Darwin"
-    linux = "Linux"
-    windows = "Windows"
-
-
-icon_ext = {
-    SupportedPlatform.macos: ".icns",
-    SupportedPlatform.linux: ".svg",
-    SupportedPlatform.windows: ".ico",
-}
-lib_ext = {
-    SupportedPlatform.macos: ".dylib",
-    SupportedPlatform.linux: ".so",
-    SupportedPlatform.windows: ".dll",
-}
-
-
-def apriltag_relative_path(absolute_path):
+def apriltag_relative_path(absolute_path: pathlib.Path):
     """Returns pupil_apriltags/lib/*"""
     return os.path.join(*absolute_path.parts[-3:])
 

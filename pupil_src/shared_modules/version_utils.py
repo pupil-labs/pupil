@@ -13,7 +13,7 @@ import packaging.version
 logger = logging.getLogger(__name__)
 
 
-def get_tag_commit() -> T.Optional[T.AnyStr]:
+def get_tag_commit() -> T.Optional[str]:
     """
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
@@ -37,7 +37,7 @@ def get_tag_commit() -> T.Optional[T.AnyStr]:
 ParsedVersion = T.Union[packaging.version.LegacyVersion, packaging.version.Version]
 
 
-def parse_version(vstring) -> ParsedVersion:
+def parse_version(vstring: str) -> ParsedVersion:
     return packaging.version.parse(vstring)
 
 
@@ -83,14 +83,13 @@ def get_version():
     return parse_version(version_string)
 
 
-def write_version_file(target_dir):
+def write_version_file(target_dir: str):
     version_string = pupil_version_string()
     print(f"Current version of Pupil: {version_string}")
 
     version_file = os.path.join(target_dir, "_version_string_")
     with open(version_file, "w") as f:
         f.write(version_string)
-    print(f"Wrote version into: {version_file}")
 
 
 if __name__ == "__main__":
