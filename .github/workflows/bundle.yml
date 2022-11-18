@@ -17,7 +17,7 @@ jobs:
       matrix:
         platform:
           - windows-latest
-          - macos-latest
+          - macOS-11
           - ubuntu-latest
     runs-on: ${{ matrix.platform }}
     steps:
@@ -45,7 +45,7 @@ jobs:
           python-version: "3.11"
       - name: Install Pupil Core dependencies
         env:
-          ARCHFLAGS="-arch x86_64"
+          ARCHFLAGS: "-arch x86_64"
         run: |
           python -m pip install -U pip wheel
           python -m pip install -r requirements.txt PyInstaller
