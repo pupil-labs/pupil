@@ -65,6 +65,21 @@ python -m pip install -r requirements.txt
 If you have trouble installing any of the dependencies, please see the corresponding
 code repository for manual installation steps and troubleshooting.
 
+#### Linux
+
+To grant Pupil Core applications access to the cameras, run
+
+```sh
+echo 'SUBSYSTEM=="usb",  ENV{DEVTYPE}=="usb_device", GROUP="plugdev", MODE="0664"' | sudo tee /etc/udev/rules.d/10-libuvc.rules > /dev/null
+sudo udevadm trigger
+```
+
+and ensure that your user is part of the `plugdev` group:
+
+```sh
+sudo usermod -a -G plugdev $USER
+```
+
 ### Run Pupil
 
 ```sh
