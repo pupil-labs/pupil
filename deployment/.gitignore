@@ -1,0 +1,4 @@
+deploy_*/
+bundle_*
+find_opengl_bigsur.py
+pupil_core_hooks.py
