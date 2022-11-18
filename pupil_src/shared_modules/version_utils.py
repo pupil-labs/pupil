@@ -93,5 +93,6 @@ def write_version_file(target_dir: str):
 
 
 if __name__ == "__main__":
-    print(get_tag_commit())
-    print(pupil_version_string())
+    print(f"{get_tag_commit()=}")
+    print(f"{pupil_version_string()=}")
+    print(f"{pupil_version()=}")

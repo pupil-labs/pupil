@@ -6,6 +6,6 @@ case "${platform}" in
     Darwin*)    machine=macos;;
     *)          machine="UNKNOWN:${platform}"
 esac
-release_dir="pupil_$(git describe --tags --long)_${machine}_x64"
+release_dir="pupil_core_$(git describe --tags --long)_${machine}_x64"
 echo "+ Creating bundle at $release_dir"
 pyinstaller pupil_core.spec --noconfirm --log-level DEBUG --distpath $release_dir
