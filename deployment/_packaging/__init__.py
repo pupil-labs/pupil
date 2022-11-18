@@ -2,7 +2,7 @@ import enum
 
 from version_utils import ParsedVersion, pupil_version, write_version_file
 
-from . import macos, windows
+from . import linux, macos, windows
 
 
 class SupportedPlatform(enum.Enum):
@@ -23,9 +23,11 @@ LIB_EXT = {
 }
 
 __all__ = [
+    "ParsedVersion",
     "SupportedPlatform",
     "ICON_EXT",
     "LIB_EXT",
+    "linux",
     "macos",
     "pupil_version",
     "windows",

@@ -22,6 +22,7 @@ from _packaging import (
     ICON_EXT,
     LIB_EXT,
     SupportedPlatform,
+    linux,
     macos,
     pupil_version,
     windows,
@@ -134,6 +135,7 @@ def main():
     bundle_postprocessing = {
         SupportedPlatform.windows: windows.create_compressed_msi,
         SupportedPlatform.macos: macos.package_bundles_as_dmg,
+        SupportedPlatform.linux: linux.create_zipped_deb_packages,
     }
     bundle_postprocessing[current_platform](pathlib.Path(DISTPATH), pupil_version())
 

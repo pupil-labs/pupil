@@ -62,4 +62,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: bundle-${{ matrix.platform }}
-          path: "deployment/*.(rar|dmg)"
+          path: |
+            deployment/*.rar
+            deployment/*.dmg
+            deployment/*.zip
