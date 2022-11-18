@@ -45,7 +45,7 @@ Version: {app_version}
 Architecture: amd64
 Maintainer: Pupil Labs <info@pupil-labs.com>
 Priority: optional
-Description: {app_name} is the easy way to preview scene video and gaze streams of your Pupil Invisible devices.
+Description: {app_name} - Find more information on https://docs.pupil-labs.com/core/
 Installed-Size: {round(dist_size / 1024)}
 """
         # See this link regarding the calculation of the Installed-Size field
@@ -87,8 +87,8 @@ Exec=x-terminal-emulator -e {package_name}"""
         f.write(content)
     desktop.chmod(0o644)
 
-    svg_file_name = f"{package_name}.svg"
-    src_path = dist_root / package_name / svg_file_name
+    svg_file_name = f"{package_name.replace('_', '-')}.svg"
+    src_path = dist_root / "icons" / svg_file_name
     dst_path = ico_dir / svg_file_name
     shutil.copy(str(src_path), str(dst_path))
     dst_path.chmod(0o755)
