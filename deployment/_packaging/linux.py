@@ -88,7 +88,7 @@ Exec=x-terminal-emulator -e {package_name}"""
         f.write(content)
     desktop.chmod(0o644)
 
-    svg_file_name = f"{package_name.replace('_', '-')}.svg"
+    svg_file_name = f"{package_name}.svg"
     src_path = pathlib.Path("icons", svg_file_name)
     dst_path = ico_dir / svg_file_name
     shutil.copy(str(src_path), str(dst_path))
@@ -107,4 +107,5 @@ Exec=x-terminal-emulator -e {package_name}"""
     opt_dir.chmod(0o755)
 
     subprocess.call(["fakeroot", "dpkg-deb", "--build", deb_root])
+    shutil.rmtree(str(deb_root))
     return deb_root.with_name(deb_root.name + ".deb")
