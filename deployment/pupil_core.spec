@@ -45,7 +45,15 @@ def main():
     all_datas = []
     all_binaries = []
     all_hidden_imports = []
-    for name in ("zmq", "pyre", "pyglui", "ndsi", "pupil_apriltags", "pye3d"):
+    for name in (
+        "zmq",
+        "pyre",
+        "pyglui",
+        "ndsi",
+        "pupil_apriltags",
+        "pye3d",
+        "OpenGL",
+    ):
         datas, binaries, hiddenimports = collect_all(
             name, exclude_datas=["**/__pycache__"]
         )
