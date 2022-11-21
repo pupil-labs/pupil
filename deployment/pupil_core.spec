@@ -111,10 +111,22 @@ def main():
                 ("PupilDrvInst.exe", "../pupil_external/PupilDrvInst.exe", "BINARY")
             )
 
+        binaries = a.binaries
+        if current_platform == SupportedPlatform.linux:
+            # libc is also not meant to travel with the bundle. Otherwise pyre.helpers with segfault.
+            binaries = (b for b in binaries if not "libc.so" in b[0])
+            # libstdc++ is also not meant to travel with the bundle. Otherwise nvideo opengl drivers will fail to load.
+            binaries = (b for b in binaries if not "libstdc++.so" in b[0])
+            # required for 14.04 16.04 interoperability.
+            binaries = (b for b in binaries if not "libgomp.so.1" in b[0])
+            # required for 17.10 interoperability.
+            binaries = (b for b in binaries if not "libdrm.so.2" in b[0])
+            binaries = list(binaries)
+
         app_name = f"Pupil {name.capitalize()}"
         collection = COLLECT(
             exe,
-            a.binaries,
+            binaries,
             a.zipfiles,
             a.datas,
             extras,
