@@ -37,6 +37,10 @@ def create_deb_package(
     desktop.parent.mkdir(mode=0o755, exist_ok=True, parents=True)
     ico_dir.mkdir(mode=0o755, exist_ok=True, parents=True)
 
+    startup_WM_class = app_name
+    if startup_WM_class == "Pupil Capture":
+        startup_WM_class += " - World"
+
     # DEB control file
     with control.open("w") as f:
         dist_size = sum(f.stat().st_size for f in dist_root.rglob("*"))
@@ -81,7 +85,7 @@ Icon={package_name.replace('_', '-')}
 Categories=Application;
 Name[en_US]={app_name}
 Actions=Terminal;
-StartupWMClass={app_name}
+StartupWMClass={startup_WM_class}
 [Desktop Action Terminal]
 Name=Open in Terminal
 Exec=x-terminal-emulator -e {package_name}"""
