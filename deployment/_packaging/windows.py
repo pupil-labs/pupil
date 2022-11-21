@@ -314,4 +314,4 @@ def fill_template(
 
     </Product>
 </Wix>
-"""
+    """.strip()
