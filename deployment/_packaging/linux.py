@@ -95,7 +95,7 @@ Exec=x-terminal-emulator -e {package_name}"""
     dst_path.chmod(0o755)
 
     # copy the actual application
-    shutil.copytree(str(dist_root / app_name), str(opt_dir))
+    shutil.copytree(str(dist_root / app_name), str(opt_dir / package_name))
     for f in opt_dir.rglob("*"):
         if f.is_file():
             if f.name == package_name:
