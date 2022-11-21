@@ -77,7 +77,7 @@ Name={app_name}
 Comment=Preview Pupil Invisible data streams
 Exec=/opt/{package_name}/{package_name}
 Terminal=false
-Icon={package_name}
+Icon={package_name.replace('_', '-')}
 Categories=Application;
 Name[en_US]={app_name}
 Actions=Terminal;
@@ -88,7 +88,7 @@ Exec=x-terminal-emulator -e {package_name}"""
         f.write(content)
     desktop.chmod(0o644)
 
-    svg_file_name = f"{package_name}.svg"
+    svg_file_name = f"{package_name.replace('_', '-')}.svg"
     src_path = pathlib.Path("icons", svg_file_name)
     dst_path = ico_dir / svg_file_name
     shutil.copy(str(src_path), str(dst_path))
