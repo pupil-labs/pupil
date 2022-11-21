@@ -5,7 +5,7 @@ import re
 import shutil
 import subprocess
 import textwrap
-from pathlib import Path
+from contextlib import contextmanager
 from typing import List
 from uuid import UUID
 from uuid import uuid4 as new_guid
@@ -32,7 +32,7 @@ def create_compressed_msi(directory: pathlib.Path, parsed_version: ParsedVersion
 # C:\Program Files (x86)\WiX Toolset v3.11\bin
 
 
-def generate_msi_installer(base_dir: Path, parsed_version: ParsedVersion):
+def generate_msi_installer(base_dir: pathlib.Path, parsed_version: ParsedVersion):
     logging.info(f"Generating msi installer for Pupil Core {parsed_version}")
     # NOTE: MSI only allows versions in the form of x.x.x.x, where all x are
     # integers, so we need to replace the '-' before patch with a '.'. Also we
@@ -79,37 +79,48 @@ def generate_msi_installer(base_dir: Path, parsed_version: ParsedVersion):
             )
         )
 
-    os.chdir(str(base_dir))
-    logging.debug("Running candle")
-    subprocess.call(
-        [
-            r"C:\Program Files (x86)\WiX Toolset v3.11\bin\candle.exe",
-            f"{base_dir.name}.wxs",
-        ]
-    )
-    logging.debug("Running light")
-    subprocess.call(
-        [
-            r"C:\Program Files (x86)\WiX Toolset v3.11\bin\light.exe",
-            "-ext",
-            "WixUIExtension",
-            f"{base_dir.name}.wixobj",
-        ]
-    )
-    logging.debug("Copy Installer")
-    shutil.copyfile(f"{base_dir.name}.msi", f"../{base_dir.name}.msi")
-    logging.debug("Cleanup")
-    base_dir.with_suffix(".wxs").unlink()
-    base_dir.with_suffix(".wixobj").unlink()
-    base_dir.with_suffix(".wixpdb").unlink()
-    base_dir.with_suffix(".msi").unlink()
-    logging.debug("Finished!")
+    with set_directory(base_dir):
+        logging.debug("Running candle")
+        subprocess.call(
+            [
+                r"C:\Program Files (x86)\WiX Toolset v3.11\bin\candle.exe",
+                f"{base_dir.name}.wxs",
+            ]
+        )
+        logging.debug("Running light")
+        subprocess.call(
+            [
+                r"C:\Program Files (x86)\WiX Toolset v3.11\bin\light.exe",
+                "-ext",
+                "WixUIExtension",
+                f"{base_dir.name}.wixobj",
+            ]
+        )
+        logging.debug("Copy Installer")
+        shutil.move(f"{base_dir.name}.msi", f"../{base_dir.name}.msi")
+
+        logging.debug("Cleanup")
+        pathlib.Path(base_dir.name + ".wxs").unlink()
+        pathlib.Path(base_dir.name + ".wixobj").unlink()
+        pathlib.Path(base_dir.name + ".wixpdb").unlink()
+        logging.debug("Finished!")
+
+
+@contextmanager
+def set_directory(path: pathlib.Path):
+    # https://dev.to/teckert/changing-directory-with-a-python-context-manager-2bj8
+    origin = pathlib.Path().absolute()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(origin)
 
 
 class SoftwareComponent:
     """Represents capture, player or service and collects all info for WiX XML."""
 
-    def __init__(self, base_dir: Path, name: str, version: str):
+    def __init__(self, base_dir: pathlib.Path, name: str, version: str):
         self.name = name
         self.dir = base_dir / f"Pupil {name.capitalize()}"
 
@@ -120,7 +131,9 @@ class SoftwareComponent:
         self.directory_root = []
         self.crawl_directory(directory=self.dir, tree_root=self.directory_root)
 
-    def crawl_directory(self, directory: Path, tree_root: list[dict[str, str]]) -> None:
+    def crawl_directory(
+        self, directory: pathlib.Path, tree_root: list[dict[str, str]]
+    ) -> None:
         for p in directory.iterdir():
             self.counter += 1
 
