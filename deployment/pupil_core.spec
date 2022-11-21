@@ -123,6 +123,7 @@ def main():
             binaries = (b for b in binaries if not "libdrm.so.2" in b[0])
             binaries = list(binaries)
 
+        whitelist = {"cv2"}
         blacklist_ext = {
             ".c",
             ".py",
@@ -138,7 +139,15 @@ def main():
             ".pyi",
             ".pyx",
         }
-        data = [d for d in a.datas if os.path.splitext(d[0])[1] not in blacklist_ext]
+
+        data = [
+            d
+            for d in a.datas
+            if (
+                any(pat in d[0] for pat in whitelist)
+                or os.path.splitext(d[0])[1] not in blacklist_ext
+            )
+        ]
 
         app_name = f"Pupil {name.capitalize()}"
         collection = COLLECT(
