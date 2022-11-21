@@ -123,12 +123,29 @@ def main():
             binaries = (b for b in binaries if not "libdrm.so.2" in b[0])
             binaries = list(binaries)
 
+        blacklist_ext = {
+            ".c",
+            ".py",
+            ".txt",
+            ".cpp",
+            ".pxi",
+            ".typed",
+            ".csv",
+            ".md",
+            ".rst",
+            ".pxd",
+            ".h",
+            ".pyi",
+            ".pyx",
+        }
+        data = [d for d in a.datas if os.path.splitext(d[0])[1] not in blacklist_ext]
+
         app_name = f"Pupil {name.capitalize()}"
         collection = COLLECT(
             exe,
             binaries,
             a.zipfiles,
-            a.datas,
+            data,
             extras,
             strip=False,
             upx=True,
