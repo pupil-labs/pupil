@@ -31,13 +31,14 @@ jobs:
           MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
           MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
           MACOS_KEYCHAIN_PWD: ${{ secrets.MACOS_KEYCHAIN_PWD }}
+          MACOS_KEYCHAIN_NAME: ${{ secrets.MACOS_KEYCHAIN_NAME }}
         run: |
           echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
-          security create-keychain -p $MACOS_KEYCHAIN_PWD build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p $MACOS_KEYCHAIN_PWD build.keychain
-          security import certificate.p12 -k build.keychain -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MACOS_KEYCHAIN_PWD build.keychain
+          security create-keychain -p $MACOS_KEYCHAIN_PWD $MACOS_KEYCHAIN_NAME
+          security default-keychain -s $MACOS_KEYCHAIN_NAME
+          security unlock-keychain -p $MACOS_KEYCHAIN_PWD $MACOS_KEYCHAIN_NAME
+          security import certificate.p12 -k $MACOS_KEYCHAIN_NAME -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MACOS_KEYCHAIN_PWD $MACOS_KEYCHAIN_NAME
           security find-identity -v
       - name: Setup Python
         uses: actions/setup-python@v4
@@ -58,6 +59,10 @@ jobs:
         if: runner.os != 'Windows'
         run: ./reproducible_build.sh
         working-directory: deployment
+        env:
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+          MACOS_KEYCHAIN_PWD: ${{ secrets.MACOS_KEYCHAIN_PWD }}
+          MACOS_KEYCHAIN_NAME: ${{ secrets.MACOS_KEYCHAIN_NAME }}
       - name: Upload build as artifact
         uses: actions/upload-artifact@v3
         with:

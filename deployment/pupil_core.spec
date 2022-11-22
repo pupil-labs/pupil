@@ -29,10 +29,6 @@ from _packaging import (
     write_version_file,
 )
 
-CODESIGN_IDENTITY = (
-    "Developer ID Application: Pupil Labs UG (haftungsbeschrankt) (R55K9ESN6B)"
-)
-
 SPECPATH: str
 DISTPATH: str
 
@@ -41,6 +37,9 @@ def main():
     cwd = SPECPATH
     current_platform = SupportedPlatform(platform.system())
     deployment_root = pathlib.Path(cwd)
+
+    logging.debug(f"Writing version file to {DISTPATH}")
+    version_file_path: pathlib.Path = write_version_file(DISTPATH)
 
     all_datas = []
     all_binaries = []
@@ -75,6 +74,8 @@ def main():
         icon_name = "pupil-" + name + ICON_EXT[current_platform]
         icon_path = (deployment_root / "icons" / icon_name).resolve()
 
+        macos.unlock_custom_keychain()  # ensure CI keychain is unlocked
+
         exe = EXE(
             pyz,
             a.scripts,
@@ -87,11 +88,13 @@ def main():
             icon=str(icon_path),
             resources=[f"{icon_path},ICON"],
             target_arch="x86_64",
-            codesign_identity=CODESIGN_IDENTITY,
+            codesign_identity=os.environ["MACOS_CODESIGN_IDENTITY"],
             entitlements_file="entitlements.plist",
         )
 
         extras: list[tuple[str, str, str]] = []
+        extras.append((version_file_path.name, str(version_file_path), "DATA"))
+
         # Add binaries that are not being collected automatically
         glfw: pathlib.Path = files("glfw")
         extras.extend(
@@ -122,6 +125,8 @@ def main():
             # required for 17.10 interoperability.
             binaries = (b for b in binaries if not "libdrm.so.2" in b[0])
             binaries = list(binaries)
+        elif current_platform == SupportedPlatform.macos:
+            binaries = [b for b in binaries if ".dylibs" not in b[0]]
 
         whitelist = {"cv2"}
         blacklist_ext = {
@@ -138,6 +143,7 @@ def main():
             ".h",
             ".pyi",
             ".pyx",
+            ".pyc",
         }
 
         data = [
@@ -161,22 +167,16 @@ def main():
             name=app_name,
         )
 
+        macos.unlock_custom_keychain()  # ensure CI keychain is unlocked
+
+        bundle_identifier = f"com.pupil-labs.core.{app_name.lower().replace(' ','_')}"
         BUNDLE(
             collection,
             name=f"{app_name}.app",
             icon=icon_path,
             version=str(pupil_version()),
-            info_plist={"NSHighResolutionCapable": "True"},
+            bundle_identifier=bundle_identifier,
         )
-
-        target_path_components: dict[SupportedPlatform, tuple[str, ...]] = {
-            SupportedPlatform.windows: (DISTPATH, app_name),
-            SupportedPlatform.linux: (DISTPATH, app_name),
-            SupportedPlatform.macos: (DISTPATH, f"{app_name}.app", "Contents", "MacOS"),
-        }
-        version_file_target = os.path.join(*target_path_components[current_platform])
-        logging.debug(f"Writing version file to {version_file_target}")
-        write_version_file(version_file_target)
 
     bundle_postprocessing = {
         SupportedPlatform.windows: windows.create_compressed_msi,

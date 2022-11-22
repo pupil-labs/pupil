@@ -7,8 +7,11 @@ from . import ParsedVersion
 
 
 def package_bundles_as_dmg(base: pathlib.Path, version: ParsedVersion):
+    # for app in base.glob("*.app"):
+    #     sign_app(app)
     logging.info(f"Creating dmg file for Pupil Core {version}")
-    create_dmg(create_and_fill_dmg_srcfolder(base), base.name, version)
+    dmg_file = create_dmg(create_and_fill_dmg_srcfolder(base), base.name, version)
+    sign_object(dmg_file)
 
 
 def create_and_fill_dmg_srcfolder(
@@ -27,8 +30,11 @@ def create_and_fill_dmg_srcfolder(
     return bundle_dir
 
 
-def create_dmg(bundle_dir: pathlib.Path, name: str, version: ParsedVersion):
+def create_dmg(
+    bundle_dir: pathlib.Path, name: str, version: ParsedVersion
+) -> pathlib.Path:
     volumen_size = get_size(bundle_dir)
+    dmg_name = f"{name}.dmg"
     dmg_cmd = (
         "hdiutil",
         "create",
@@ -40,9 +46,10 @@ def create_dmg(bundle_dir: pathlib.Path, name: str, version: ParsedVersion):
         "ULMO",
         "-size",
         f"{volumen_size}b ",
-        f"{name}.dmg",
+        dmg_name,
     )
-    subprocess.call(dmg_cmd)
+    subprocess.check_call(dmg_cmd)
+    return pathlib.Path(dmg_name)
 
 
 def get_size(start_path: str | pathlib.Path = "."):
@@ -55,3 +62,53 @@ def get_size(start_path: str | pathlib.Path = "."):
                 total_size += os.path.getsize(fp)
 
     return total_size
+
+
+def unlock_custom_keychain():
+    if (MACOS_KEYCHAIN_NAME := os.environ.get("MACOS_KEYCHAIN_NAME")) and (
+        MACOS_KEYCHAIN_PWD := os.environ.get("MACOS_KEYCHAIN_PWD")
+    ):
+        try:
+            logging.info(f"Attempt to unlock {MACOS_KEYCHAIN_NAME}")
+            subprocess.check_call(
+                [
+                    "security",
+                    "unlock-keychain",
+                    "-p",
+                    MACOS_KEYCHAIN_NAME,
+                    MACOS_KEYCHAIN_PWD,
+                ]
+            )
+            logging.info(f"Successfully unlocked {MACOS_KEYCHAIN_NAME}")
+        except subprocess.CalledProcessError:
+            logging.warning(f"Failed to unlock {MACOS_KEYCHAIN_NAME}")
+
+
+def sign_app(path: pathlib.Path):
+    for obj in path.rglob(".dylibs/*.dylib"):
+        sign_object(obj)
+    sign_object(path)
+
+
+def sign_object(path: pathlib.Path):
+    unlock_custom_keychain()
+    logging.info(f"Attempting to sign '{path}'")
+    subprocess.check_call(
+        [
+            "codesign",
+            "--all-architectures",
+            "--force",
+            "--strict=all",
+            "--options",
+            "runtime",
+            "--entitlements",
+            "entitlements.plist",
+            "--continue",
+            "--verify",
+            "--verbose=4",
+            "-s",
+            os.environ["MACOS_CODESIGN_IDENTITY"],
+            str(path),
+        ]
+    )
+    logging.info(f"Successfully signed '{path}'")

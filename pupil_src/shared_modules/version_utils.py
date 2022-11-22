@@ -4,6 +4,7 @@
 
 import logging
 import os
+import pathlib
 import sys
 import typing as T
 from subprocess import STDOUT, CalledProcessError, check_output
@@ -83,13 +84,13 @@ def get_version():
     return parse_version(version_string)
 
 
-def write_version_file(target_dir: str):
+def write_version_file(target_dir: str) -> pathlib.Path:
     version_string = pupil_version_string()
-    print(f"Current version of Pupil: {version_string}")
-
     version_file = os.path.join(target_dir, "_version_string_")
+    logger.debug(f"Writing Pupil Core version '{version_string}' to {version_file}")
     with open(version_file, "w") as f:
         f.write(version_string)
+    return pathlib.Path(version_file)
 
 
 if __name__ == "__main__":
