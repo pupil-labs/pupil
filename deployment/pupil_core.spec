@@ -74,7 +74,11 @@ def main():
         icon_name = "pupil-" + name + ICON_EXT[current_platform]
         icon_path = (deployment_root / "icons" / icon_name).resolve()
 
-        macos.unlock_custom_keychain()  # ensure CI keychain is unlocked
+        if current_platform == SupportedPlatform.macos:
+            macos.unlock_custom_keychain()  # ensure CI keychain is unlocked
+            codesign_identity = os.environ["MACOS_CODESIGN_IDENTITY"]
+        else:
+            codesign_identity = None
 
         exe = EXE(
             pyz,
@@ -88,7 +92,7 @@ def main():
             icon=str(icon_path),
             resources=[f"{icon_path},ICON"],
             target_arch="x86_64",
-            codesign_identity=os.environ["MACOS_CODESIGN_IDENTITY"],
+            codesign_identity=codesign_identity,
             entitlements_file="entitlements.plist",
         )
 
@@ -167,16 +171,17 @@ def main():
             name=app_name,
         )
 
-        macos.unlock_custom_keychain()  # ensure CI keychain is unlocked
-
-        bundle_identifier = f"com.pupil-labs.core.{app_name.lower().replace(' ','_')}"
-        BUNDLE(
-            collection,
-            name=f"{app_name}.app",
-            icon=icon_path,
-            version=str(pupil_version()),
-            bundle_identifier=bundle_identifier,
-        )
+        if current_platform == SupportedPlatform.macos:
+            macos.unlock_custom_keychain()  # ensure CI keychain is unlocked
+            BUNDLE(
+                collection,
+                name=f"{app_name}.app",
+                icon=icon_path,
+                version=str(pupil_version()),
+                bundle_identifier=(
+                    f"com.pupil-labs.core.{app_name.lower().replace(' ','_')}"
+                ),
+            )
 
     bundle_postprocessing = {
         SupportedPlatform.windows: windows.create_compressed_msi,
