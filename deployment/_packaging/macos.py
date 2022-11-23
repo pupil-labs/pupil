@@ -64,26 +64,6 @@ def get_size(start_path: str | pathlib.Path = "."):
     return total_size
 
 
-def unlock_custom_keychain():
-    if (MACOS_KEYCHAIN_NAME := os.environ.get("MACOS_KEYCHAIN_NAME")) and (
-        MACOS_KEYCHAIN_PWD := os.environ.get("MACOS_KEYCHAIN_PWD")
-    ):
-        try:
-            logging.info(f"Attempt to unlock {MACOS_KEYCHAIN_NAME}")
-            subprocess.check_call(
-                [
-                    "security",
-                    "unlock-keychain",
-                    "-p",
-                    MACOS_KEYCHAIN_NAME,
-                    MACOS_KEYCHAIN_PWD,
-                ]
-            )
-            logging.info(f"Successfully unlocked {MACOS_KEYCHAIN_NAME}")
-        except subprocess.CalledProcessError:
-            logging.warning(f"Failed to unlock {MACOS_KEYCHAIN_NAME}")
-
-
 def sign_app(path: pathlib.Path):
     for obj in path.rglob(".dylibs/*.dylib"):
         sign_object(obj)
@@ -91,7 +71,6 @@ def sign_app(path: pathlib.Path):
 
 
 def sign_object(path: pathlib.Path):
-    unlock_custom_keychain()
     logging.info(f"Attempting to sign '{path}'")
     subprocess.check_call(
         [

@@ -75,7 +75,6 @@ def main():
         icon_path = (deployment_root / "icons" / icon_name).resolve()
 
         if current_platform == SupportedPlatform.macos:
-            macos.unlock_custom_keychain()  # ensure CI keychain is unlocked
             codesign_identity = os.environ["MACOS_CODESIGN_IDENTITY"]
         else:
             codesign_identity = None
@@ -171,17 +170,15 @@ def main():
             name=app_name,
         )
 
-        if current_platform == SupportedPlatform.macos:
-            macos.unlock_custom_keychain()  # ensure CI keychain is unlocked
-            BUNDLE(
-                collection,
-                name=f"{app_name}.app",
-                icon=icon_path,
-                version=str(pupil_version()),
-                bundle_identifier=(
-                    f"com.pupil-labs.core.{app_name.lower().replace(' ','_')}"
-                ),
-            )
+        BUNDLE(
+            collection,
+            name=f"{app_name}.app",
+            icon=icon_path,
+            version=str(pupil_version()),
+            bundle_identifier=(
+                f"com.pupil-labs.core.{app_name.lower().replace(' ','_')}"
+            ),
+        )
 
     bundle_postprocessing = {
         SupportedPlatform.windows: windows.create_compressed_msi,

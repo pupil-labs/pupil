@@ -24,22 +24,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - name: Prepare codesign identity on macOS
-        if: runner.os == 'macOS'
-        # https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
-        env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}
-          MACOS_KEYCHAIN_PWD: ${{ secrets.MACOS_KEYCHAIN_PWD }}
-          MACOS_KEYCHAIN_NAME: ${{ secrets.MACOS_KEYCHAIN_NAME }}
-        run: |
-          echo $MACOS_CERTIFICATE | base64 --decode > certificate.p12
-          security create-keychain -p $MACOS_KEYCHAIN_PWD $MACOS_KEYCHAIN_NAME
-          security default-keychain -s $MACOS_KEYCHAIN_NAME
-          security unlock-keychain -p $MACOS_KEYCHAIN_PWD $MACOS_KEYCHAIN_NAME
-          security import certificate.p12 -k $MACOS_KEYCHAIN_NAME -P $MACOS_CERTIFICATE_PWD -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $MACOS_KEYCHAIN_PWD $MACOS_KEYCHAIN_NAME
-          security find-identity -v
       - name: Setup Python
         uses: actions/setup-python@v4
         with:
@@ -55,14 +39,18 @@ jobs:
         run: .\reproducible_build.ps1
         shell: powershell
         working-directory: deployment
+      - name: Import macOS codesign certificates
+        if: runner.os == 'macOS'
+        uses: apple-actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
+          p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
       - name: Bundle on Unix
         if: runner.os != 'Windows'
         run: ./reproducible_build.sh
         working-directory: deployment
         env:
           MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
-          MACOS_KEYCHAIN_PWD: ${{ secrets.MACOS_KEYCHAIN_PWD }}
-          MACOS_KEYCHAIN_NAME: ${{ secrets.MACOS_KEYCHAIN_NAME }}
       - name: Upload build as artifact
         uses: actions/upload-artifact@v3
         with:
