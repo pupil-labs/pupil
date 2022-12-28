@@ -124,7 +124,7 @@ class BundleAdjustment:
 
         return initial_guess_array, bounds, sparsity_matrix
 
-    def _calculate_bounds(self, eps=np.finfo(np.float).eps, scale=np.inf):
+    def _calculate_bounds(self, eps=np.finfo(np.float64).eps, scale=np.inf):
         """calculate the lower and upper bounds on independent variables
         fix the first marker at the origin of the coordinate system
         """
