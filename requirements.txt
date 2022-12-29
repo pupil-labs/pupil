@@ -30,4 +30,4 @@ pupil-apriltags==1.0.*
 pupil-detectors>=2.0.2rc2
 pupil-labs-uvc
 pye3d==0.3.*
-pyglui>=1.31.0
+pyglui>=1.31.1b1
