@@ -53,6 +53,7 @@ def main():
         "pye3d",
         "OpenGL",
         "pylsl",
+        "sklearn",
     ):
         datas, binaries, hiddenimports = collect_all(
             name, exclude_datas=["**/__pycache__"]
