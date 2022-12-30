@@ -62,13 +62,18 @@ def main():
         all_binaries.extend(binaries)
         all_hidden_imports.extend(hiddenimports)
 
+    if current_platform == SupportedPlatform.linux:
+        runtime_hooks = ["runtime_hook_sounddevice.py"]
+    else:
+        runtime_hooks = []
+
     a = Analysis(
         ["../pupil_src/main.py"],
         pathex=["../pupil_src/shared_modules/"],
         datas=all_datas,
         binaries=all_binaries,
         hiddenimports=all_hidden_imports,
-        # runtime_hooks=["pupil_core_hooks.py"],
+        runtime_hooks=runtime_hooks,
     )
     pyz = PYZ(a.pure)
 
