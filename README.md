@@ -67,6 +67,8 @@ code repository for manual installation steps and troubleshooting.
 
 #### Linux
 
+##### USB Access
+
 To grant Pupil Core applications access to the cameras, run
 
 ```sh
@@ -78,6 +80,14 @@ and ensure that your user is part of the `plugdev` group:
 
 ```sh
 sudo usermod -a -G plugdev $USER
+```
+
+##### Audio Playback
+
+The [`sounddevice`](https://python-sounddevice.readthedocs.io/en/0.4.5/installation.html#installation) package depends on the `libportaudio2` library:
+
+```sh
+sudo apt install libportaudio2
 ```
 
 ### Run Pupil
