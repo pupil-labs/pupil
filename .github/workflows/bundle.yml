@@ -36,7 +36,7 @@ jobs:
           python -m pip install -r requirements.txt -r requirements-bundle.txt
       - name: Install Linux-specific dependencies
         if: runner.os == 'Linux'
-        run: apt install libportaudio2
+        run: sudo apt-get install libportaudio2
       - name: Bundle on Windows
         if: runner.os == 'Windows'
         run: .\reproducible_build.ps1
