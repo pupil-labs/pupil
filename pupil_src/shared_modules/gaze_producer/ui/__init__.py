@@ -1,14 +1,13 @@
 """
 (*)~---------------------------------------------------------------------------
 Pupil - eye tracking platform
-Copyright (C) 2012-2022 Pupil Labs
+Copyright (C) Pupil Labs
 
 Distributed under the terms of the GNU
 Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-
 from gaze_producer.ui.select_and_refresh_menu import SelectAndRefreshMenu
 from gaze_producer.ui.storage_edit_menu import StorageEditMenu
 
