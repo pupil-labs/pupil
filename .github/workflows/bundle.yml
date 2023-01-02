@@ -43,7 +43,7 @@ jobs:
         shell: powershell
         working-directory: deployment
       - name: Import macOS codesign certificates
-        if: runner.os == 'macOS' && github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        if: runner.os == 'macOS'
         uses: apple-actions/import-codesign-certs@v1
         with:
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
