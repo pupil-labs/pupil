@@ -1,10 +1,7 @@
 name: Bundle Pupil Core
 
 on:
-  pull_request:
   push:
-    branches:
-      - develop
     tags:
       - "**"
   workflow_dispatch:
@@ -69,3 +66,21 @@ jobs:
             deployment/*.dmg
             deployment/*.json
             deployment/*.zip
+
+  draft_release:
+    name: Draft Github release
+    needs: Bundle
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+      - name: Create Github release draft
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *.rar
+            *.dmg
+            *.zip
+          draft: true
+          name: Pupil Capture, Player, and Service release
