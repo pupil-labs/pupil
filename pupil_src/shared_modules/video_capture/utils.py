@@ -125,16 +125,16 @@ class Check_Frame_Stripes:
         num_local_optimum = [0, 0]
         if self.row_index is None:
             self.row_index = np.linspace(
-                8, frame_gray.shape[0] - 8, num=self.len_row_index, dtype=np.int
+                8, frame_gray.shape[0] - 8, num=self.len_row_index, dtype=np.int64
             )
             self.col_index = np.linspace(
-                8, frame_gray.shape[1] - 8, num=self.len_col_index, dtype=np.int
+                8, frame_gray.shape[1] - 8, num=self.len_col_index, dtype=np.int64
             )
         for n in [0, 1]:
             if n == 0:
-                arrs = np.array(frame_gray[self.row_index, :], dtype=np.int)
+                arrs = np.array(frame_gray[self.row_index, :], dtype=np.int64)
             else:
-                arrs = np.array(frame_gray[:, self.col_index], dtype=np.int)
+                arrs = np.array(frame_gray[:, self.col_index], dtype=np.int64)
                 arrs = np.transpose(arrs)
 
             local_max_union = set()

@@ -76,7 +76,11 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
             return  # Unknown/unexpected notification, not handling it
         else:
             if note.action == ChoreographyAction.SHOULD_START and not self.is_active:
-                self._prepare_perform_start_from_notification(note_dict)
+                try:
+                    self._prepare_perform_start_from_notification(note_dict)
+                except KeyError as err:
+                    logger.error(f"Calibration cannot be started without {err}")
+                    return
 
             elif note.action == ChoreographyAction.ADD_REF_DATA and self.is_active:
                 self.ref_list += note_dict["ref_data"]
