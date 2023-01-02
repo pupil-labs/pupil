@@ -8,12 +8,20 @@ from . import ParsedVersion
 
 
 def package_bundles_as_dmg(base: pathlib.Path, version: ParsedVersion):
-    for app in base.glob("*.app"):
-        sign_app(app)
-    logging.info(f"Creating dmg file for Pupil Core {version}")
-    dmg_file = create_dmg(create_and_fill_dmg_srcfolder(base), base.name, version)
-    sign_object(dmg_file)
-    notarize_bundle(dmg_file)
+    should_sign_and_notarize = (
+        os.environ.get("MACOS_SHOULD_SIGN_AND_NOTARIZE", "false") == "true"
+    )
+    if should_sign_and_notarize:
+        for app in base.glob("*.app"):
+            sign_app(app)
+        logging.info(f"Creating dmg file for Pupil Core {version}")
+        dmg_file = create_dmg(create_and_fill_dmg_srcfolder(base), base.name, version)
+        sign_object(dmg_file)
+        notarize_bundle(dmg_file)
+    else:
+        logging.info("Skipping signing, notarization, and creation of dmg file")
+        for app in base.glob("*.app"):
+            app.rename(app.name)
 
 
 def create_and_fill_dmg_srcfolder(

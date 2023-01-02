@@ -43,7 +43,7 @@ jobs:
         shell: powershell
         working-directory: deployment
       - name: Import macOS codesign certificates
-        if: runner.os == 'macOS'
+        if: runner.os == 'macOS' && github.event_name == 'push' && contains(github.ref, 'refs/tags/')
         uses: apple-actions/import-codesign-certs@v1
         with:
           p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
@@ -53,6 +53,7 @@ jobs:
         run: ./reproducible_build.sh
         working-directory: deployment
         env:
+          MACOS_SHOULD_SIGN_AND_NOTARIZE: ${{ github.event_name == 'push' && contains(github.ref, 'refs/tags/') }}
           MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
           MACOS_NOTARYTOOL_APPLE_ID: ${{ secrets.MACOS_NOTARYTOOL_APPLE_ID }}
           MACOS_NOTARYTOOL_TEAM_ID: ${{ secrets.MACOS_NOTARYTOOL_TEAM_ID }}
@@ -64,6 +65,7 @@ jobs:
           name: bundle-${{ matrix.platform }}
           path: |
             deployment/*.rar
+            deployment/*.app
             deployment/*.dmg
             deployment/*.json
             deployment/*.zip
