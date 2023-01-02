@@ -54,11 +54,16 @@ jobs:
         working-directory: deployment
         env:
           MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+          MACOS_NOTARYTOOL_APPLE_ID: ${{ secrets.MACOS_NOTARYTOOL_APPLE_ID }}
+          MACOS_NOTARYTOOL_TEAM_ID: ${{ secrets.MACOS_NOTARYTOOL_TEAM_ID }}
+          MACOS_NOTARYTOOL_APPSPECIFIC_PASSWORD: ${{ secrets.MACOS_NOTARYTOOL_APPSPECIFIC_PASSWORD }}
       - name: Upload build as artifact
         uses: actions/upload-artifact@v3
+        if: always()
         with:
           name: bundle-${{ matrix.platform }}
           path: |
             deployment/*.rar
             deployment/*.dmg
+            deployment/*.json
             deployment/*.zip
