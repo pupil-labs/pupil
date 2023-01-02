@@ -164,6 +164,8 @@ class UVC_Source(Base_Source):
             (0x046D, 0x0843, "Logitech Webcam C930e"),
             (0x17EF, 0x480F, "Lenovo Integrated Camera"),
             (0x0C45, 0x64AB, "Pupil Cam2 ID0"),
+            (0x04B4, 0x0036, "Neon Sensor Module v1"),
+            (0x0BDA, 0x3036, "Neon Scene Camera v1"),
         ]
         ids_present = 0
         ids_to_install = []
