@@ -416,22 +416,6 @@ def launcher():
                             "doc": launcher.__doc__,
                         }
                     )
-                elif "notify.shared_camera_process.should_start" in topic:
-                    from launchables.shared_camera import event_loop
-
-                    Process(
-                        target=event_loop,
-                        name="shared_camera",
-                        args=(
-                            timebase,
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            parsed_args.debug,
-                            parsed_args.skip_driver_installation,
-                        ),
-                    ).start()
                 elif "notify.launcher_process.should_stop" in topic:
                     if parsed_args.app == "capture":
                         cmd_push.notify({"subject": "world_process.should_stop"})
