@@ -156,7 +156,9 @@ class HMD_Streaming_Source(Base_Source):
         self,
         g_pool,
         topics: Iterable[str] = ("hmd_streaming.world",),
-        hwm=100,
+        hwm: int = 100,
+        flip_preview: Optional[bool] = None,
+        menu_name: Optional[str] = None,
         *args,
         **kwargs,
     ):
@@ -172,6 +174,14 @@ class HMD_Streaming_Source(Base_Source):
             topics=self.__topics,
             hwm=self.__hwm,
         )
+        if menu_name is not None:
+            self.name = menu_name  # type: ignore
+        if self.g_pool.process.startswith("eye") and flip_preview is not None:
+            self._original_flip_value: Optional[bool] = self.g_pool.flip
+            self.g_pool.flip = flip_preview
+            logger.debug(f"Overwriting `g_pool.flip` to {flip_preview}")
+        else:
+            self._original_flip_value = None
 
     def get_init_dict(self):
         init_dict = super().get_init_dict()
@@ -181,6 +191,9 @@ class HMD_Streaming_Source(Base_Source):
 
     def cleanup(self):
         self.frame_sub = None
+        if self._original_flip_value is not None:
+            self.g_pool.flip = self._original_flip_value
+            logger.debug(f"Restoring `g_pool.flip` to {self._original_flip_value}")
 
     def recent_events(self, events):
         frame = self.get_frame()
@@ -271,5 +284,5 @@ class HMD_Streaming_Source(Base_Source):
 
     def ui_elements(self):
         ui_elements = []
-        ui_elements.append(ui.Info_Text(f"HMD Streaming"))
+        ui_elements.append(ui.Info_Text(self.name))
         return ui_elements

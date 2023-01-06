@@ -462,7 +462,11 @@ def network_interface(
                     "subject": "start_eye_plugin",
                     "target": f"eye{eye_id}",
                     "name": "HMD_Streaming_Source",
-                    "args": {"topics": (topic_prefix + f"eye{eye_id}",)},
+                    "args": {
+                        "topics": (topic_prefix + f"eye{eye_id}",),
+                        "flip_preview": False,
+                        "menu_name": f"Neon {['right', 'left'][eye_id]} eye camera",
+                    },
                 },
                 use_bin_type=True,
             )
