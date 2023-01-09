@@ -173,6 +173,52 @@ default_intrinsics: RawIntrinsicsByResolutionByName = {
             "cam_type": "radial",
         }
     },
+    "Neon Scene Camera v1": {
+        "(1600, 1200)": {
+            "dist_coefs": [
+                [
+                    -0.13199101574152391,
+                    0.11064108837365579,
+                    0.00010404274838141136,
+                    -0.00019483441697480834,
+                    -0.002837744957163781,
+                    0.17125797998042083,
+                    0.05167573834059702,
+                    0.021300346544012465,
+                ]
+            ],
+            "camera_matrix": [
+                [892.1746128870618, 0.0, 829.7903330088201],
+                [0.0, 891.4721112020742, 606.9965952706247],
+                [0.0, 0.0, 1.0],
+            ],
+            "cam_type": "radial",
+        }
+    },
+    "Neon Sensor Module v1": {
+        # resolution for both eyes, but intrinsics below are used for each eye after
+        # splitting the image into left and right
+        "(384, 192)": {
+            "dist_coefs": [
+                [
+                    0.05449484235207129,
+                    -0.14013187141454536,
+                    0.0006598061556076783,
+                    5.0572400552608696e-05,
+                    -0.6158040573125376,
+                    -0.048953803434398195,
+                    0.04521347340211147,
+                    -0.7004955138758611,
+                ]
+            ],
+            "camera_matrix": [
+                [140.68445787837342, 0.0, 99.42393317744813],
+                [0.0, 140.67571954970256, 96.235134525304],
+                [0.0, 0.0, 1.0],
+            ],
+            "cam_type": "radial",
+        }
+    },
 }
 
 # Add measured intrinsics for the eyes (once for each ID for easy lookup)

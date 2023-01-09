@@ -5,8 +5,10 @@ import time
 from multiprocessing.sharedctypes import SynchronizedBase
 from multiprocessing.synchronize import Event as EventClass
 
+import camera_models as cm
+
 from .camera import NeonCameraInterface
-from .definitions import LEFT_EYE_CAM_INTRINSICS, MODULE_SPEC, RIGHT_EYE_CAM_INTRINSICS
+from .definitions import MODULE_SPEC, DistortionCoeffs, Intrinsics, ProjectionMatrix
 from .network import NetworkInterface
 
 
@@ -14,6 +16,7 @@ class BackgroundCameraSharingManager:
     def __init__(
         self,
         timebase: "SynchronizedBase[ctypes.c_double]",  # mp.Value
+        user_dir: str,
         ipc_pub_url: str,
         ipc_sub_url: str,
         ipc_push_url: str,
@@ -30,6 +33,7 @@ class BackgroundCameraSharingManager:
                 process_started_event,
                 self.should_stop_running_event,
                 timebase,
+                user_dir,
                 ipc_pub_url,
                 ipc_sub_url,
                 ipc_push_url,
@@ -58,6 +62,7 @@ class BackgroundCameraSharingManager:
         process_started_event: EventClass,
         should_stop_running_event: EventClass,
         timebase: "SynchronizedBase[ctypes.c_double]",  # mp.Value
+        user_dir: str,
         ipc_pub_url: str,
         ipc_sub_url: str,
         ipc_push_url: str,
@@ -79,6 +84,14 @@ class BackgroundCameraSharingManager:
             num_frames_recv = 0
             num_frames_forwarded = 0
 
+            camera_model = cm.Camera_Model.from_file(
+                user_dir, MODULE_SPEC.name, (MODULE_SPEC.width, MODULE_SPEC.height)
+            )
+            intrinsics = Intrinsics(
+                projection_matrix=camera_model.K.tolist(),
+                distortion_coeffs=camera_model.D.tolist(),
+            )
+
             while not should_stop_running_event.is_set():
                 frame = camera.get_shared_frame(0.5)
                 if frame is not None:
@@ -87,12 +100,8 @@ class BackgroundCameraSharingManager:
                 split_frames = camera.split_shared_frame(frame)
                 if split_frames is not None:
                     num_frames_forwarded += 1
-                    network.send_eye_frame(
-                        split_frames.right, RIGHT_EYE_CAM_INTRINSICS, eye_id=0
-                    )
-                    network.send_eye_frame(
-                        split_frames.left, LEFT_EYE_CAM_INTRINSICS, eye_id=1
-                    )
+                    network.send_eye_frame(split_frames.right, intrinsics, eye_id=0)
+                    network.send_eye_frame(split_frames.left, intrinsics, eye_id=1)
                 now = time.perf_counter()
                 if now - last_status_update > 5.0:
                     total_time = now - first_update

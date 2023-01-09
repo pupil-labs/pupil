@@ -91,6 +91,7 @@ class Neon_Manager(Base_Manager):
             logger.debug("Launching BackgroundCameraSharingManager")
             self._neon_eye_camera_sharing_manager = BackgroundCameraSharingManager(
                 timebase=self.g_pool.timebase,
+                user_dir=self.g_pool.user_dir,
                 ipc_pub_url=self.g_pool.ipc_pub_url,
                 ipc_push_url=self.g_pool.ipc_push_url,
                 ipc_sub_url=self.g_pool.ipc_sub_url,
