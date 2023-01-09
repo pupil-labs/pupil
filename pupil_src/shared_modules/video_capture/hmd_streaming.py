@@ -158,7 +158,6 @@ class HMD_Streaming_Source(Base_Source):
         topics: Iterable[str] = ("hmd_streaming.world",),
         hwm: int = 100,
         flip_preview: Optional[bool] = None,
-        menu_name: Optional[str] = None,
         *args,
         **kwargs,
     ):
@@ -174,8 +173,6 @@ class HMD_Streaming_Source(Base_Source):
             topics=self.__topics,
             hwm=self.__hwm,
         )
-        if menu_name is not None:
-            self.name = menu_name  # type: ignore
         if self.g_pool.process.startswith("eye") and flip_preview is not None:
             self._original_flip_value: Optional[bool] = self.g_pool.flip
             self.g_pool.flip = flip_preview

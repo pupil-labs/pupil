@@ -26,6 +26,7 @@ from pyglui import cygl, ui
 from version_utils import parse_version
 
 from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
+from .neon_backend.definitions import SCENE_CAM_SPEC, CameraSpec
 from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
@@ -291,6 +292,13 @@ class UVC_Source(Base_Source):
             )
             self.ts_offset = -0.1
 
+        # Set NEON bandwidth factors
+        if self.uvc_capture.name in CameraSpec.spec_by_name():
+            cam = self.uvc_capture.name
+            spec = CameraSpec.spec_by_name()[cam]
+            self.uvc_capture.bandwidth_factor = spec.bandwidth_factor
+            logger.debug(f"Set {cam} bandwidth_factor to {spec.bandwidth_factor}")
+
         # UVC setting quirks:
         controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
 
@@ -384,6 +392,27 @@ class UVC_Source(Base_Source):
                 controls_dict["Gamma"].value = 200
             except KeyError:
                 pass
+
+        elif self.uvc_capture.name == SCENE_CAM_SPEC.name:
+            controls = {
+                "Backlight Compensation": 2,
+                "Brightness": 0,
+                "Contrast": 32,
+                "Gain": 64,
+                "Hue": 0,
+                "Saturation": 64,
+                "Sharpness": 50,
+                "Gamma": 300,
+                "White Balance temperature": 4600,
+            }
+            for key, value in controls.items():
+                try:
+                    controls_dict[key].value = value
+                except KeyError:
+                    logger.debug(
+                        f"Setting {key} to {value} failed: Unknown control. Known "
+                        f"controls: {list(controls_dict)}"
+                    )
 
         else:
             self.uvc_capture.bandwidth_factor = 2.0
@@ -901,6 +930,7 @@ class UVC_Manager(Base_Manager):
         # Do not show RealSense cameras in selection, since they are not supported
         # anymore in Pupil Capture since v1.22 and won't work.
         self.ignore_name_patterns = ["RealSense"]
+        # Do not show Neon cameras in selection, use dedicated backend instead
         self.ignore_vid_pid = [(0x04B4, 0x0036), (0x0BDA, 0x3036)]
 
     def get_devices(self):
@@ -922,7 +952,7 @@ class UVC_Manager(Base_Manager):
             if not any(
                 pattern in device["name"] for pattern in self.ignore_name_patterns
             )
-            and (device["idVendor"], device["idProduct"]) not in self.ignore_vid_pid
+            # and (device["idVendor"], device["idProduct"]) not in self.ignore_vid_pid
         ]
 
     def activate(self, key):
