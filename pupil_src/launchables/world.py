@@ -91,7 +91,6 @@ def world(
         n = {
             "subject": f"eye_process.should_stop.{eye_id}",
             "eye_id": eye_id,
-            "delay": 0.2,
         }
         ipc_pub.notify(n)
 
