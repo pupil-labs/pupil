@@ -56,6 +56,7 @@ class NeonCameraInterface:
                 camera.fps,
             ):
                 capture.frame_mode = mode
+                capture.get_frame(1.0)  # starts the stream
                 return capture
         capture.close()
         raise OSError(f"None of the available modes matched: {capture.available_modes}")
