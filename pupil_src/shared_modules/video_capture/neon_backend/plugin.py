@@ -105,6 +105,14 @@ class Neon_Manager(Base_Manager):
             self._neon_eye_camera_sharing_manager.stop()
         return super().cleanup()
 
+    def recent_events(self, events):
+        if (
+            self._neon_eye_camera_sharing_manager is not None
+            and not self._neon_eye_camera_sharing_manager.is_running
+        ):
+            raise ValueError("Shared camera processed stopped unexpectedly!")
+        return super().recent_events(events)
+
 
 class Neon_Eye_Cam_Source(HMD_Streaming_Source):
     def __init__(self, g_pool, topics=None, *args, **kwargs):
