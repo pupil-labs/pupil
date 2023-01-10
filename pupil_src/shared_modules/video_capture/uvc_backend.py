@@ -592,6 +592,15 @@ class UVC_Source(Base_Source):
             self.stripe_detector = Check_Frame_Stripes()
 
     @property
+    def bandwidth_factor(self) -> float:
+        return self.uvc_capture.bandwidth_factor if self.uvc_capture else float("nan")
+
+    @bandwidth_factor.setter
+    def bandwidth_factor(self, value: float):
+        if self.uvc_capture and not np.isnan(value):
+            self.uvc_capture.bandwidth_factor = value
+
+    @property
     def should_check_stripes(self):
         return self.enable_stripe_checks and ("Pupil Cam2" in self.uvc_capture.name)
 
@@ -700,6 +709,10 @@ class UVC_Source(Base_Source):
         sensor_control.collapsed = False
         image_processing = ui.Growing_Menu(label="Image Post Processing")
         image_processing.collapsed = True
+
+        sensor_control.append(
+            ui.Text_Input("bandwidth_factor", self, label="Bandwidth factor")
+        )
 
         sensor_control.append(
             ui.Selector(
