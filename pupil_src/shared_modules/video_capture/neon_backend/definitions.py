@@ -38,7 +38,7 @@ SCENE_CAM_SPEC = CameraSpec(
     width=1280,
     height=720,
     fps=30,
-    bandwidth_factor=1.0,
+    bandwidth_factor=1.2,
 )
 MODULE_SPEC = CameraSpec(
     name="Neon Sensor Module v1",
