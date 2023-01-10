@@ -55,7 +55,10 @@ class NetworkInterface:
         import zmq_tools
 
         self.zmq_ctx = zmq.Context()
-        self.ipc_pub = zmq_tools.Msg_Streamer(self.zmq_ctx, ipc_pub_url)
+        self.num_subscribers = 0
+        self.ipc_pub = zmq_tools.Msg_Streamer(
+            self.zmq_ctx, ipc_pub_url, socket_type=zmq.XPUB
+        )
         self.notify_sub = zmq_tools.Msg_Receiver(
             self.zmq_ctx, ipc_sub_url, topics=("notify",)
         )
@@ -149,3 +152,11 @@ class NetworkInterface:
                 "__raw_data__": [np.ascontiguousarray(image)],
             }
         )
+
+    def process_subscriptions(self):
+        while self.ipc_pub.socket.get(zmq.EVENTS) & zmq.POLLIN:
+            subscription, *_ = self.ipc_pub.socket.recv_multipart()
+            if subscription.startswith(b"\x01" + self.topic_prefix.encode()):
+                self.num_subscribers += 1
+            elif subscription.startswith(b"\x00" + self.topic_prefix.encode()):
+                self.num_subscribers = max(self.num_subscribers - 1, 0)

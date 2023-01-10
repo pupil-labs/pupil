@@ -1,14 +1,16 @@
+import contextlib
 import ctypes
 import logging
 import multiprocessing
 import time
 from multiprocessing.sharedctypes import SynchronizedBase
 from multiprocessing.synchronize import Event as EventClass
+from typing import Optional
 
 import camera_models as cm
 
 from .camera import NeonCameraInterface
-from .definitions import MODULE_SPEC, DistortionCoeffs, Intrinsics, ProjectionMatrix
+from .definitions import MODULE_SPEC, Intrinsics
 from .network import NetworkInterface
 
 
@@ -75,14 +77,9 @@ class BackgroundCameraSharingManager:
                 ipc_sub_url=ipc_sub_url,
                 ipc_push_url=ipc_push_url,
             ) as network,
-            NeonCameraInterface(MODULE_SPEC) as camera,
+            contextlib.suppress(KeyboardInterrupt),
         ):
             process_started_event.set()
-
-            last_status_update = time.perf_counter()
-            first_update = last_status_update
-            num_frames_recv = 0
-            num_frames_forwarded = 0
 
             camera_model = cm.Camera_Model.from_file(
                 user_dir, MODULE_SPEC.name, (MODULE_SPEC.width, MODULE_SPEC.height)
@@ -91,8 +88,29 @@ class BackgroundCameraSharingManager:
                 projection_matrix=camera_model.K.tolist(),
                 distortion_coeffs=camera_model.D.tolist(),
             )
+            camera: Optional[NeonCameraInterface] = None
 
             while not should_stop_running_event.is_set():
+
+                network.process_subscriptions()
+                if network.num_subscribers > 0 and camera is None:
+                    network.logger.debug("New subscriber(s) - start sharing camera")
+                    camera = NeonCameraInterface(MODULE_SPEC)
+                    last_status_update = time.perf_counter()
+                    first_update = last_status_update
+                    num_frames_recv = 0
+                    num_frames_forwarded = 0
+                elif network.num_subscribers == 0 and camera is not None:
+                    camera.close()
+                    camera = None
+                    network.logger.debug(
+                        "No more subscriber(s) - stopped sharing camera"
+                    )
+
+                if camera is None:
+                    time.sleep(0.5)
+                    continue
+
                 frame = camera.get_shared_frame(0.5)
                 if frame is not None:
                     num_frames_recv += 1

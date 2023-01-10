@@ -142,8 +142,8 @@ class Msg_Streamer(ZMQ_Socket):
     Not threadsave. Make a new one for each thread
     """
 
-    def __init__(self, ctx, url, hwm=None):
-        self.socket = zmq.Socket(ctx, zmq.PUB)
+    def __init__(self, ctx, url, hwm=None, socket_type: int = zmq.PUB):
+        self.socket = zmq.Socket(ctx, socket_type)
         if hwm is not None:
             self.socket.set_hwm(hwm)
 
