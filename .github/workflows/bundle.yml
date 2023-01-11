@@ -2,6 +2,8 @@ name: Bundle Pupil Core
 
 on:
   push:
+    branch:
+      - bundle-refactor
     tags:
       - "**"
   workflow_dispatch:
@@ -13,10 +15,12 @@ jobs:
       fail-fast: False
       matrix:
         platform:
-          - windows-latest
-          - macOS-11
+          # - windows-latest
+          # - macOS-11
           - ubuntu-latest
     runs-on: ${{ matrix.platform }}
+    container:
+      image: quay.io/pypa/manylinux2014_x86_64
     steps:
       - uses: actions/checkout@v3
         with:
