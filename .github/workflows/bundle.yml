@@ -1,9 +1,8 @@
 name: Bundle Pupil Core
 
 on:
+  pull_request:
   push:
-    branch:
-      - bundle-refactor
     tags:
       - "**"
   workflow_dispatch:
