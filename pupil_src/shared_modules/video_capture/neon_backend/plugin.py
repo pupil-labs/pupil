@@ -99,6 +99,7 @@ class Neon_Manager(Base_Manager):
                 topic_prefix=NEON_SHARED_EYE_CAM_TOPIC,
             )
             logger.debug("Launched BackgroundCameraSharingManager")
+            self.notify_all({"subject": "frame_publishing.started", "format": "gray"})
 
     def cleanup(self):
         if self._neon_eye_camera_sharing_manager is not None:
