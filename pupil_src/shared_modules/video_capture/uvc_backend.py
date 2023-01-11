@@ -948,7 +948,15 @@ class UVC_Manager(Base_Manager):
 
     def get_devices(self):
         self.devices.update()
-        if len(self.devices) == 0:
+        uvc_auto_selection_devices = [
+            device
+            for device in self.devices
+            if not any(
+                pattern in device["name"] for pattern in self.ignore_name_patterns
+            )
+            and (device["idVendor"], device["idProduct"]) not in self.ignore_vid_pid
+        ]
+        if len(uvc_auto_selection_devices) == 0:
             return []
         else:
             return [SourceInfo(label="Local USB", manager=self, key="usb")]
@@ -965,7 +973,6 @@ class UVC_Manager(Base_Manager):
             if not any(
                 pattern in device["name"] for pattern in self.ignore_name_patterns
             )
-            # and (device["idVendor"], device["idProduct"]) not in self.ignore_vid_pid
         ]
 
     def activate(self, key):
