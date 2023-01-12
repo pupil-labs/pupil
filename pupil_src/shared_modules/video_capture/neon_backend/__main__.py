@@ -7,7 +7,7 @@ import sys
 from typing import Tuple
 
 from .background import BackgroundCameraSharingManager
-from .definitions import NEON_SHARED_EYE_CAM_TOPIC
+from .definitions import NEON_SHARED_EYE_FRAME_TOPIC
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
         ipc_pub_url=ipc_pub_url,
         ipc_push_url=ipc_push_url,
         ipc_sub_url=ipc_sub_url,
-        topic_prefix=NEON_SHARED_EYE_CAM_TOPIC,
+        topic_prefix=NEON_SHARED_EYE_FRAME_TOPIC,
     )
     with contextlib.suppress(KeyboardInterrupt):
         manager._background_process.join()

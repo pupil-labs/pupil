@@ -1,7 +1,7 @@
 import logging
 import time
 from types import SimpleNamespace
-from typing import Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 import numpy as np
 import numpy.typing as npt
@@ -158,10 +158,26 @@ class NeonCameraInterface:
         if self._uvc_capture is not None:
             self._uvc_capture.close()
         self._uvc_capture = None
-        self._pyusb_device = None
 
     def __enter__(self):
         return self
 
     def __exit__(self, *args, **kwargs):
         self.close()
+
+    @property
+    def controls(self) -> Dict[str, Any]:
+        if self._uvc_capture is None:
+            return {}
+        return {c.display_name: c.value for c in self._uvc_capture.controls}
+
+    @controls.setter
+    def controls(self, to_be_changed: Dict[str, Any]):
+        if self._uvc_capture is None:
+            return
+
+        controls: Dict[str, Any] = {
+            c.display_name: c for c in self._uvc_capture.controls
+        }
+        for key in set(to_be_changed) & set(controls):
+            controls[key].value = to_be_changed[key]

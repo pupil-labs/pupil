@@ -10,7 +10,11 @@ from typing import Optional
 import camera_models as cm
 
 from .camera import NeonCameraInterface
-from .definitions import MODULE_SPEC, Intrinsics
+from .definitions import (
+    MODULE_SPEC,
+    NEON_SHARED_CAM_STATE_CHANGE_REQUEST_TOPIC,
+    Intrinsics,
+)
 from .network import NetworkInterface
 
 
@@ -100,12 +104,26 @@ class BackgroundCameraSharingManager:
                     first_update = last_status_update
                     num_frames_recv = 0
                     num_frames_forwarded = 0
+                    network.announce_camera_state(camera.controls)
                 elif network.num_subscribers == 0 and camera is not None:
                     camera.close()
                     camera = None
                     network.logger.debug(
                         "No more subscriber(s) - stopped sharing camera"
                     )
+                    network.announce_camera_state({})
+
+                for topic, notification in network.process_notifications():
+                    if (
+                        notification["subject"]
+                        == NEON_SHARED_CAM_STATE_CHANGE_REQUEST_TOPIC
+                    ):
+                        network.logger.debug(f"Received {notification}")
+                        if camera is not None:
+                            camera.controls = notification
+                            network.announce_camera_state(camera.controls)
+                        else:
+                            network.announce_camera_state({})
 
                 if camera is None:
                     time.sleep(0.5)

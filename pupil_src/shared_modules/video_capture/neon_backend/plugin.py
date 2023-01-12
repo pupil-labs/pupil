@@ -1,11 +1,17 @@
 import logging
-from typing import Any, Optional, Sequence
+from functools import partial
+from typing import Any, Dict, Optional, Sequence
 
 from ..base_backend import Base_Manager, Base_Source, SourceInfo
 from ..hmd_streaming import HMD_Streaming_Source
 from .background import BackgroundCameraSharingManager
 from .camera import NeonCameraInterface
-from .definitions import NEON_SHARED_EYE_CAM_TOPIC, SCENE_CAM_SPEC
+from .definitions import (
+    NEON_SHARED_CAM_STATE_ANNOUNCEMENT_TOPIC,
+    NEON_SHARED_CAM_STATE_CHANGE_REQUEST_TOPIC,
+    NEON_SHARED_EYE_FRAME_TOPIC,
+    SCENE_CAM_SPEC,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +102,7 @@ class Neon_Manager(Base_Manager):
                 ipc_push_url=self.g_pool.ipc_push_url,
                 ipc_sub_url=self.g_pool.ipc_sub_url,
                 wait_for_process_start=True,
-                topic_prefix=NEON_SHARED_EYE_CAM_TOPIC,
+                topic_prefix=NEON_SHARED_EYE_FRAME_TOPIC,
             )
             logger.debug("Launched BackgroundCameraSharingManager")
             self.notify_all({"subject": "frame_publishing.started", "format": "gray"})
@@ -118,7 +124,7 @@ class Neon_Manager(Base_Manager):
 class Neon_Eye_Cam_Source(HMD_Streaming_Source):
     def __init__(self, g_pool, topics=None, *args, **kwargs):
         if topics is None:
-            topics = (NEON_SHARED_EYE_CAM_TOPIC + g_pool.process,)  # type: ignore
+            topics = (NEON_SHARED_EYE_FRAME_TOPIC + g_pool.process,)  # type: ignore
         super().__init__(
             g_pool,
             topics=topics,
@@ -131,6 +137,54 @@ class Neon_Eye_Cam_Source(HMD_Streaming_Source):
         eye = {"eye0": "right", "eye1": "left"}.get(g_pool.process, None)
         self.name = f"Neon {eye} eye camera"
 
+        self.camera_state: Dict[str, Any] = {
+            "connected": False,
+            "Absolute Exposure Time": 49,
+        }
+
     @classmethod
     def base_class(cls):
         return Base_Source
+
+    def on_notify(self, notification: Dict[str, Any]):
+        if notification["subject"] == NEON_SHARED_CAM_STATE_ANNOUNCEMENT_TOPIC:
+            self.update_ui(notification)
+        return super().on_notify(notification)
+
+    def update_ui(self, notification: Dict[str, Any]):
+        notification = notification.copy()
+        del notification["subject"]
+        self.camera_state.update(notification)
+
+        if hasattr(self, "menu"):
+            for element in self.menu:
+                element.read_only = not self.camera_state["connected"]
+
+    def init_ui(self):
+        super().init_ui()
+
+        from pyglui import ui
+
+        exposure_time = "Absolute Exposure Time"
+        self.menu.append(
+            ui.Slider(
+                exposure_time,
+                self.camera_state,
+                min=0,
+                max=255,
+                step=1,
+                setter=partial(self._request_camera_change, exposure_time),
+            )
+        )
+        for element in self.menu:
+            element.read_only = not self.camera_state["connected"]
+
+    def _request_camera_change(self, attr: str, value: Any):
+        self.camera_state[attr] = value
+        self.notify_all(
+            {
+                "subject": NEON_SHARED_CAM_STATE_CHANGE_REQUEST_TOPIC,
+                "delay": 0.2,
+                **self.camera_state,
+            }
+        )

@@ -1,4 +1,5 @@
-from typing import Dict, NamedTuple, Tuple
+import sys
+from typing import Dict, NamedTuple, Tuple, get_type_hints
 
 import numpy as np
 import numpy.typing as npt
@@ -77,4 +78,8 @@ class Intrinsics(NamedTuple):
     distortion_coeffs: DistortionCoeffs
 
 
-NEON_SHARED_EYE_CAM_TOPIC = "neon_backend.shared_eye_cam."
+NEON_SHARED_EYE_FRAME_TOPIC = "neon_backend.shared_eye_frame."
+
+_STATE_TOPIC_PREFIX = "neon_backend.shared_cam_state."
+NEON_SHARED_CAM_STATE_ANNOUNCEMENT_TOPIC = _STATE_TOPIC_PREFIX + "announcement"
+NEON_SHARED_CAM_STATE_CHANGE_REQUEST_TOPIC = _STATE_TOPIC_PREFIX + "change_request"
