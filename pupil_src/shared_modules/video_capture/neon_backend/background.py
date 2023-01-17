@@ -124,6 +124,15 @@ class BackgroundCameraSharingManager:
                             network.announce_camera_state(camera.controls)
                         else:
                             network.announce_camera_state({})
+                    if notification["subject"] == "shared_camera.restart":
+                        network.logger.debug("Requested restart")
+                        if camera is not None:
+                            camera.close()
+                            network.announce_camera_state({})
+                            network.logger.debug("Closed")
+                        camera = None
+                        time.sleep(1.0)
+                        network.logger.debug("Restarting")
 
                 if camera is None:
                     time.sleep(0.5)
