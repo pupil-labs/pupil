@@ -140,6 +140,7 @@ class BackgroundCameraSharingManager:
                     network.send_eye_frame(split_frames.left, intrinsics, eye_id=1)
                 now = time.perf_counter()
                 if now - last_status_update > 5.0:
+                    network.announce_camera_state(camera.controls)
                     total_time = now - first_update
                     fps = num_frames_forwarded / total_time
 
