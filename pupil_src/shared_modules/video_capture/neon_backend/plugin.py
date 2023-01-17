@@ -140,6 +140,7 @@ class Neon_Eye_Cam_Source(HMD_Streaming_Source):
         self.camera_state: Dict[str, Any] = {
             "connected": False,
             "Absolute Exposure Time": 49,
+            "Gain": 100,
         }
 
     @classmethod
@@ -174,8 +175,19 @@ class Neon_Eye_Cam_Source(HMD_Streaming_Source):
         )
         self.exposure_time_slider.read_only = not self.camera_state["connected"]
 
+        gain = "Gain"
+        self.gain_slider = ui.Slider(
+            gain,
+            self.camera_state,
+            min=0,
+            max=1000,
+            step=1,
+            setter=partial(self._request_camera_change, gain),
+        )
+
         return [
             self.exposure_time_slider,
+            self.gain_slider,
         ]
 
     def _request_camera_change(self, attr: str, value: Any):
