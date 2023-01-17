@@ -850,7 +850,7 @@ def world(
 
         trace = traceback.format_exc()
         logger.error(f"Process Capture crashed with trace:\n{trace}")
-
+        raise
     finally:
         # de-init all running plugins
         for p in g_pool.plugins:
