@@ -157,27 +157,26 @@ class Neon_Eye_Cam_Source(HMD_Streaming_Source):
         self.camera_state.update(notification)
 
         if hasattr(self, "menu"):
-            for element in self.menu:
-                element.read_only = not self.camera_state["connected"]
+            self.exposure_time_slider.read_only = not self.camera_state["connected"]
 
-    def init_ui(self):
-        super().init_ui()
-
+    def ui_elements(self):
+        """Returns a list of ui elements with info and settings for the source."""
         from pyglui import ui
 
         exposure_time = "Absolute Exposure Time"
-        self.menu.append(
-            ui.Slider(
-                exposure_time,
-                self.camera_state,
-                min=0,
-                max=255,
-                step=1,
-                setter=partial(self._request_camera_change, exposure_time),
-            )
+        self.exposure_time_slider = ui.Slider(
+            exposure_time,
+            self.camera_state,
+            min=0,
+            max=255,
+            step=1,
+            setter=partial(self._request_camera_change, exposure_time),
         )
-        for element in self.menu:
-            element.read_only = not self.camera_state["connected"]
+        self.exposure_time_slider.read_only = not self.camera_state["connected"]
+
+        return [
+            self.exposure_time_slider,
+        ]
 
     def _request_camera_change(self, attr: str, value: Any):
         self.camera_state[attr] = value
