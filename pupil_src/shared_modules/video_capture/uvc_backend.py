@@ -577,9 +577,7 @@ class UVC_Source(Base_Source):
         size = self.uvc_capture.frame_sizes[best_size_idx]
         if tuple(size) != tuple(new_size):
             logger.warning(
-                "{} resolution capture mode not available. Selected {}.".format(
-                    new_size, size
-                )
+                f"{new_size} resolution capture mode not available. Selected {size}."
             )
         self.uvc_capture.frame_size = size
         self.frame_size_backup = size
@@ -597,6 +595,12 @@ class UVC_Source(Base_Source):
 
     @bandwidth_factor.setter
     def bandwidth_factor(self, value: float):
+        if isinstance(value, str):
+            try:
+                value = float(value)
+            except ValueError as err:
+                logger.debug("err")
+                return
         if self.uvc_capture and not np.isnan(value):
             self.uvc_capture.bandwidth_factor = value
 
@@ -619,9 +623,9 @@ class UVC_Source(Base_Source):
         rate = self.uvc_capture.frame_rates[best_rate_idx]
         if rate != new_rate:
             logger.warning(
-                "{}fps capture mode not available at ({}) on '{}'. Selected {}fps. ".format(
-                    new_rate, self.uvc_capture.frame_size, self.uvc_capture.name, rate
-                )
+                f"{new_rate} fps capture mode not available at "
+                f"{self.uvc_capture.frame_size} on {self.uvc_capture.name!r}. "
+                f"Selected {rate} fps."
             )
         self.uvc_capture.frame_rate = rate
         self.frame_rate_backup = rate
@@ -709,10 +713,6 @@ class UVC_Source(Base_Source):
         sensor_control.collapsed = False
         image_processing = ui.Growing_Menu(label="Image Post Processing")
         image_processing.collapsed = True
-
-        sensor_control.append(
-            ui.Text_Input("bandwidth_factor", self, label="Bandwidth factor")
-        )
 
         sensor_control.append(
             ui.Selector(
@@ -816,6 +816,15 @@ class UVC_Source(Base_Source):
                 "Auto Exposure Priority",
                 "Absolute Exposure Time",
             ]
+
+        sensor_control.append(
+            ui.Text_Input(
+                "bandwidth_factor",
+                self,
+                label="Bandwidth factor",
+                getter=lambda: f"{self.bandwidth_factor:.2f}",
+            )
+        )
 
         for control in self.uvc_capture.controls:
             c = None
