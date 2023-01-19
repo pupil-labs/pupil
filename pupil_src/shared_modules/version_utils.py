@@ -69,6 +69,8 @@ def pupil_version_string() -> str:
     if "-" in version:
         parts = version.split("-")
         version = ".".join(parts[:-1])
+    if version_parsed.is_prerelease:
+        version += "".join(map(str, version_parsed.pre))
     return version
 
 
