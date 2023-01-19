@@ -9,7 +9,7 @@ from . import ParsedVersion
 
 def package_bundles_as_dmg(base: pathlib.Path, version: ParsedVersion):
     should_sign_and_notarize = (
-        os.environ.get("MACOS_SHOULD_SIGN_AND_NOTARIZE", "false") == "true"
+        os.environ.get("MACOS_SHOULD_SIGN_AND_NOTARIZE", "false").strip() == "true"
     )
     if should_sign_and_notarize:
         for app in base.glob("*.app"):
