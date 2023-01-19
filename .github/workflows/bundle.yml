@@ -18,9 +18,9 @@ jobs:
       fail-fast: False
       matrix:
         platform:
-          - windows-latest
+          # - windows-latest
           - macOS-11
-          - ubuntu-18.04
+          # - ubuntu-18.04
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v3

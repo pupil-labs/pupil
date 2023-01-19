@@ -34,6 +34,15 @@ DISTPATH: str
 
 
 def main():
+    import os
+
+    from rich import print
+
+    print(os.environ)
+    print(os.environ["MACOS_SHOULD_SIGN_AND_NOTARIZE"])
+    print(f'{os.environ["MACOS_SHOULD_SIGN_AND_NOTARIZE"]=!r}')
+    raise RuntimeError()
+
     cwd = SPECPATH
     current_platform = SupportedPlatform(platform.system())
     deployment_root = pathlib.Path(cwd)
