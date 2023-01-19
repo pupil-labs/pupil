@@ -63,7 +63,7 @@ class UVC_Source(Base_Source):
         uid=None,
         uvc_controls={},
         check_stripes=True,
-        exposure_mode="manual",
+        exposure_mode="auto",
         *args,
         **kwargs,
     ):
