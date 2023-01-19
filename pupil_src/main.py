@@ -309,127 +309,156 @@ def launcher():
         )
 
     with Prevent_Idle_Sleep():
-        while True:
-            # listen for relevant messages.
-            if cmd_sub.socket.poll(timeout=1000):
-                topic, n = cmd_sub.recv()
-                if "notify.eye_process.should_start" in topic:
-                    eye_id = n["eye_id"]
-                    Process(
-                        target=eye,
-                        name=f"eye{eye_id}",
-                        args=(
-                            timebase,
-                            eye_procs_alive[eye_id],
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            eye_id,
-                            n.get("overwrite_cap_settings"),
-                            parsed_args.hide_ui,
-                            parsed_args.debug,
-                            n.get("pub_socket_hwm"),
-                            parsed_args.app,  # parent_application
-                            parsed_args.skip_driver_installation,
-                        ),
-                    ).start()
-                elif "notify.player_process.should_start" in topic:
-                    Process(
-                        target=player,
-                        name="player",
-                        args=(
-                            n["rec_dir"],
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            parsed_args.debug,
-                        ),
-                    ).start()
-                elif "notify.world_process.should_start" in topic:
-                    Process(
-                        target=world,
-                        name="world",
-                        args=(
-                            timebase,
-                            eye_procs_alive,
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            parsed_args.port,
-                            parsed_args.hide_ui,
-                            parsed_args.debug,
-                            parsed_args.skip_driver_installation,
-                        ),
-                    ).start()
-                elif "notify.clear_settings_process.should_start" in topic:
-                    Process(
-                        target=clear_settings, name="clear_settings", args=(user_dir,)
-                    ).start()
-                elif "notify.service_process.should_start" in topic:
-                    Process(
-                        target=service,
-                        name="service",
-                        args=(
-                            timebase,
-                            eye_procs_alive,
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            parsed_args.port,
-                            parsed_args.hide_ui,
-                            parsed_args.debug,
-                        ),
-                    ).start()
-                elif "notify.player_drop_process.should_start" in topic:
-                    Process(
-                        target=player_drop,
-                        name="player",
-                        args=(
-                            n["rec_dir"],
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            parsed_args.debug,
-                        ),
-                    ).start()
-                elif "notify.circle_detector_process.should_start" in topic:
-                    Process(
-                        target=circle_detector,
-                        name="circle_detector",
-                        args=(ipc_push_url, n["pair_url"], n["source_path"]),
-                    ).start()
-                elif "notify.meta.should_doc" in topic:
-                    cmd_push.notify(
-                        {
-                            "subject": "meta.doc",
-                            "actor": "launcher",
-                            "doc": launcher.__doc__,
-                        }
+        try:
+            while True:
+                # listen for relevant messages.
+                if cmd_sub.socket.poll(timeout=1000):
+                    topic, n = cmd_sub.recv()
+                    process_notification(
+                        topic,
+                        n,
+                        timebase,
+                        eye_procs_alive,
+                        ipc_pub_url,
+                        ipc_sub_url,
+                        ipc_push_url,
+                        user_dir,
+                        app_version,
+                        parsed_args,
                     )
-                elif "notify.launcher_process.should_stop" in topic:
-                    if parsed_args.app == "capture":
-                        cmd_push.notify({"subject": "world_process.should_stop"})
-                    elif parsed_args.app == "service":
-                        cmd_push.notify({"subject": "service_process.should_stop"})
-                    elif parsed_args.app == "player":
-                        cmd_push.notify({"subject": "player_process.should_stop"})
+                else:
+                    if not active_children():
+                        break
+        except KeyboardInterrupt:
+            logging.warning(
+                f"Launcher shutting down with active children: {active_children()}"
+            )
+            # TODO: join with timeout and kill after
+        else:
+            for p in active_children():
+                p.join()
 
-            else:
-                if not active_children():
-                    break
 
-        for p in active_children():
-            p.join()
+def process_notification(
+    topic,
+    notification,
+    timebase,
+    eye_procs_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    user_dir,
+    app_version,
+    parsed_args,
+):
+    if "notify.eye_process.should_start" in topic:
+        eye_id = notification["eye_id"]
+        Process(
+            target=eye,
+            name=f"eye{eye_id}",
+            args=(
+                timebase,
+                eye_procs_alive[eye_id],
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                eye_id,
+                notification.get("overwrite_cap_settings"),
+                parsed_args.hide_ui,
+                parsed_args.debug,
+                notification.get("pub_socket_hwm"),
+                parsed_args.app,  # parent_application
+                parsed_args.skip_driver_installation,
+            ),
+        ).start()
+    elif "notify.player_process.should_start" in topic:
+        Process(
+            target=player,
+            name="player",
+            args=(
+                notification["rec_dir"],
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                parsed_args.debug,
+            ),
+        ).start()
+    elif "notify.world_process.should_start" in topic:
+        Process(
+            target=world,
+            name="world",
+            args=(
+                timebase,
+                eye_procs_alive,
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                parsed_args.port,
+                parsed_args.hide_ui,
+                parsed_args.debug,
+                parsed_args.skip_driver_installation,
+            ),
+        ).start()
+    elif "notify.clear_settings_process.should_start" in topic:
+        Process(target=clear_settings, name="clear_settings", args=(user_dir,)).start()
+    elif "notify.service_process.should_start" in topic:
+        Process(
+            target=service,
+            name="service",
+            args=(
+                timebase,
+                eye_procs_alive,
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                parsed_args.port,
+                parsed_args.hide_ui,
+                parsed_args.debug,
+            ),
+        ).start()
+    elif "notify.player_drop_process.should_start" in topic:
+        Process(
+            target=player_drop,
+            name="player",
+            args=(
+                notification["rec_dir"],
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                parsed_args.debug,
+            ),
+        ).start()
+    elif "notify.circle_detector_process.should_start" in topic:
+        Process(
+            target=circle_detector,
+            name="circle_detector",
+            args=(ipc_push_url, notification["pair_url"], notification["source_path"]),
+        ).start()
+    elif "notify.meta.should_doc" in topic:
+        cmd_push.notify(
+            {
+                "subject": "meta.doc",
+                "actor": "launcher",
+                "doc": launcher.__doc__,
+            }
+        )
+    elif "notify.launcher_process.should_stop" in topic:
+        if parsed_args.app == "capture":
+            cmd_push.notify({"subject": "world_process.should_stop"})
+        elif parsed_args.app == "service":
+            cmd_push.notify({"subject": "service_process.should_stop"})
+        elif parsed_args.app == "player":
+            cmd_push.notify({"subject": "player_process.should_stop"})
 
 
 if __name__ == "__main__":

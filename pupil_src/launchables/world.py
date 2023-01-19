@@ -91,7 +91,6 @@ def world(
         n = {
             "subject": f"eye_process.should_stop.{eye_id}",
             "eye_id": eye_id,
-            "delay": 0.2,
         }
         ipc_pub.notify(n)
 
@@ -323,6 +322,7 @@ def world(
             ("UVC_Manager", {}),
             ("NDSI_Manager", {}),
             ("HMD_Streaming_Manager", {}),
+            ("Neon_Manager", {}),
             ("File_Manager", {}),
             ("Log_Display", {}),
             ("Dummy_Gaze_Mapper", {}),
@@ -845,6 +845,13 @@ def world(
 
         session_settings.close()
 
+    except Exception:
+        import traceback
+
+        trace = traceback.format_exc()
+        logger.error(f"Process Capture crashed with trace:\n{trace}")
+        raise
+    finally:
         # de-init all running plugins
         for p in g_pool.plugins:
             p.alive = False
@@ -854,13 +861,6 @@ def world(
         glfw.destroy_window(main_window)
         glfw.terminate()
 
-    except Exception:
-        import traceback
-
-        trace = traceback.format_exc()
-        logger.error(f"Process Capture crashed with trace:\n{trace}")
-
-    finally:
         # shut down eye processes:
         stop_eye_process(0)
         stop_eye_process(1)

@@ -217,6 +217,10 @@ class Plugin:
             else:
                 self.g_pool.notifications.append(notification)
         else:
+            logger.debug(
+                f"'{notification['subject']}' notification sent with keys: "
+                f"{tuple(notification.keys())}"
+            )
             self.g_pool.ipc_pub.notify(notification)
 
     @property

@@ -141,7 +141,7 @@ class Base_Source(Plugin):
             logger.debug(f"Setting source mode: {new_mode.name}")
             self.notify_all({"subject": "backend.change_mode", "mode": new_mode})
 
-    def on_notify(self, notification):
+    def on_notify(self, notification: T.Dict[str, T.Any]):
         subject = notification["subject"]
 
         if subject == "backend.change_mode":
