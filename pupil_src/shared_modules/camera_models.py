@@ -530,13 +530,10 @@ class Camera_Model(abc.ABC):
             return Camera_Model._from_raw_intrinsics(cam_name, resolution, intrinsics)
         else:
             logger.warning(
-                f"No camera intrinsics available for camera {cam_name} at"
-                f" resolution {resolution}!"
-            )
-            logger.warning("Loading dummy intrinsics, which might decrease accuracy!")
-            logger.warning(
-                "Consider selecting a different resolution, or running the Camera"
-                " Instrinsics Estimation!"
+                f"No camera intrinsics available for camera {cam_name} at "
+                f"resolution {resolution}! Loading dummy intrinsics, which might "
+                "decrease accuracy! Consider selecting a different resolution, "
+                "or running the Camera Instrinsics Estimation!"
             )
             return Dummy_Camera(cam_name, resolution)
 
