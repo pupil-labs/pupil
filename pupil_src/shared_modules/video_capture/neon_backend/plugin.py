@@ -159,6 +159,7 @@ class Neon_Eye_Cam_Source(HMD_Streaming_Source):
 
         if hasattr(self, "menu"):
             self.exposure_time_slider.read_only = not self.camera_state["connected"]
+            self.gain_slider.read_only = not self.camera_state["connected"]
 
     def ui_elements(self):
         """Returns a list of ui elements with info and settings for the source."""
