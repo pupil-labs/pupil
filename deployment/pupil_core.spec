@@ -54,6 +54,7 @@ def main():
         "OpenGL",
         "pylsl",
         "sklearn",
+        "glfw",
     ):
         datas, binaries, hiddenimports = collect_all(
             name, exclude_datas=["**/__pycache__"]
@@ -106,11 +107,6 @@ def main():
         extras.append((version_file_path.name, str(version_file_path), "DATA"))
 
         # Add binaries that are not being collected automatically
-        glfw: pathlib.Path = files("glfw")
-        extras.extend(
-            (bin_path.name, str(bin_path), "BINARY")
-            for bin_path in glfw.rglob("*" + LIB_EXT[current_platform])
-        )
 
         apriltags: pathlib.Path = files("pupil_apriltags")
         apriltags = apriltags.with_name(apriltags.name + ".libs")
