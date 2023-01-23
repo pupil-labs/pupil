@@ -51,7 +51,7 @@ def main():
         "ndsi",
         "pupil_apriltags",
         "pye3d",
-        "OpenGL",
+        "OpenGL.GL",
         "pylsl",
         "sklearn",
         "glfw",
