@@ -24,8 +24,11 @@ class CameraSpec(NamedTuple):
     def matches_vid_pid(self, vendor_id: int, product_id: int) -> bool:
         return self.vendor_id == vendor_id and self.product_id == product_id
 
+    def matches_name(self, name: str) -> bool:
+        return self.name == name
+
     def matches_device(self, device: UVCDeviceInfo) -> bool:
-        return self.matches_vid_pid(device["idVendor"], device["idProduct"])
+        return self.matches_name(device["name"])
 
     @classmethod
     def spec_by_name(cls) -> Dict[str, "CameraSpec"]:

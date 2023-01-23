@@ -952,8 +952,6 @@ class UVC_Manager(Base_Manager):
         # Do not show RealSense cameras in selection, since they are not supported
         # anymore in Pupil Capture since v1.22 and won't work.
         self.ignore_name_patterns = ["RealSense"]
-        # Do not show Neon cameras in selection, use dedicated backend instead
-        self.ignore_vid_pid = [(0x04B4, 0x0036), (0x0BDA, 0x3036)]
 
     def get_devices(self):
         self.devices.update()
@@ -963,7 +961,7 @@ class UVC_Manager(Base_Manager):
             if not any(
                 pattern in device["name"] for pattern in self.ignore_name_patterns
             )
-            and (device["idVendor"], device["idProduct"]) not in self.ignore_vid_pid
+            and "Neon" not in device["name"]  # Only ignore Neon in get_devices()
         ]
         if len(uvc_auto_selection_devices) == 0:
             return []
