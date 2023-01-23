@@ -50,7 +50,13 @@ def set_bundled_glfw_environ_var():
     import pathlib
 
     meipass = pathlib.Path(sys._MEIPASS)
-    lib_path = next(meipass.glob("*glfw*"), None)
+    glfw_folder = meipass / "glfw"
+    lib_path = next(glfw_folder.glob("*glfw*"), None)
+    if lib_path is None:
+        session_type = (
+            "wayland" if os.environ.get("XDG_SESSION_TYPE") == "wayland" else "x11"
+        )
+        lib_path = glfw_folder / session_type / "libglfw.so"
     os.environ["PYGLFW_LIBRARY"] = str(lib_path)
 
 
