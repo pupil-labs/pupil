@@ -784,11 +784,8 @@ def world(
 
                 gl_utils.glViewport(0, 0, *window_size)
                 try:
-                    print("get_clipboard_string before")
                     clipboard = glfw.get_clipboard_string(main_window).decode()
-                    print("get_clipboard_string after")
-                except (AttributeError, glfw.GLFWError) as err:
-                    print(f"get_clipboard_string error {err}")
+                except (AttributeError, glfw.GLFWError):
                     # clipboard is None, might happen on startup
                     clipboard = ""
                 g_pool.gui.update_clipboard(clipboard)
@@ -822,9 +819,7 @@ def world(
                         if plugin.on_char(char_):
                             break
 
-                print("swap_buffers before")
                 glfw.swap_buffers(main_window)
-                print("swap_buffers after")
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["ui_config"] = g_pool.gui.configuration
