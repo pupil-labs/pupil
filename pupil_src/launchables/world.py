@@ -775,16 +775,22 @@ def world(
 
             glfw.make_context_current(main_window)
             # render visual feedback from loaded plugins
+            logger.debug("poll_events before")
             glfw.poll_events()
+            logger.debug("poll_events after")
             if window_should_update() and gl_utils.is_window_visible(main_window):
 
                 gl_utils.glViewport(0, 0, *camera_render_size)
+                logger.debug("gl_display before")
                 for p in g_pool.plugins:
                     p.gl_display()
+                logger.debug("gl_display after")
 
                 gl_utils.glViewport(0, 0, *window_size)
                 try:
+                    logger.debug("get_clipboard_string before")
                     clipboard = glfw.get_clipboard_string(main_window).decode()
+                    logger.debug("get_clipboard_string after")
                 except (AttributeError, glfw.GLFWError):
                     # clipboard is None, might happen on startup
                     clipboard = ""
@@ -817,7 +823,9 @@ def world(
                         if plugin.on_char(char_):
                             break
 
+                logger.debug("swap_buffers before")
                 glfw.swap_buffers(main_window)
+                logger.debug("swap_buffers after")
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["ui_config"] = g_pool.gui.configuration
