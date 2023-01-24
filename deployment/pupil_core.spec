@@ -52,6 +52,8 @@ def main():
         "pupil_apriltags",
         "pye3d",
         "OpenGL.GL",
+        "OpenGL.platform.egl",  # wayland support
+        "OpenGL.platform.glx",  # x11 support
         "pylsl",
         "sklearn",
         "glfw",
