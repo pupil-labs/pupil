@@ -775,30 +775,29 @@ def world(
 
             glfw.make_context_current(main_window)
             # render visual feedback from loaded plugins
-            logger.debug("poll_events before")
             glfw.poll_events()
-            logger.debug("poll_events after")
             if window_should_update() and gl_utils.is_window_visible(main_window):
 
                 gl_utils.glViewport(0, 0, *camera_render_size)
-                logger.debug("gl_display before")
                 for p in g_pool.plugins:
                     p.gl_display()
-                logger.debug("gl_display after")
 
                 gl_utils.glViewport(0, 0, *window_size)
                 try:
-                    logger.debug("get_clipboard_string before")
+                    print("get_clipboard_string before")
                     clipboard = glfw.get_clipboard_string(main_window).decode()
-                    logger.debug("get_clipboard_string after")
-                except (AttributeError, glfw.GLFWError):
+                    print("get_clipboard_string after")
+                except (AttributeError, glfw.GLFWError) as err:
+                    print(f"get_clipboard_string error {err}")
                     # clipboard is None, might happen on startup
                     clipboard = ""
                 g_pool.gui.update_clipboard(clipboard)
                 user_input = g_pool.gui.update()
                 if user_input.clipboard != clipboard:
                     # only write to clipboard if content changed
+                    print("set_clipboard_string before")
                     glfw.set_clipboard_string(main_window, user_input.clipboard)
+                    print("set_clipboard_string after")
 
                 for button, action, mods in user_input.buttons:
                     x, y = glfw.get_cursor_pos(main_window)
@@ -823,9 +822,9 @@ def world(
                         if plugin.on_char(char_):
                             break
 
-                logger.debug("swap_buffers before")
+                print("swap_buffers before")
                 glfw.swap_buffers(main_window)
-                logger.debug("swap_buffers after")
+                print("swap_buffers after")
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["ui_config"] = g_pool.gui.configuration
