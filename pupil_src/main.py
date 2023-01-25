@@ -213,7 +213,9 @@ def launcher():
             level=logging.DEBUG if log_level_debug else logging.INFO,
             rich_tracebacks=False,
         )
-        ch.setFormatter(logging.Formatter("%(processName)s - %(name)s: %(message)s"))
+        ch.setFormatter(
+            logging.Formatter("%(processName)s - %(name)s: %(message)s", datefmt="[%X]")
+        )
 
         logger.addHandler(ch)
         # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
