@@ -63,11 +63,11 @@ def get_recording_type(rec_dir: str) -> RecordingType:
     elif _is_old_style_player_recording(rec_dir):
         return RecordingType.OLD_STYLE
 
-    elif non_core_type:
-        return non_core_type
-
     elif _is_pupil_mobile_recording(rec_dir):
         return RecordingType.MOBILE
+
+    elif non_core_type:
+        return non_core_type
 
     raise InvalidRecordingException(
         reason=f"There is no info file in the target directory.", recovery=""
