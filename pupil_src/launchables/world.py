@@ -792,9 +792,7 @@ def world(
                 user_input = g_pool.gui.update()
                 if user_input.clipboard != clipboard:
                     # only write to clipboard if content changed
-                    print("set_clipboard_string before")
                     glfw.set_clipboard_string(main_window, user_input.clipboard)
-                    print("set_clipboard_string after")
 
                 for button, action, mods in user_input.buttons:
                     x, y = glfw.get_cursor_pos(main_window)

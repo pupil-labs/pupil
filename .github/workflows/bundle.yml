@@ -18,8 +18,8 @@ jobs:
       fail-fast: False
       matrix:
         platform:
-          # - windows-latest
-          # - macOS-11
+          - windows-latest
+          - macOS-11
           - ubuntu-18.04
     runs-on: ${{ matrix.platform }}
     steps:
