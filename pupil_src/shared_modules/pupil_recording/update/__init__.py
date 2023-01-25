@@ -40,6 +40,15 @@ def update_recording(rec_dir: str):
 
     recording_type = get_recording_type(rec_dir)
 
+    if recording_type == RecordingType.CLOUD_CSV_EXPORT:
+        raise InvalidRecordingException(
+            "Pupil Player does not support\nPupil Cloud CSV exports"
+        )
+    if recording_type == RecordingType.NEON:
+        raise InvalidRecordingException(
+            "Pupil Player does not support\nNeon Companion recordings"
+        )
+
     if recording_type == RecordingType.INVISIBLE:
         # NOTE: there is an issue with PI recordings, where sometimes multiple parts of
         # the recording are stored as an .mjpeg and .mp4, but for the same part number.
