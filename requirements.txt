@@ -29,5 +29,5 @@ ndsi==1.4.*
 pupil-apriltags==1.0.*
 pupil-detectors>=2.0.2rc2
 pupil-labs-uvc
-pye3d==0.3.*
+pye3d>=0.3.2
 pyglui>=1.31.1b1
