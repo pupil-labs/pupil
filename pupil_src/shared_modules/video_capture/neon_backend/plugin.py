@@ -169,8 +169,8 @@ class Neon_Eye_Cam_Source(HMD_Streaming_Source):
         self.exposure_time_slider = ui.Slider(
             exposure_time,
             self.camera_state,
-            min=0,
-            max=255,
+            min=10,
+            max=49,
             step=1,
             setter=partial(self._request_camera_change, exposure_time),
         )
@@ -181,7 +181,7 @@ class Neon_Eye_Cam_Source(HMD_Streaming_Source):
             gain,
             self.camera_state,
             min=0,
-            max=1000,
+            max=1023,
             step=1,
             setter=partial(self._request_camera_change, gain),
         )
