@@ -204,7 +204,7 @@ def player(
             gl_utils.glViewport(0, 0, *window_size)
 
             try:
-                clipboard = glfw.get_clipboard_string(main_window).decode()
+                clipboard = glfw.get_clipboard_string(None).decode()
             except (AttributeError, glfw.GLFWError):
                 # clipbaord is None, might happen on startup
                 clipboard = ""
@@ -212,7 +212,7 @@ def player(
             user_input = g_pool.gui.update()
             if user_input.clipboard and user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.set_clipboard_string(main_window, user_input.clipboard)
+                glfw.set_clipboard_string(None, user_input.clipboard)
 
             for b in user_input.buttons:
                 button, action, mods = b
@@ -744,7 +744,7 @@ def player(
                 gl_utils.glViewport(0, 0, *window_size)
 
                 try:
-                    clipboard = glfw.get_clipboard_string(main_window).decode()
+                    clipboard = glfw.get_clipboard_string(None).decode()
                 except (AttributeError, glfw.GLFWError):
                     # clipbaord is None, might happen on startup
                     clipboard = ""
@@ -752,7 +752,7 @@ def player(
                 user_input = g_pool.gui.update()
                 if user_input.clipboard and user_input.clipboard != clipboard:
                     # only write to clipboard if content changed
-                    glfw.set_clipboard_string(main_window, user_input.clipboard)
+                    glfw.set_clipboard_string(None, user_input.clipboard)
 
                 for b in user_input.buttons:
                     button, action, mods = b

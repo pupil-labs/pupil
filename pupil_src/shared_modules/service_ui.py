@@ -200,7 +200,7 @@ class Service_UI(System_Plugin_Base):
             glfw.poll_events()
             self.gl_display()
             try:
-                clipboard = glfw.get_clipboard_string(self.g_pool.main_window).decode()
+                clipboard = glfw.get_clipboard_string(None).decode()
             except (AttributeError, glfw.GLFWError):
                 # clipbaord is None, might happen on startup
                 clipboard = ""
@@ -208,7 +208,7 @@ class Service_UI(System_Plugin_Base):
             user_input = self.g_pool.gui.update()
             if user_input.clipboard and user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.set_clipboard_string(self.g_pool.main_window, user_input.clipboard)
+                glfw.set_clipboard_string(None, user_input.clipboard)
 
             glfw.swap_buffers(self.g_pool.main_window)
         else:

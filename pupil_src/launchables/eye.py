@@ -282,7 +282,7 @@ def eye(
 
             # render GUI
             try:
-                clipboard = glfw.get_clipboard_string(main_window).decode()
+                clipboard = glfw.get_clipboard_string(None).decode()
             except (AttributeError, glfw.GLFWError):
                 # clipboard is None, might happen on startup
                 clipboard = ""
@@ -290,7 +290,7 @@ def eye(
             user_input = g_pool.gui.update()
             if user_input.clipboard != clipboard:
                 # only write to clipboard if content changed
-                glfw.set_clipboard_string(main_window, user_input.clipboard)
+                glfw.set_clipboard_string(None, user_input.clipboard)
 
             for button, action, mods in user_input.buttons:
                 x, y = glfw.get_cursor_pos(main_window)
