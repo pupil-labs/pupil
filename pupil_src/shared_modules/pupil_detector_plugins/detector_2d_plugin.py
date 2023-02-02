@@ -138,6 +138,22 @@ class Detector2DPlugin(PupilDetectorPlugin):
                 step=1,
             )
         )
+        info = ui.Info_Text(
+            "When using Neon in IR-light-heavy environments, it can help to increase "
+            "the Canny Threshold to reduce the effect of reflections on the pupil "
+            "detection result. The default value is 160."
+        )
+        self.menu.append(info)
+        self.menu.append(
+            ui.Slider(
+                "canny_treshold",
+                self.pupil_detector_properties,
+                label="Canny Threshold",
+                min=0,
+                max=1000,
+                step=1,
+            )
+        )
         self.menu.append(ui.Info_Text("Color Legend"))
         self.menu.append(
             ui.Color_Legend(color_scheme.PUPIL_ELLIPSE_2D.as_float, "2D pupil ellipse")
