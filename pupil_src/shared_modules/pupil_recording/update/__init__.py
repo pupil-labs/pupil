@@ -42,12 +42,12 @@ def update_recording(rec_dir: str):
 
     if recording_type == RecordingType.CLOUD_CSV_EXPORT:
         raise InvalidRecordingException(
-            "Pupil Cloud CSV exports are not supported in Pupil Player",
-            recovery="Open the CSV files in the analysis tool of your choice instead",
+            "Pupil Cloud CSV exports\nare not supported in Pupil Player",
+            recovery="Open the CSV files in the\nanalysis tool of your choice instead",
         )
     if recording_type == RecordingType.NEON:
         raise InvalidRecordingException(
-            "Neon Companion app recordings are not supported in Pupil Player",
+            "Neon Companion app recordings\nare not supported in Pupil Player",
             recovery="You can view them in Pupil Cloud instead",
         )
 
