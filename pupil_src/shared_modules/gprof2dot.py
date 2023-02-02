@@ -3407,15 +3407,15 @@ def main():
     if options.output is None:
         if PYTHON_3:
             output = open(
-                sys.stdout.fileno(), mode="wt", encoding="UTF-8", closefd=False
+                sys.stdout.fileno(), mode="w", encoding="UTF-8", closefd=False
             )
         else:
             output = sys.stdout
     else:
         if PYTHON_3:
-            output = open(options.output, "wt", encoding="UTF-8")
+            output = open(options.output, "w", encoding="UTF-8")
         else:
-            output = open(options.output, "wt")
+            output = open(options.output, "w")
 
     dot = DotWriter(output)
     dot.strip = options.strip

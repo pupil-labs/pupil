@@ -20,7 +20,7 @@ repos:
       - id: black
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.0.0
+    rev: v3.3.1
     hooks:
       - id: pyupgrade
         name: PyUpgrade 3.6+
@@ -28,12 +28,12 @@ repos:
         exclude: ^bin/
 
   - repo: https://github.com/PyCQA/isort
-    rev: 5.10.1
+    rev: 5.12.0
     hooks:
       - id: isort
         args: [--profile, black]
 
   - repo: https://github.com/asottile/setup-cfg-fmt
-    rev: v2.0.0
+    rev: v2.2.0
     hooks:
       - id: setup-cfg-fmt
