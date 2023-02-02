@@ -23,6 +23,7 @@ GLFWErrorReporting.set_default()
 
 from plugin import System_Plugin_Base
 from pyglui import cygl, ui
+from video_capture.neon_backend.plugin import Neon_Manager
 
 # UI Platform tweaks
 if platform.system() == "Linux":
@@ -168,6 +169,23 @@ class Service_UI(System_Plugin_Base):
                 label="Detect eye 1",
                 setter=lambda alive: self.start_stop_eye(1, alive),
                 getter=lambda: g_pool.eye_procs_alive[1].value,
+            )
+        )
+        g_pool.menubar.append(
+            ui.Info_Text(
+                "To use Neon, connect it to your PC and click the button below."
+            )
+        )
+        g_pool.menubar.append(
+            ui.Button(
+                "Activate Neon",
+                lambda: self.notify_all(
+                    {
+                        "subject": Neon_Manager.SUBJECT_REQUEST_AUTO_ACTIVATE,
+                        "scene": False,
+                        "eyes": True,
+                    }
+                ),
             )
         )
 

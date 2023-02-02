@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 class Neon_Manager(Base_Manager):
     SUBJECT_REQUEST_SHARED_CAMERA_START: str = "neon_backend.shared_camera.should_start"
+    SUBJECT_REQUEST_AUTO_ACTIVATE: str = "neon_backend.auto_activate"
 
     def __init__(self, g_pool):
         super().__init__(g_pool)
@@ -58,7 +59,7 @@ class Neon_Manager(Base_Manager):
         if key == "neon":
             self.auto_activate_source()
 
-    def auto_activate_source(self):
+    def auto_activate_source(self, scene: bool = True, eyes: bool = True):
         logger.debug("Auto activating Neon source.")
 
         # self.enable_neon_eye_camera_sharing()
@@ -72,21 +73,28 @@ class Neon_Manager(Base_Manager):
             "uid": source_uid,
             "name": "Neon Scene Camera v1",
         }
-        self.notify_all(
-            {"subject": "start_plugin", "name": "UVC_Source", "args": settings}
-        )
-        for eye in range(2):
+        if scene:
             self.notify_all(
-                {
-                    "subject": "start_eye_plugin",
-                    "target": f"eye{eye}",
-                    "name": "Neon_Eye_Cam_Source",
-                }
+                {"subject": "start_plugin", "name": "UVC_Source", "args": settings}
             )
+        if eyes:
+            for eye in range(2):
+                self.notify_all(
+                    {
+                        "subject": "start_eye_plugin",
+                        "target": f"eye{eye}",
+                        "name": "Neon_Eye_Cam_Source",
+                    }
+                )
 
     def on_notify(self, notification):
         if notification["subject"] == self.SUBJECT_REQUEST_SHARED_CAMERA_START:
             self.enable_neon_eye_camera_sharing()
+        elif notification["subject"] == self.SUBJECT_REQUEST_AUTO_ACTIVATE:
+            self.auto_activate_source(
+                scene=notification.get("scene", True),
+                eyes=notification.get("eyes", True),
+            )
         return super().on_notify(notification)
 
     def enable_neon_eye_camera_sharing(self):

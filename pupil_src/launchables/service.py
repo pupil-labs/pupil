@@ -107,6 +107,7 @@ def service(
         from service_ui import Service_UI
         from uvc import get_time_monotonic
         from version_utils import parse_version
+        from video_capture.neon_backend.plugin import Neon_Manager
 
         IPC_Logging_Task_Proxy.push_url = ipc_push_url
 
@@ -158,6 +159,7 @@ def service(
             Pupil_Groups,
             NetworkApiPlugin,
             Blink_Detection,
+            Neon_Manager,
         ] + runtime_plugins
         plugin_by_index = (
             runtime_plugins
@@ -169,6 +171,7 @@ def service(
         plugin_by_name = dict(zip(name_by_index, plugin_by_index))
         default_plugins = [
             ("Service_UI", {}),
+            ("Neon_Manager", {}),
             # Calibration choreography plugin is added bellow by calling
             # patch_world_session_settings_with_choreography_plugin
             ("NetworkApiPlugin", {}),
