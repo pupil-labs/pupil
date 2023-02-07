@@ -377,7 +377,6 @@ class Serialized_Dict(object):
 
 
 def _recursive_deep_copy(item):
-
     if isinstance(item, collections.abc.Mapping):
         _item_dict = {k: _recursive_deep_copy(v) for k, v in item.items()}
         if isinstance(item, types.MappingProxyType):
@@ -444,7 +443,6 @@ def bench_save():
 
 
 def bench_load():
-
     import time
 
     start = time.time()

@@ -387,7 +387,6 @@ class _AudioPacketIterator:
         self.fill_gaps = fill_gaps
 
     def iterate_audio_packets(self):
-
         last_audio_pts = float("-inf")
 
         if self.fill_gaps:
@@ -448,7 +447,6 @@ class _AudioPacketIterator:
                 raise ValueError(f"Unknown audio frame type: {audio_frame}")
 
     def _iterate_audio_frames_filling_gaps(self):
-
         # Prologue: Yield silence frames between start_time and the first audio frame (if any)
 
         audio_part_end_ts = [part.timestamps[-1] for part in self.audio_parts]
@@ -512,7 +510,6 @@ class _AudioPacketIterator:
         last_part_last_frame = None
 
         for part_idx, audio_part in enumerate(audio_parts):
-
             frames = container_decode(audio_part.container, audio=0)
             frames = iter_catch(frames, av.AVError)
             for frame, timestamp in zip(frames, audio_part.timestamps):
@@ -539,7 +536,6 @@ class _AudioPacketIterator:
 
     @staticmethod
     def _generate_silence_audio_frames(stream, start_ts, max_duration: float = None):
-
         frame_sample_sizes = _AudioPacketIterator._generate_raw_frame_sample_size(
             stream, start_ts, max_duration
         )

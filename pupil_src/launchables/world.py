@@ -732,7 +732,6 @@ def world(
 
         # Event loop
         while not glfw.window_should_close(main_window) and not process_was_interrupted:
-
             # fetch newest notifications
             new_notifications = []
             while notify_sub.new_data:
@@ -780,7 +779,6 @@ def world(
             # render visual feedback from loaded plugins
             glfw.poll_events()
             if window_should_update() and gl_utils.is_window_visible(main_window):
-
                 gl_utils.glViewport(0, 0, *camera_render_size)
                 for p in g_pool.plugins:
                     p.gl_display()

@@ -45,7 +45,6 @@ split_str = """
 </plist>"""
 
 if platform.system() == "Darwin":
-
     print("starting version stript:")
     write_version_file("dist/Pupil Player.app/Contents/MacOS")
     print("created version file in app dir")
@@ -69,7 +68,6 @@ elif platform.system() == "Windows":
     write_version_file(os.path.join("dist", "Pupil Player"))
 
 elif platform.system() == "Linux":
-
     distribtution_dir = "dist"
     pupil_player_dir = os.path.join(distribtution_dir, "pupil_player")
 

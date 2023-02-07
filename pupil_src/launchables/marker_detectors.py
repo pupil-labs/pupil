@@ -12,7 +12,6 @@ from types import SimpleNamespace
 
 
 def circle_detector(ipc_push_url, pair_url, source_path, batch_size=20):
-
     # ipc setup
     import zmq
     import zmq_tools

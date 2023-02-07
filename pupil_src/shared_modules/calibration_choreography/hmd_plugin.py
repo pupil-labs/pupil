@@ -30,7 +30,6 @@ logger = logging.getLogger(__name__)
 
 
 class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
-
     ### Public
 
     @classmethod
@@ -93,7 +92,6 @@ class _BaseHMDChoreographyPlugin(CalibrationChoreographyPlugin):
 
 
 class HMD3DChoreographyPlugin(_BaseHMDChoreographyPlugin):
-
     ### Public
 
     label = "HMD 3D Calibration"

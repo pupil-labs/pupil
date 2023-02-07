@@ -44,7 +44,6 @@ class RecordingInfoInvalidError(Exception):
 
 
 class RecordingInfo(collections.abc.MutableMapping):
-
     # MutableMapping
 
     def __getitem__(self, key):
@@ -302,7 +301,6 @@ class RecordingInfo(collections.abc.MutableMapping):
     def __matching_public_properties(
         cls, x: "RecordingInfo", y: "RecordingInfo"
     ) -> T.Mapping[str, T.Tuple[_PublicProperty, _PublicProperty]]:
-
         x_properties = x._public_properties
         y_properties = y._public_properties
 
@@ -322,7 +320,6 @@ class RecordingInfo(collections.abc.MutableMapping):
 
 
 class RecordingInfoFile(RecordingInfo):
-
     # Public
 
     file_name = "info.player.json"

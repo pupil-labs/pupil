@@ -85,7 +85,6 @@ class Eye_Visualizer(Visualizer):
     ############## DRAWING FUNCTIONS ###########
 
     def draw_eye(self, result):
-
         self.eye.pupil_radius = result["circle_3d"]["radius"]
         self.eye.move_to_point(
             [
@@ -107,7 +106,6 @@ class Eye_Visualizer(Visualizer):
             self.eye.draw_gl(alpha=0.7)
 
     def draw_debug_info(self, result):
-
         sphere_center = result["sphere"]["center"]
         gaze_vector = result["circle_3d"]["normal"]
         pupil_radius = result["circle_3d"]["radius"]
@@ -135,7 +133,6 @@ class Eye_Visualizer(Visualizer):
         self.glfont.pop_state()
 
     def draw_residuals(self, result):
-
         glMatrixMode(GL_PROJECTION)
         glPushMatrix()
         glLoadIdentity()
@@ -176,7 +173,6 @@ class Eye_Visualizer(Visualizer):
         glutils.draw_polyline(vertices, thickness=1, color=RGBA(1.0, 1.0, 1.0, 0.9))
 
         try:
-
             vertices = list(
                 zip(
                     np.clip(
@@ -198,7 +194,6 @@ class Eye_Visualizer(Visualizer):
             )
 
         except:
-
             pass
 
         glPopMatrix()
@@ -206,7 +201,6 @@ class Eye_Visualizer(Visualizer):
         glPopMatrix()
 
     def draw_Dierkes_lines(self, result):
-
         glPushMatrix()
         glMatrixMode(GL_MODELVIEW)
         glColor4f(1.0, 0.0, 0.0, 0.1)
@@ -219,7 +213,6 @@ class Eye_Visualizer(Visualizer):
         glPopMatrix()
 
     def update_window(self, g_pool, result):
-
         if not result:
             return
 

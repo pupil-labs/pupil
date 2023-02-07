@@ -84,7 +84,6 @@ def service(
         ipc_pub.notify(n)
 
     try:
-
         # helpers/utils
         from file_methods import Persistent_Dict
         from methods import delta_t, get_system_info

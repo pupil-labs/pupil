@@ -15,7 +15,6 @@ from version_utils import parse_version, ParsedVersion
 
 
 class _RecordingInfoFile_2_1(_RecordingInfoFile_2_0):
-
     # Used for differentiating between < v1.18 and >= v1.18 because of a bug in the
     # upgrade of PI recordings to newstyle. The data format is the same. Note that
     # min_player_version stays the same, as recordings that have been transformed to

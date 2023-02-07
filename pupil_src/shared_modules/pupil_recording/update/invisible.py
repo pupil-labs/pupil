@@ -137,7 +137,6 @@ def _pi_path_core_path_pairs(recording: PupilRecording):
 
 
 def _rewrite_timestamps(recording: PupilRecording):
-
     # Use start time from info file (instead of recording.meta_info.start_time_synced_ns)
     # to have a more precise value and avoid having a negative first timestamp when rewriting
     info_json = utils.read_pupil_invisible_info_file(recording.rec_dir)
@@ -164,7 +163,7 @@ def _convert_gaze(recording: PupilRecording):
         "confidence": None,
     }
     with fm.PLData_Writer(recording.rec_dir, "gaze") as writer:
-        for ((x, y), ts, conf) in pi_gaze_items(root_dir=recording.rec_dir):
+        for (x, y), ts, conf in pi_gaze_items(root_dir=recording.rec_dir):
             template_datum["timestamp"] = ts
             template_datum["norm_pos"] = m.normalize(
                 (x, y), size=(width, height), flip_y=True
@@ -252,7 +251,6 @@ class BrokenFirstFrameRecordingIssue:
         # this is a symptom of Pupil Invisible recording with broken first frame.
         # If the first timestamp is greater, remove it from the timestamps and overwrite the file.
         for v_path, ts_path in cls._pi_world_video_and_raw_time_paths(recording):
-
             in_container = av.open(str(v_path))
             packets = in_container.demux(video=0)
 

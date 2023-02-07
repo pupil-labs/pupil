@@ -404,7 +404,6 @@ class Batch_Exporter(Plugin):
 
 
 def main():
-
     import argparse
     from textwrap import dedent
     from file_methods import Persistent_Dict

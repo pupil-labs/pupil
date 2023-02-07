@@ -42,9 +42,9 @@ def surfaces_deserialized() -> typing.Collection[Surface]:
     return tuple(d for d, s in surface_pairs())
 
 
-def surface_marker_aggregate_pairs() -> typing.Collection[
-    typing.Tuple[Surface_Marker_Aggregate, dict]
-]:
+def surface_marker_aggregate_pairs() -> (
+    typing.Collection[typing.Tuple[Surface_Marker_Aggregate, dict]]
+):
     return (
         (
             SURFACE_MARKER_AGGREGATE_V01_SQUARE_DESERIALIZED_0_DIST,
@@ -69,9 +69,9 @@ def surface_marker_aggregates_serialized() -> typing.Collection[dict]:
     return tuple(s for d, s in surface_marker_aggregate_pairs())
 
 
-def surface_marker_aggregates_deserialized() -> typing.Collection[
-    Surface_Marker_Aggregate
-]:
+def surface_marker_aggregates_deserialized() -> (
+    typing.Collection[Surface_Marker_Aggregate]
+):
     return tuple(d for d, s in surface_marker_aggregate_pairs())
 
 
