@@ -13,7 +13,6 @@ from plugin import Plugin
 
 
 class Head_Pose_Tracker_Base(Plugin, Observable):
-
     icon_chr = chr(0xEC07)
     icon_font = "pupil_icons"
 

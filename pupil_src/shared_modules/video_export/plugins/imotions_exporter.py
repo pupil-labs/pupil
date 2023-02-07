@@ -63,7 +63,6 @@ class iMotions_Exporter(IsolatedFrameExporter):
         super().customize_menu()
 
     def export_data(self, export_range, export_dir):
-
         pupil_recording = PupilRecording(rec_dir=self.g_pool.rec_dir)
         meta = pupil_recording.meta_info
 
@@ -183,7 +182,6 @@ class _iMotionsExporterNo3DGazeDataError(Exception):
 def _csv_exported_gaze_data(
     gaze_positions, destination_folder, export_range, timestamps, capture
 ):
-
     export_start, export_stop = export_range  # export_stop is exclusive
     export_window = pm.exact_window(timestamps, (export_start, export_stop - 1))
     gaze_section = gaze_positions.init_dict_for_window(export_window)

@@ -113,7 +113,6 @@ class _Surface_Serializer_Base(abc.ABC):
 
 
 class _Surface_Serializer_V00(_Surface_Serializer_Base):
-
     version = 0
 
     def dict_from_surface_marker_aggregate(
@@ -156,7 +155,6 @@ class _Surface_Serializer_V00(_Surface_Serializer_Base):
 
 
 class _Surface_Serializer_V01(_Surface_Serializer_Base):
-
     version = 1
 
     def dict_from_surface_marker_aggregate(

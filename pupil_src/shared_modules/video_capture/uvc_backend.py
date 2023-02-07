@@ -66,7 +66,6 @@ class UVC_Source(Base_Source):
         *args,
         **kwargs,
     ):
-
         super().__init__(g_pool, *args, **kwargs)
         self.uvc_capture = None
         self._last_ts = None
@@ -311,9 +310,7 @@ class UVC_Source(Base_Source):
             pass
 
         if "Pupil Cam1" in self.uvc_capture.name:
-
             if "ID0" in self.uvc_capture.name or "ID1" in self.uvc_capture.name:
-
                 self.uvc_capture.bandwidth_factor = 1.3
 
                 try:

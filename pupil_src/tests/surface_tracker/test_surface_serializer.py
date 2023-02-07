@@ -29,7 +29,6 @@ from .fixtures import (
 
 
 def _test_surface_serializer_with_surfaces(serializer, surface_pairs):
-
     assert isinstance(serializer, _Surface_Serializer_Base)
     assert len(surface_pairs) > 0
 
@@ -52,7 +51,6 @@ def _test_surface_serializer_with_surfaces(serializer, surface_pairs):
 def _test_surface_serializer_with_surface_marker_aggregates(
     serializer, aggregate_pairs
 ):
-
     assert isinstance(serializer, _Surface_Serializer_Base)
     assert len(aggregate_pairs) > 0
 

@@ -219,7 +219,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
         result = self._recent_detection_result
 
         if result is not None:
-
             # normal eyeball drawing
             draw_eyeball_outline(result)
 

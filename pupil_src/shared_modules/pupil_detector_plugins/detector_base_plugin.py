@@ -39,7 +39,6 @@ class DetectorPropertyProxy:
 
 
 class PupilDetectorPlugin(Plugin):
-
     label = "Unnamed"  # Used in eye -> general settings as selector
 
     pupil_detection_identifier = "unnamed"
@@ -134,7 +133,6 @@ class PupilDetectorPlugin(Plugin):
         self._recent_detection_result = detection_result
 
     def on_notify(self, notification):
-
         subject_match = re.match(
             PUPIL_DETECTOR_NOTIFICATION_SUBJECT_PATTERN, notification["subject"]
         )

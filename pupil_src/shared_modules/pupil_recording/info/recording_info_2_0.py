@@ -16,7 +16,6 @@ from version_utils import parse_version, ParsedVersion
 
 
 class _RecordingInfoFile_2_0(RecordingInfoFile):
-
     # RecordingInfo
 
     @property

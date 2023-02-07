@@ -27,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class _Surface_File_Store_Base(abc.ABC):
-
     # Abstract members
 
     @property
@@ -109,7 +108,6 @@ class _Surface_File_Store_Base(abc.ABC):
 
 
 class _Surface_File_Store_V00(_Surface_File_Store_Base):
-
     # _Surface_File_Store_Base API
 
     @property
@@ -122,7 +120,6 @@ class _Surface_File_Store_V00(_Surface_File_Store_Base):
 
 
 class _Surface_File_Store_V01(_Surface_File_Store_Base):
-
     # _Surface_File_Store_Base API
 
     @property
@@ -134,7 +131,6 @@ class _Surface_File_Store_V01(_Surface_File_Store_Base):
         return _Surface_Serializer_V01()
 
     def read_surfaces_from_file(self, surface_class) -> typing.Iterator[Surface]:
-
         if os.path.isfile(self.file_path):
             # If the updated file exists, then read from it and ignore the legacy steps
             return super().read_surfaces_from_file(surface_class=surface_class)
@@ -157,7 +153,6 @@ class _Surface_File_Store_V01(_Surface_File_Store_Base):
 
 
 class Surface_File_Store(_Surface_File_Store_Base):
-
     Version = int
     Migration_Procedure = typing.Callable[[], None]
     Versioned_File_Store_Mapping = typing.Mapping[Version, _Surface_File_Store_Base]
@@ -191,7 +186,6 @@ class Surface_File_Store(_Surface_File_Store_Base):
         return self.__file_store_latest.serializer
 
     def read_surfaces_from_file(self, surface_class) -> typing.Iterator[Surface]:
-
         # Perform all migrations
         for source_version, target_version in self.__migration_step_sequence:
             migration_proc = self.__migration_procedure(

@@ -18,7 +18,6 @@ from subprocess import call
 from version import get_tag_commit, pupil_version, write_version_file
 
 if platform.system() == "Darwin":
-
     print("starting version stript:")
     write_version_file("dist/Pupil Capture.app/Contents/MacOS")
     print("created version file in dist folder")
@@ -35,7 +34,6 @@ elif platform.system() == "Windows":
     write_version_file(os.path.join("dist", "Pupil Capture"))
 
 elif platform.system() == "Linux":
-
     distribtution_dir = "dist"
     pupil_capture_dir = os.path.join(distribtution_dir, "pupil_capture")
 

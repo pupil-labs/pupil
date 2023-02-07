@@ -19,7 +19,6 @@ from gaze_mapping.notifications import (
 
 
 def test_success_notification_serialization():
-
     cls = CalibrationSuccessNotification
 
     serialized_sample_1 = {

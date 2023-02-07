@@ -12,7 +12,6 @@ import numpy as np
 
 
 def cart2sph(x):
-
     phi = np.arctan2(x[2], x[0])
     theta = np.arccos(x[1] / np.linalg.norm(x))
 
@@ -20,7 +19,6 @@ def cart2sph(x):
 
 
 def sph2cart(phi, theta):
-
     result = np.empty(3)
 
     result[0] = np.sin(theta) * np.cos(phi)
@@ -31,12 +29,10 @@ def sph2cart(phi, theta):
 
 
 def normalize(v, axis=-1):
-
     return v / np.linalg.norm(v, axis=axis)
 
 
 def enclosed_angle(v1, v2, unit="deg", axis=-1):
-
     v1 = normalize(v1, axis=axis)
     v2 = normalize(v2, axis=axis)
 
@@ -49,7 +45,6 @@ def enclosed_angle(v1, v2, unit="deg", axis=-1):
 
 
 def make_homogeneous_vector(v):
-
     return np.hstack((v, [0.0]))
 
 
@@ -68,7 +63,6 @@ def transform_as_homogeneous_vector(v, trafo):
 
 
 def rotate_v1_on_v2(v1, v2):
-
     v1 = normalize(v1)
     v2 = normalize(v2)
     cos_angle = np.dot(v1, v2)
