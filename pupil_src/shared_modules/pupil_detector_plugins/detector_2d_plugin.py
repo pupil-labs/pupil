@@ -141,7 +141,7 @@ class Detector2DPlugin(PupilDetectorPlugin):
         info = ui.Info_Text(
             "When using Neon in bright light, increasing the Canny Threshold can "
             "help reduce the effect of reflections in the eye image and improve pupil "
-            "detection. The default value is 160.
+            "detection. The default value is 160."
         )
         self.menu.append(info)
         self.menu.append(
