@@ -344,7 +344,10 @@ class Gazer3D(GazerBase):
 
     @classmethod
     def _gazer_description_text(cls) -> str:
-        return "3D gaze mapping: default method; able to compensate for small movements of the headset (slippage); uses 3d eye model as input."
+        return (
+            "3D gaze mapping: default method; able to compensate for small movements "
+            "of the headset (slippage); uses 3d eye model as input."
+        )
 
     def _init_left_model(self) -> Model:
         return Model3D_Monocular(
@@ -456,3 +459,17 @@ class Gazer3D(GazerBase):
         pupil_data = list(filter(lambda p: "3d" in p["method"], pupil_data))
         pupil_data = super().filter_pupil_data(pupil_data, confidence_threshold)
         return pupil_data
+
+
+class NeonGazer3D(Gazer3D):
+    label = "3D Neon"
+
+    eye0_hardcoded_translation = 30, 5, -10
+    eye1_hardcoded_translation = -30, 5, -10
+
+    @classmethod
+    def _gazer_description_text(cls) -> str:
+        return (
+            "3D gaze mapping: optimized for Neon; able to compensate for small "
+            "movements of the headset (slippage); uses 3d eye model as input."
+        )
