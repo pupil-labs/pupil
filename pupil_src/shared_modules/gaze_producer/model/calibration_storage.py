@@ -169,8 +169,7 @@ class CalibrationStorage(Storage, Observable):
             pass
         self._load_recorded_calibrations()
 
-    def _load_calibration_from_file(self, file_name):
-        file_path = os.path.join(self._calibration_folder, file_name)
+    def _load_calibration_from_file(self, file_path):
         calibration_dict = self._load_data_from_file(file_path)
         if not calibration_dict:
             return
