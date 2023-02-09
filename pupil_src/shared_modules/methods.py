@@ -811,6 +811,11 @@ def container_decode(container, *args, **kwargs):
         yield from packet.decode()
 
 
+def container_packet_frame_pairs(container, *args, **kwargs):
+    for packet in container.demux(*args, **kwargs):
+        yield from ((packet, frame) for frame in packet.decode())
+
+
 def make_change_loglevel_fn(level):
     def _change_level(record):
         record.levelno = level

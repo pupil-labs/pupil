@@ -20,7 +20,7 @@ from time import monotonic, sleep
 import av
 import numpy as np
 from camera_models import Camera_Model
-from methods import container_decode, iter_catch, make_change_loglevel_fn
+from methods import container_packet_frame_pairs, iter_catch, make_change_loglevel_fn
 from pupil_recording import PupilRecording
 from pyglui import ui
 
@@ -188,11 +188,11 @@ class OnDemandDecoder(Decoder):
         self.container.seek(pts_position, stream=self.video_stream)
 
     def get_frame_iterator(self):
-        frames = container_decode(self.container, self.video_stream)
-        frames = iter_catch(frames, av.AVError)
-        for frame in frames:
+        packets_frames = container_packet_frame_pairs(self.container, self.video_stream)
+        packets_frames = iter_catch(packets_frames, av.AVError)
+        for packet, frame in packets_frames:
             if frame:
-                yield frame
+                yield packet, frame
 
 
 # NOTE:Base_Source is included as base class for uniqueness:by_base_class to work
@@ -397,19 +397,23 @@ class File_Source(Playback_Source, Base_Source):
 
         # advance frame iterator until we hit the target frame
         av_frame = None
-        for av_frame in self.frame_iterator:
+        for packet, av_frame in self.frame_iterator:
             if not av_frame:
                 raise EndofVideoError
-            if av_frame.pts == target_entry.pts:
+            if packet.pts == target_entry.pts:
                 break
-            elif av_frame.pts > target_entry.pts:
+            elif packet.pts > target_entry.pts:
+
                 # This should never happen, but just in case we should make sure
                 # that our current_frame_idx is actually correct afterwards!
-                logger.warn("Advancing frame iterator went past the target frame!")
+                logger.warn(
+                    "Advancing frame iterator went past the target frame! Expected "
+                    f"{target_entry.pts}, got {packet.pts}"
+                )
                 current_video_lookup = self.videoset.lookup[
                     self.videoset.lookup.container_idx == target_entry.container_idx
                 ]
-                pts_indices = np.flatnonzero(current_video_lookup.pts == av_frame.pts)
+                pts_indices = np.flatnonzero(current_video_lookup.pts == packet.pts)
                 if pts_indices.size > 1:
                     logger.err("Found multiple maching pts! Something is wrong!")
                     raise EndofVideoError
