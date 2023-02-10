@@ -55,9 +55,10 @@ class BackgroundCameraSharingManager:
         self.should_stop_running_event.set()
         self._background_process.join(timeout=5.0)
         if self.is_running:
-            logging.getLogger(__name__ + ".foreground").warning(
-                "Background process could not be terminated"
+            logging.getLogger(__name__ + ".foreground").debug(
+                "Background process did not terminate gracefully. Forcing termination!"
             )
+            self._background_process.terminate()
 
     @property
     def is_running(self) -> bool:
