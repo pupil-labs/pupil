@@ -151,6 +151,12 @@ class Neon_Eye_Cam_Source(HMD_Streaming_Source):
             "Gain": 100,
         }
 
+    def get_frame(self):
+        frame = super().get_frame()
+        if frame is not None:
+            frame.timestamp -= self.g_pool.timebase.value
+        return frame
+
     @classmethod
     def base_class(cls):
         return Base_Source
