@@ -96,7 +96,6 @@ class BackgroundCameraSharingManager:
             camera: Optional[NeonCameraInterface] = None
 
             while not should_stop_running_event.is_set():
-
                 network.process_subscriptions()
                 if network.num_subscribers > 0 and camera is None:
                     network.logger.debug("New subscriber(s) - start sharing camera")
