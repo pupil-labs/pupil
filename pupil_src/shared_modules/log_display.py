@@ -63,7 +63,6 @@ class Log_Display(System_Plugin_Base):
         self.should_redraw = True
 
     def init_ui(self):
-
         self.glfont = fontstash.Context()
         self.glfont.add_font("opensans", get_opensans_font_path())
         self.glfont.set_size(32)

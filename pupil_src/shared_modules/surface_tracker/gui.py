@@ -237,7 +237,6 @@ class GUI:
         # If the surface is defined, draw menu buttons. Otherwise draw definition
         # progress.
         if surface.defined:
-
             self._draw_surface_menu_buttons(
                 surface, surface_edit_anchor, marker_edit_anchor
             )
@@ -417,7 +416,6 @@ class GUI:
     def _on_click_menu_buttons(self, action, pos):
         if action == glfw.PRESS:
             for surface in reversed(self.tracker.surfaces):
-
                 if not surface.detected:
                     continue
 
@@ -564,7 +562,6 @@ class Surface_Window:
 
     def open_window(self):
         if not self._window:
-
             monitor = None
             # open with same aspect ratio as surface
             surface_aspect_ratio = (

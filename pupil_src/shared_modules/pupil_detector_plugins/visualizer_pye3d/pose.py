@@ -14,7 +14,6 @@ import numpy as np
 
 class PosedObject:
     def __init__(self, pose=np.eye(4), extrinsics=None, children=(), parents=()):
-
         self.parents = parents
         self.children = children
         self._pose = np.eye(

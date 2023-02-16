@@ -199,7 +199,6 @@ class ScanPathController(Observable):
 
 
 class ScanPathParams(dict):
-
     version = 1
 
     default_params = {"timeframe": ScanPathController.min_timeframe}

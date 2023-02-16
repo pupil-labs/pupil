@@ -560,7 +560,6 @@ class Profile(Object):
 
     def _integrate_cycle(self, cycle, outevent, inevent):
         if outevent not in cycle:
-
             # Compute the outevent for the whole cycle
             total = inevent.null()
             for member in cycle.functions:
@@ -885,7 +884,6 @@ class JsonParser(Parser):
         self.stream = stream
 
     def parse(self):
-
         obj = json.load(self.stream)
 
         assert obj["version"] == 0
@@ -1287,7 +1285,6 @@ class GprofParser(Parser):
         self.functions[function.index] = function
 
     def parse_cycle_entry(self, lines):
-
         # read cycle header line
         line = lines[0]
         mo = self._cg_cycle_header_re.match(line)
@@ -1552,7 +1549,6 @@ class AXEParser(Parser):
             self.functions[function.index] = function
 
     def parse_cycle_entry(self, lines):
-
         # Process the parents that were not there in gprof format.
         parents = []
         while True:

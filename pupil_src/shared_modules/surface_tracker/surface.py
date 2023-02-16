@@ -43,7 +43,6 @@ class Surface(abc.ABC):
         build_up_status: float = None,
         deprecated_definition: bool = None,
     ):
-
         init_args = [
             real_world_size,
             marker_aggregates_undist,
@@ -469,7 +468,6 @@ class Surface(abc.ABC):
             self.prune_markers()
 
     def _bounding_quadrangle(self, vertices):
-
         # According to OpenCV implementation, cv2.convexHull only accepts arrays with
         # 32bit floats (CV_32F) or 32bit signed ints (CV_32S).
         # See: https://github.com/opencv/opencv/blob/3.4/modules/imgproc/src/convhull.cpp#L137

@@ -147,7 +147,6 @@ class NaturalFeatureTracker:
         self.__was_detected_on_last_update = False
 
     def update(self, gray_img) -> T.Optional[dict]:
-
         # No starting point was selected yet
         if self.__previous_detected_points is None:
             return None

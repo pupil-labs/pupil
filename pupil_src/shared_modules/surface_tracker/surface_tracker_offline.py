@@ -163,7 +163,6 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
                 # Loaded markers are either False, [] or a list of dictionaries. We
                 # need to convert the dictionaries into Surface_Marker objects.
                 if markers:
-
                     markers = [
                         Surface_Marker.deserialize(args) if args else None
                         for args in markers
@@ -564,7 +563,6 @@ class Surface_Tracker_Offline(Observable, Surface_Tracker, Plugin):
                     break
 
         elif notification["subject"] == "should_export":
-
             if self.cache_filler is not None:
                 logger.error("Marker detection not finished. No data will be exported.")
                 return

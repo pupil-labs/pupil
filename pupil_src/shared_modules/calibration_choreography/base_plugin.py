@@ -159,9 +159,9 @@ class CalibrationChoreographyPlugin(Plugin):
             raise NotImplementedError(f'{cls} must implement a "label" class property')
 
     @staticmethod
-    def registered_choreographies_by_label() -> T.Mapping[
-        str, "CalibrationChoreographyPlugin"
-    ]:
+    def registered_choreographies_by_label() -> (
+        T.Mapping[str, "CalibrationChoreographyPlugin"]
+    ):
         return dict(CalibrationChoreographyPlugin.__registered_choreography_plugins)
 
     @classmethod

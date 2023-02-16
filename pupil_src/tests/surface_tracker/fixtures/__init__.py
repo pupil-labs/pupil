@@ -75,9 +75,9 @@ def surfaces_deserialized_v01_mixed() -> typing.Collection[Surface]:
     return (*surfaces_deserialized_v01_apriltag(), *surfaces_deserialized_v01_square())
 
 
-def surface_marker_aggregate_pairs_v01_mixed() -> typing.Collection[
-    typing.Tuple[Surface_Marker_Aggregate, dict]
-]:
+def surface_marker_aggregate_pairs_v01_mixed() -> (
+    typing.Collection[typing.Tuple[Surface_Marker_Aggregate, dict]]
+):
     return (
         *surface_marker_aggregate_pairs_v01_apriltag(),
         *surface_marker_aggregate_pairs_v01_square(),
@@ -91,9 +91,9 @@ def surface_marker_aggregates_serialized_v01_mixed() -> typing.Collection[dict]:
     )
 
 
-def surface_marker_aggregates_deserialized_v01_mixed() -> typing.Collection[
-    Surface_Marker_Aggregate
-]:
+def surface_marker_aggregates_deserialized_v01_mixed() -> (
+    typing.Collection[Surface_Marker_Aggregate]
+):
     return (
         *surface_marker_aggregates_deserialized_v01_apriltag(),
         *surface_marker_aggregates_deserialized_v01_square(),

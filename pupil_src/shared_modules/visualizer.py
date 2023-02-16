@@ -75,7 +75,6 @@ class Visualizer:
     """
 
     def __init__(self, g_pool, name="Visualizer", run_independently=False):
-
         self.name = name
         self.window_size = (640, 480)
         self.window = None
@@ -106,7 +105,6 @@ class Visualizer:
     ############## DRAWING FUNCTIONS ##############################
 
     def draw_frustum(self, width, height, length):
-
         W = width / 2.0
         H = height / 2.0
         Z = length
@@ -158,7 +156,6 @@ class Visualizer:
         contours=45,
         color=RGBA(0.2, 0.5, 0.5, 0.5),
     ):
-
         glPushMatrix()
         glTranslatef(sphere_position[0], sphere_position[1], sphere_position[2])
         glScale(sphere_radius, sphere_radius, sphere_radius)

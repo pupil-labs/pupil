@@ -355,7 +355,6 @@ class Camera_Intrinsics_Estimation(Plugin):
             self.undist_img = self.g_pool.capture.intrinsics.undistort(frame.img)
 
     def gl_display(self):
-
         for grid_points in self.img_points:
             # we dont need that extra encapsulation that opencv likes so much
             calib_bounds = cv2.convexHull(grid_points)[:, 0]

@@ -31,7 +31,6 @@ def test_unique():
 
 
 def test_operators():
-
     assert is_none(None) == True
     assert is_not_none(None) == False
 

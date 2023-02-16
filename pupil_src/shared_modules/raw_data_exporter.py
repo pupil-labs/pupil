@@ -458,7 +458,6 @@ class Gaze_Positions_Exporter(_Base_Positions_Exporter):
     def dict_export(
         cls, raw_value: csv_utils.CSV_EXPORT_RAW_TYPE, world_index: int
     ) -> dict:
-
         gaze_timestamp = str(raw_value["timestamp"])
         confidence = raw_value["confidence"]
         norm_pos = raw_value["norm_pos"]

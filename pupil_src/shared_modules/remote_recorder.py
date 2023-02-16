@@ -120,7 +120,6 @@ class Remote_Recorder_Core:
 
 
 class Remote_Recorder(Plugin):
-
     order = 0.3
     uniqueness = "by_class"
     icon_chr = chr(0xEC16)

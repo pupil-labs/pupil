@@ -42,7 +42,6 @@ def default_calibration_choreography_plugin(app: str):
 
 
 def patch_loaded_plugins_with_choreography_plugin(loaded_plugins, app: str):
-
     default_choreo_class = default_calibration_choreography_plugin(app=app)
     default_choreo_name = default_choreo_class.__name__
 

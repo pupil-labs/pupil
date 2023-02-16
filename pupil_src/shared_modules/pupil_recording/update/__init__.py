@@ -37,7 +37,6 @@ _transformations_to_new_style = {
 
 
 def update_recording(rec_dir: str):
-
     recording_type = get_recording_type(rec_dir)
 
     if recording_type == RecordingType.CLOUD_CSV_EXPORT:

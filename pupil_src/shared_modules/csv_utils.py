@@ -44,7 +44,6 @@ class CSV_Exporter(abc.ABC, t.Generic[CSV_EXPORT_RAW_TYPE]):
         export_dir: str,
         export_name: str,
     ) -> str:
-
         export_path = os.path.abspath(os.path.join(export_dir, export_name))
 
         with open(export_path, "w", encoding="utf-8", newline="") as csv_file:

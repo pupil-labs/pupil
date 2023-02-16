@@ -193,7 +193,6 @@ class Hololens_Relay(Plugin):
         self.remove_menu()
 
     def update_menu(self):
-
         del self.menu.elements[:]
 
         def set_iface(use_primary_interface):
@@ -335,7 +334,6 @@ class Hololens_Relay(Plugin):
                         and remote_socket is not None
                         and topic.startswith("notify.calibration.")
                     ):
-
                         if payload["subject"] == "calibration.successful":
                             # event calibration successful
                             remote_socket.sendto(b"ECS", self.calib_result_receiver)

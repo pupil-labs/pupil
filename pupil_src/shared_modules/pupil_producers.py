@@ -490,7 +490,6 @@ class Offline_Pupil_Detection(Pupil_Producer_Base):
 
     @property
     def detection_progress(self) -> float:
-
         if not sum(self.eye_frame_num):
             return 0.0
 

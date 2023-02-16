@@ -629,7 +629,6 @@ def eye(
         # Event loop
         window_should_close = False
         while not window_should_close:
-
             if notify_sub.new_data:
                 t, notification = notify_sub.recv()
                 subject = notification["subject"]

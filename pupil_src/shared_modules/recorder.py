@@ -443,7 +443,6 @@ class Recorder(System_Plugin_Base):
             self.info_menu = None
 
     def recent_events(self, events):
-
         if self.check_space():
             disk_space = available_gb(self.rec_root_dir)
             if (

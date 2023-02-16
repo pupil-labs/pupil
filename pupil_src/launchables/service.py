@@ -86,7 +86,6 @@ def service(
         ipc_pub.notify(n)
 
     try:
-
         # helpers/utils
         import audio
         from background_helper import IPC_Logging_Task_Proxy

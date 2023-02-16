@@ -306,7 +306,6 @@ class Time_Sync(Plugin):
             return False
 
     def restart_discovery(self, name):
-
         if self.discovery:
             if self.discovery.name() == name:
                 return

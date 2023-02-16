@@ -17,7 +17,6 @@ from .recording_info_2_0 import _RecordingInfoFile_2_0
 
 
 class _RecordingInfoFile_2_2(_RecordingInfoFile_2_0):
-
     # Used to make Pupil v2.0 recordings backwards incompatible with v1.*
 
     @property

@@ -30,7 +30,6 @@ class WindowPositionManager:
         default_position: T.Tuple[int, int],
         previous_position: T.Optional[T.Tuple[int, int]],
     ) -> T.Tuple[int, int]:
-
         if previous_position is None:
             return default_position
 

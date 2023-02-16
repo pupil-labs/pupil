@@ -118,7 +118,6 @@ class ScreenMarkerChoreographyPlugin(
         return "Calibrate gaze parameters using a screen based animation."
 
     def _init_custom_menu_ui_elements(self) -> list:
-
         self.__ui_selector_monitor_name = ui.Selector(
             "selected_monitor_name",
             self,
@@ -302,7 +301,6 @@ class ScreenMarkerChoreographyPlugin(
         self._signal_should_stop(mode=self.current_mode)
 
     def __detect_reference_circle_marker(self, gray_img):
-
         # Detect all circular markers
         circle_markers = self.__circle_tracker.update(gray_img)
 

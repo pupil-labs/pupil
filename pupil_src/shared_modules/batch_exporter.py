@@ -403,7 +403,6 @@ class Batch_Exporter(Plugin):
 
 
 def main():
-
     import argparse
     from textwrap import dedent
 

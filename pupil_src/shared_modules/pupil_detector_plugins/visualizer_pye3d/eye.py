@@ -71,7 +71,6 @@ class LeGrandEye(BasicEye):
         n_refraction=1.3375,
         camera=None,
     ):
-
         super().__init__()
 
         self.model_type = "LeGrand"
@@ -133,7 +132,6 @@ class LeGrandEye(BasicEye):
         return pupil_center
 
     def set_up_gl_vertices(self):
-
         # EYEBALL
         self.central_ring_eyeball = [
             [self.eyeball_radius * np.sin(phi), 0, self.eyeball_radius * np.cos(phi)]
@@ -187,7 +185,6 @@ class LeGrandEye(BasicEye):
         color_eyeball=(0.6, 0.6, 1.0),
         color_cornea=(1.0, 1.0, 1.0),
     ):
-
         glPushMatrix()
 
         glLoadIdentity()
@@ -210,7 +207,6 @@ class LeGrandEye(BasicEye):
 
         # DRAW EYEBALL
         if draw_eyeball:
-
             # glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glColor4f(*color_eyeball, 1.0 * alpha)
             glLineWidth(1.0)
@@ -244,7 +240,6 @@ class LeGrandEye(BasicEye):
 
         # DRAW IRIS
         if draw_iris:
-
             glPolygonMode(GL_FRONT_AND_BACK, GL_FILL)
             glColor4f(
                 self.iris_color[0], self.iris_color[1], self.iris_color[2], 0.4 * alpha
@@ -263,7 +258,6 @@ class LeGrandEye(BasicEye):
 
         # DRAW CORNEA
         if draw_cornea:
-
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE)
             glColor4f(*color_cornea, 0.3 * alpha)
             glLineWidth(1.0)

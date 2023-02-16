@@ -40,7 +40,6 @@ def nearest_intersection_points(line0, line1):
     b0 = diff.dot(d1)
 
     if np.abs(a01) < 1.0:
-
         # Lines are not parallel.
         det = 1.0 - a01 * a01
         b1 = -diff.dot(d2)
@@ -48,7 +47,6 @@ def nearest_intersection_points(line0, line1):
         s1 = (a01 * b0 - b1) / det
 
     else:
-
         # Lines are parallel, select any pair of closest points.
         s0 = -b0
         s1 = 0
@@ -71,7 +69,6 @@ def nearest_intersection(line0, line1):
 
 
 def nearest_linepoint_to_point(ref_point, line):
-
     p1 = line[0]
     p2 = line[1]
 

@@ -55,7 +55,6 @@ class Vis_Polyline(Plugin, Observable):
         }
 
     def init_ui(self):
-
         polyline_style_thickness_slider = ui.Slider(
             "thickness",
             self.polyline_style_controller,
@@ -214,7 +213,6 @@ class Vis_Polyline(Plugin, Observable):
 
 
 class PolylineStyleController:
-
     rgba_min = 0.0
     rgba_max = 1.0
     rgba_step = 0.05

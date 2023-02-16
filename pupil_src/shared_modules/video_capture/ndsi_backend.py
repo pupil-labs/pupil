@@ -340,7 +340,6 @@ class NDSI_Source(Base_Source):
         return menu
 
     def ui_elements(self):
-
         ui_elements = []
         ui_elements.append(
             ui.Info_Text(f"Camera: {self._sensor_name} @ {self._host_name}")

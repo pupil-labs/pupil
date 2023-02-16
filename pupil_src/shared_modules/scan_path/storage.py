@@ -21,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 class ScanPathStorage:
-
     version = 1
 
     def __init__(self, rec_dir, gaze_data=...):

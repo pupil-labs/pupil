@@ -65,7 +65,6 @@ state Open {
 
 
 class MarkerWindowController(observable.Observable):
-
     _CLICKS_NEEDED_TO_CLOSE = 5
 
     # frames of marker shown before starting to sample
@@ -247,7 +246,6 @@ class MarkerWindowController(observable.Observable):
             raise UnhandledMarkerWindowStateError(self.__state)
 
     def draw_window(self):
-
         if self.__window.window_size == (0, 0):
             # On Windows we get a window_size of (0, 0) when either minimizing the
             # Window or when tabbing out (rendered only in the background). We get

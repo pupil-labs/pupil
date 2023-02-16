@@ -33,7 +33,6 @@ def test_surface_marker_from_raw_detection():
 
 
 def test_surface_marker_deserialize():
-
     # Square tag deserialization test
 
     SQUARE_MARKER_TAG_ID = 55

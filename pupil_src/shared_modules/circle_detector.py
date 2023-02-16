@@ -670,7 +670,6 @@ def getEllipsePts(e, num_pts=10):
 
 
 def marker_3d_pose(marker, cam_model, marker_diameter=7.6):
-
     target_circle = [[0, 0], [marker_diameter, marker_diameter], 0]
     target_pts = getEllipsePts(target_circle)
     target_pts3D = np.zeros(

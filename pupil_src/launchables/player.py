@@ -703,7 +703,6 @@ def player(
                         )
 
         while not glfw.window_should_close(main_window) and not process_was_interrupted:
-
             # fetch newest notifications
             new_notifications = []
             while notify_sub.new_data:
@@ -735,7 +734,6 @@ def player(
             glfw.poll_events()
             # render visual feedback from loaded plugins
             if gl_utils.is_window_visible(main_window):
-
                 gl_utils.glViewport(0, 0, *g_pool.camera_render_size)
                 g_pool.capture.gl_display()
                 for p in g_pool.plugins:
@@ -948,7 +946,6 @@ def player_drop(
             return bottom_y
 
         while not glfw.window_should_close(window) and not process_was_interrupted:
-
             fb_size = glfw.get_framebuffer_size(window)
             content_scale = gl_utils.get_content_scale(window)
             gl_utils.adjust_gl_view(*fb_size)

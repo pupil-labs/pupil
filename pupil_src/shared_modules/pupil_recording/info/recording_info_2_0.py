@@ -17,7 +17,6 @@ from . import recording_info_utils as utils
 
 
 class _RecordingInfoFile_2_0(RecordingInfoFile):
-
     # RecordingInfo
 
     @property
