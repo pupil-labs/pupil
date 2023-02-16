@@ -9,12 +9,11 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import pytest
-
 from gaze_mapping.notifications import (
-    CalibrationSuccessNotification,
     CalibrationFailureNotification,
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
+    CalibrationSuccessNotification,
 )
 
 

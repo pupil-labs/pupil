@@ -11,21 +11,22 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 
 import pye3d
-from pye3d.detector_3d import Detector3D, CameraModel, DetectorMode
-from pyglui import ui
 from methods import normalize
+from pye3d.detector_3d import CameraModel, Detector3D, DetectorMode
+from pyglui import ui
+from version_utils import parse_version
 
 from . import color_scheme
 from .detector_base_plugin import PupilDetectorPlugin
-from .visualizer_2d import draw_eyeball_outline, draw_pupil_outline, draw_ellipse
+from .visualizer_2d import draw_ellipse, draw_eyeball_outline, draw_pupil_outline
 from .visualizer_pye3d import Eye_Visualizer
 
 logger = logging.getLogger(__name__)
 
-version_installed = getattr(pye3d, "__version__", "0.0.1")
-version_supported = "0.3.0"
+version_installed = parse_version(getattr(pye3d, "__version__", "0.0.1"))
+version_supported = parse_version("0.3")
 
-if version_installed != version_supported:
+if not version_installed.release[:2] == version_installed.release[:2]:
     logger.info(
         f"Requires pye3d version {version_supported} "
         f"(Installed: {version_installed})"
@@ -46,10 +47,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
     def pupil_detector(self):
         return self.detector
 
-    def __init__(
-        self,
-        g_pool=None,
-    ):
+    def __init__(self, g_pool=None, **kwargs):
         super().__init__(g_pool=g_pool)
         self.camera = CameraModel(
             focal_length=self.g_pool.capture.intrinsics.focal_length,
@@ -62,7 +60,7 @@ class Pye3DPlugin(PupilDetectorPlugin):
             else DetectorMode.blocking
         )
         logger.debug(f"Running {mode.name} in {g_pool.app}")
-        self.detector = Detector3D(camera=self.camera, long_term_mode=mode)
+        self.detector = Detector3D(camera=self.camera, long_term_mode=mode, **kwargs)
 
         method_suffix = {
             DetectorMode.asynchronous: "real-time",
@@ -163,11 +161,6 @@ class Pye3DPlugin(PupilDetectorPlugin):
         help_text = (
             f"pye3d {pye3d.__version__} - a model-based 3d pupil detector with corneal "
             "refraction correction. Read more about the detector in our docs website."
-        )
-        self.menu.append(ui.Info_Text(help_text))
-        help_text = (
-            "Visualizations: Green circle: eye model outline. Blue ellipse: 2d pupil "
-            "detection. Red ellipse: 3d pupil detection."
         )
         self.menu.append(ui.Info_Text(help_text))
         self.menu.append(ui.Button("Reset 3D model", self.reset_model))

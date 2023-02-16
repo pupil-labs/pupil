@@ -60,7 +60,7 @@ class ZMQ_handler(logging.Handler):
             self.socket.send(record_dict)
 
 
-class ZMQ_Socket(object):
+class ZMQ_Socket:
     def __del__(self):
         self.socket.close()
 
@@ -132,7 +132,7 @@ class Msg_Receiver(ZMQ_Socket):
         return payload
 
     @property
-    def new_data(self):
+    def new_data(self) -> bool:
         return self.socket.get(zmq.EVENTS) & zmq.POLLIN
 
 
@@ -142,8 +142,8 @@ class Msg_Streamer(ZMQ_Socket):
     Not threadsave. Make a new one for each thread
     """
 
-    def __init__(self, ctx, url, hwm=None):
-        self.socket = zmq.Socket(ctx, zmq.PUB)
+    def __init__(self, ctx, url, hwm=None, socket_type: int = zmq.PUB):
+        self.socket = zmq.Socket(ctx, socket_type)
         if hwm is not None:
             self.socket.set_hwm(hwm)
 
@@ -162,7 +162,7 @@ class Msg_Streamer(ZMQ_Socket):
         require exposing the pyhton memoryview interface.
         """
         assert deprecated == (), "Depracted use of send()"
-        assert "topic" in payload, "`topic` field required in {}".format(payload)
+        assert "topic" in payload, f"`topic` field required in {payload}"
 
         if "__raw_data__" not in payload:
             # IMPORTANT: serialize first! Else if there is an exception

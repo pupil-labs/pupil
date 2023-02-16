@@ -216,11 +216,11 @@ def make_coord_system_norm_based(flip=False):
     glLoadIdentity()
 
 
-class Coord_System(object):
+class Coord_System:
     """docstring for Coord_System"""
 
     def __init__(self, left, right, bottom, top):
-        super(Coord_System, self).__init__()
+        super().__init__()
         if left == right:
             left -= 1
             right += 1

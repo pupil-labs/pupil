@@ -8,16 +8,20 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+from dataclasses import dataclass
+from typing import ClassVar, Optional, Tuple
+
 from storage import StorageItem
 
 
+@dataclass
 class ReferenceLocation(StorageItem):
-    version = 1
+    screen_pos: Tuple[float, float]
+    frame_index: int
+    timestamp: float
+    mm_pos: Optional[Tuple[float, float, float]] = None
 
-    def __init__(self, screen_pos, frame_index, timestamp):
-        self.screen_pos = screen_pos  # 2D tuple
-        self.frame_index = frame_index
-        self.timestamp = timestamp
+    version: ClassVar[int] = 1
 
     @property
     def screen_x(self):
@@ -33,4 +37,4 @@ class ReferenceLocation(StorageItem):
 
     @property
     def as_tuple(self):
-        return self.screen_pos, self.frame_index, self.timestamp
+        return self.screen_pos, self.frame_index, self.timestamp, self.mm_pos

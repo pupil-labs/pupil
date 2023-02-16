@@ -13,10 +13,9 @@ import logging
 
 import cv2
 import numpy as np
+from head_pose_tracker.function import utils
 from scipy import optimize as scipy_optimize
 from scipy import sparse as scipy_sparse
-
-from head_pose_tracker.function import utils
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +123,7 @@ class BundleAdjustment:
 
         return initial_guess_array, bounds, sparsity_matrix
 
-    def _calculate_bounds(self, eps=np.finfo(np.float).eps, scale=np.inf):
+    def _calculate_bounds(self, eps=np.finfo(np.float64).eps, scale=np.inf):
         """calculate the lower and upper bounds on independent variables
         fix the first marker at the origin of the coordinate system
         """

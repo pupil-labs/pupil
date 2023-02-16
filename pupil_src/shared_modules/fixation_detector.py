@@ -34,23 +34,22 @@ from bisect import bisect_left, bisect_right
 from collections import deque
 from types import SimpleNamespace
 
-import cv2
-import msgpack
-import numpy as np
-from pyglui import ui
-from pyglui.cygl.utils import RGBA, draw_circle
-from pyglui.pyfontstash import fontstash
-from scipy.spatial.distance import pdist
-
 import background_helper as bh
+import cv2
 import data_changed
 import file_methods as fm
+import msgpack
+import numpy as np
 import player_methods as pm
 from hotkey import Hotkey
 from methods import denormalize
 from observable import Observable
 from plugin import Plugin
 from pupil_recording import PupilRecording, RecordingInfo
+from pyglui import ui
+from pyglui.cygl.utils import RGBA, draw_circle
+from pyglui.pyfontstash import fontstash
+from scipy.spatial.distance import pdist
 
 logger = logging.getLogger(__name__)
 
@@ -102,7 +101,7 @@ def fixation_from_data(
     return fix
 
 
-class Fixation_Result_Factory(object):
+class Fixation_Result_Factory:
     __slots__ = ("_id_counter",)
 
     def __init__(self):
@@ -547,7 +546,7 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
                     )
                     self.menu_icon.indicator_stop = progress
             if self.bg_task.completed:
-                self.status = "{} fixations detected".format(len(self.fixation_data))
+                self.status = f"{len(self.fixation_data)} fixations detected"
                 self.correlate_and_publish_new()
                 self.bg_task = None
                 self.menu_icon.indicator_stop = 0.0
@@ -778,12 +777,10 @@ class Offline_Fixation_Detector(Observable, Fixation_Detector_Base):
         ) as csvfile:
             csv_writer = csv.writer(csvfile)
             csv_writer.writerow(("fixation classifier", "Dispersion_Duration"))
-            csv_writer.writerow(
-                ("max_dispersion", "{:0.3f} deg".format(self.max_dispersion))
-            )
-            csv_writer.writerow(("min_duration", "{:.0f} ms".format(self.min_duration)))
-            csv_writer.writerow(("max_duration", "{:.0f} ms".format(self.max_duration)))
-            csv_writer.writerow((""))
+            csv_writer.writerow(("max_dispersion", f"{self.max_dispersion:0.3f} deg"))
+            csv_writer.writerow(("min_duration", f"{self.min_duration:.0f} ms"))
+            csv_writer.writerow(("max_duration", f"{self.max_duration:.0f} ms"))
+            csv_writer.writerow("")
             csv_writer.writerow(("fixation_count", len(fixations_in_section)))
             logger.info("Created 'fixation_report.csv' file.")
 

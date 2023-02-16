@@ -8,23 +8,20 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import pytest
+
 import itertools
 
+import pytest
 from surface_tracker.surface_marker import (
     Surface_Marker,
-    Surface_Marker_Type,
     Surface_Marker_TagID,
-)
-from surface_tracker.surface_marker import (
-    create_surface_marker_uid,
-    parse_surface_marker_type,
-    parse_surface_marker_tag_id,
-    parse_surface_marker_tag_family,
-)
-from surface_tracker.surface_marker import (
+    Surface_Marker_Type,
     _Apriltag_V3_Marker_Detection,
     _Square_Marker_Detection,
+    create_surface_marker_uid,
+    parse_surface_marker_tag_family,
+    parse_surface_marker_tag_id,
+    parse_surface_marker_type,
 )
 
 

@@ -8,13 +8,15 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import cv2
+
 import logging
+
+import cv2
 
 logger = logging.Logger(__name__)
 import numpy as np
-from scipy.spatial.distance import pdist
 from scipy.interpolate import interp1d
+from scipy.spatial.distance import pdist
 
 
 # because np.sqrt is slower when we do it on small arrays
@@ -85,7 +87,7 @@ def decode(square_img, grid):
         msg_int = 0
     elif sum(corners) == 1:
         msg_int = 1
-        corners = tuple([1 - c for c in corners])  # just inversion
+        corners = tuple(1 - c for c in corners)  # just inversion
     else:
         # this is no valid marker but maybe a maldetected one? We return unknown marker with None rotation
         return None
@@ -453,7 +455,7 @@ def detect_markers_robust(
             m for m in not_found if m["frames_since_true_detection"] < 5
         ] + new_markers
         if markers:  # del double detected markers
-            min_distace = min([m["perimeter"] for m in markers]) / 4.0
+            min_distace = min(m["perimeter"] for m in markers) / 4.0
             # min_distace = 50
             if len(markers) > 1:
                 remove = set()
@@ -495,6 +497,7 @@ def detect_markers_robust(
 
 def bench(folder):
     from os.path import join
+
     from video_capture.av_file_capture import File_Capture
 
     cap = File_Capture(join(folder, "marker-test.mp4"))
@@ -524,7 +527,9 @@ def bench(folder):
 
 if __name__ == "__main__":
     folder = "/Users/mkassner/Desktop/"
-    import cProfile, subprocess, os
+    import cProfile
+    import os
+    import subprocess
 
     cProfile.runctx(
         "bench(folder)",

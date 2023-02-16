@@ -8,13 +8,13 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import glfw
 import gl_utils
+import glfw
 from gl_utils import GLFWErrorReporting
 
 GLFWErrorReporting.set_default()
 
-from methods import normalize, denormalize
+from methods import denormalize, normalize
 
 
 class Draggable:

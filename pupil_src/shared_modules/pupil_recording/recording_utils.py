@@ -12,6 +12,9 @@ import enum
 import os
 from pathlib import Path
 
+from packaging.version import Version
+from typing_extensions import Literal
+
 from .info import recording_info_utils
 from .info.recording_info import RecordingInfoFile
 
@@ -45,10 +48,14 @@ class RecordingType(enum.Enum):
     INVISIBLE = enum.auto()
     OLD_STYLE = enum.auto()
     NEW_STYLE = enum.auto()
+    NEON = enum.auto()
+    CLOUD_CSV_EXPORT = enum.auto()
 
 
 def get_recording_type(rec_dir: str) -> RecordingType:
     assert_valid_rec_dir(rec_dir)
+
+    non_core_type = _is_PI_Neon_or_Cloud_export(rec_dir)
 
     if RecordingInfoFile.does_recording_contain_info_file(rec_dir):
         return RecordingType.NEW_STYLE
@@ -56,11 +63,11 @@ def get_recording_type(rec_dir: str) -> RecordingType:
     elif _is_old_style_player_recording(rec_dir):
         return RecordingType.OLD_STYLE
 
-    elif _is_pupil_invisible_recording(rec_dir):
-        return RecordingType.INVISIBLE
-
     elif _is_pupil_mobile_recording(rec_dir):
         return RecordingType.MOBILE
+
+    elif non_core_type:
+        return non_core_type
 
     raise InvalidRecordingException(
         reason=f"There is no info file in the target directory.", recovery=""
@@ -130,12 +137,22 @@ def assert_valid_rec_dir(rec_dir: str):
 # outside!
 
 
-def _is_pupil_invisible_recording(rec_dir: str) -> bool:
+def _is_PI_Neon_or_Cloud_export(
+    rec_dir: str,
+) -> Literal[
+    RecordingType.INVISIBLE, RecordingType.NEON, RecordingType.CLOUD_CSV_EXPORT, None
+]:
+    if next(Path(rec_dir).glob("*.csv"), False):
+        return RecordingType.CLOUD_CSV_EXPORT
     try:
-        recording_info_utils.read_info_json_file(rec_dir)
-        return True
-    except FileNotFoundError:
-        return False
+        info = recording_info_utils.read_info_json_file(rec_dir)
+        data_version = Version(info["data_format_version"])
+        if data_version.major < 2:
+            return RecordingType.INVISIBLE
+        else:
+            return RecordingType.NEON
+    except (FileNotFoundError, KeyError):
+        return None
 
 
 def _is_pupil_mobile_recording(rec_dir: str) -> bool:

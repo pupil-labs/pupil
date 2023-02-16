@@ -9,16 +9,15 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import typing
-import numpy as np
 
+import numpy as np
 from surface_tracker.surface import Surface
-from surface_tracker.surface_online import Surface_Online
-from surface_tracker.surface_offline import Surface_Offline
 from surface_tracker.surface_marker_aggregate import (
     Surface_Marker_Aggregate,
     Surface_Marker_UID,
 )
-
+from surface_tracker.surface_offline import Surface_Offline
+from surface_tracker.surface_online import Surface_Online
 
 __all__ = [
     "surface_pairs",

@@ -8,8 +8,30 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import abc
+from __future__ import annotations
+
+import sys
 import typing as T
+
+from typing_extensions import Self, TypedDict
+
+if sys.version_info < (3, 9):
+
+    def get_type_hints(cls):
+        return cls.__annotations__
+
+else:
+    # Starting in Python 3.10, __annotations__ does no longer contain the annotations
+    # of the parent class. `_SerializedNamedTupleMixin.sanitize_serialized_dict`
+    # depends on the earlier implementation.
+    # We do not use `inspect.get_annotations()` as a replacement for two reasons:
+    # 1. It also does not include the base classes' annoations
+    # 2. The annotations might not be evaluated yet, containing `typing.ForwardRef`
+    #    instances
+    #
+    # `typing.get_type_hints` implements the desired behavior but is only available in
+    # Python 3.9 or newer
+    from typing import get_type_hints
 
 
 # TODO: Consider extending this pattern for notifications through the entire codebase and/or replace with dataclasses with Python 3.7
@@ -20,17 +42,17 @@ class _SerializedNamedTupleMixin:
         return dict(self._asdict())
 
     @classmethod
-    def from_dict(cls, dict_: dict) -> T.NamedTuple:
+    def from_dict(cls, dict_: dict) -> Self:
         dict_ = {**cls._field_defaults, **dict_}
         try:
             dict_ = cls.sanitize_serialized_dict(dict_)
             return cls(**dict_)
         except Exception as err:
-            raise ValueError from err
+            raise ValueError(f"{err}") from err
 
     @classmethod
     def sanitize_serialized_dict(cls, dict_: dict) -> dict:
-        field_classes = cls.__annotations__
+        field_classes = get_type_hints(cls)
         for field_name in cls._fields:
             field_cls = field_classes[field_name]
             dict_[field_name] = field_cls(dict_[field_name])
@@ -107,10 +129,15 @@ class _CalibrationFailureFields(T.NamedTuple):
     subject: str = f"calibration.failed"
 
 
+class CalibrationData(TypedDict):
+    ref_list: T.List
+    pupil_list: T.List
+
+
 class _CalibrationSetupFields(T.NamedTuple):
     gazer_class_name: str
     timestamp: float
-    calib_data: dict
+    calib_data: CalibrationData
     record: bool = False
 
     # Meta

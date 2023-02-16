@@ -8,7 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os, sys, platform
+
+import os
+import platform
+import sys
 
 running_from_bundle = getattr(sys, "frozen", False)
 if not running_from_bundle:
@@ -47,20 +50,26 @@ def set_bundled_glfw_environ_var():
     import pathlib
 
     meipass = pathlib.Path(sys._MEIPASS)
-    lib_path = next(meipass.glob("*glfw*"), None)
+    glfw_folder = meipass / "glfw"
+    lib_path = next(glfw_folder.glob("*glfw*"), None)
+    if lib_path is None:
+        session_type = (
+            "wayland" if os.environ.get("XDG_SESSION_TYPE") == "wayland" else "x11"
+        )
+        lib_path = glfw_folder / session_type / "libglfw.so"
     os.environ["PYGLFW_LIBRARY"] = str(lib_path)
 
 
 if running_from_bundle:
     # Specifiy user dir.
-    folder_name = "pupil_{}_settings".format(parsed_args.app)
+    folder_name = f"pupil_{parsed_args.app}_settings"
     user_dir = os.path.expanduser(os.path.join("~", folder_name))
 
     # set libglfw env variable to prevent endless version check loop within pyglfw
     set_bundled_glfw_environ_var()
 else:
     # Specifiy user dir.
-    user_dir = os.path.join(pupil_base_dir, "{}_settings".format(parsed_args.app))
+    user_dir = os.path.join(pupil_base_dir, f"{parsed_args.app}_settings")
 
     # Add pupil_external binaries to PATH
     if platform.system() == "Windows":
@@ -82,48 +91,52 @@ plugin_dir = os.path.join(user_dir, "plugins")
 if not os.path.isdir(plugin_dir):
     os.mkdir(plugin_dir)
 
+from ctypes import c_bool, c_double
+
 # threading and processing
 from multiprocessing import (
     Process,
     Value,
     active_children,
-    set_start_method,
     freeze_support,
+    set_start_method,
 )
 from threading import Thread
-from ctypes import c_double, c_bool
+
+# time
+from time import time
 
 # networking
 import zmq
 import zmq_tools
-
-# time
-from time import time
 
 # os utilities
 from os_utils import Prevent_Idle_Sleep
 
 # functions to run in seperate processes
 if parsed_args.profile:
-    from launchables.world import world_profiled as world
-    from launchables.service import service_profiled as service
     from launchables.eye import eye_profiled as eye
     from launchables.player import player_profiled as player
+    from launchables.service import service_profiled as service
+    from launchables.world import world_profiled as world
 else:
     from launchables.world import world
     from launchables.service import service
     from launchables.eye import eye
     from launchables.player import player
-from launchables.player import player_drop
+
 from launchables.marker_detectors import circle_detector
+from launchables.player import player_drop
 
 
 def clear_settings(user_dir):
-    import glob, os, time
+    import glob
+    import os
+    import time
 
     time.sleep(1.0)
     for f in glob.glob(os.path.join(user_dir, "user_settings_*")):
-        print("Clearing {}...".format(f))
+        print(f"Clearing {f}...")
         os.remove(f)
     time.sleep(5)
 
@@ -176,13 +189,15 @@ def launcher():
     def log_loop(ipc_sub_url, log_level_debug):
         import logging
 
+        from rich.logging import RichHandler
+
         # Get the root logger
         logger = logging.getLogger()
         # set log level
         logger.setLevel(logging.NOTSET)
         # Stream to file
         fh = logging.FileHandler(
-            os.path.join(user_dir, "{}.log".format(parsed_args.app)),
+            os.path.join(user_dir, f"{parsed_args.app}.log"),
             mode="w",
             encoding="utf-8",
         )
@@ -193,17 +208,18 @@ def launcher():
         )
         logger.addHandler(fh)
         # Stream to console.
-        ch = logging.StreamHandler()
-        ch.setFormatter(
-            logging.Formatter("%(processName)s - [%(levelname)s] %(name)s: %(message)s")
+
+        ch = RichHandler(
+            level=logging.DEBUG if log_level_debug else logging.INFO,
+            rich_tracebacks=False,
         )
-        if log_level_debug:
-            ch.setLevel(logging.DEBUG)
-        else:
-            ch.setLevel(logging.INFO)
+        ch.setFormatter(
+            logging.Formatter("%(processName)s - %(name)s: %(message)s", datefmt="[%X]")
+        )
+
         logger.addHandler(ch)
         # IPC setup to receive log messages. Use zmq_tools.ZMQ_handler to send messages to here.
-        sub = zmq_tools.Msg_Receiver(zmq_ctx, ipc_sub_url, topics=("logging",))
+        sub = zmq_tools.Msg_Receiver(zmq.Context(), ipc_sub_url, topics=("logging",))
         while True:
             topic, msg = sub.recv()
             record = logging.makeLogRecord(msg)
@@ -243,20 +259,22 @@ def launcher():
 
     # Starting communication threads:
     # A ZMQ Proxy Device serves as our IPC Backbone
-    ipc_backbone_thread = Thread(target=zmq.proxy, args=(xsub_socket, xpub_socket))
-    ipc_backbone_thread.setDaemon(True)
+    ipc_backbone_thread = Thread(
+        target=zmq.proxy, args=(xsub_socket, xpub_socket), daemon=True
+    )
     ipc_backbone_thread.start()
 
-    pull_pub = Thread(target=pull_pub, args=(ipc_pub_url, pull_socket))
-    pull_pub.setDaemon(True)
+    pull_pub = Thread(target=pull_pub, args=(ipc_pub_url, pull_socket), daemon=True)
     pull_pub.start()
 
-    log_thread = Thread(target=log_loop, args=(ipc_sub_url, parsed_args.debug))
-    log_thread.setDaemon(True)
+    log_thread = Thread(
+        target=log_loop, args=(ipc_sub_url, parsed_args.debug), daemon=True
+    )
     log_thread.start()
 
-    delay_thread = Thread(target=delay_proxy, args=(ipc_push_url, ipc_sub_url))
-    delay_thread.setDaemon(True)
+    delay_thread = Thread(
+        target=delay_proxy, args=(ipc_push_url, ipc_sub_url), daemon=True
+    )
     delay_thread.start()
 
     del xsub_socket, xpub_socket, pull_socket
@@ -299,131 +317,161 @@ def launcher():
         )
 
     with Prevent_Idle_Sleep():
-        while True:
-            # listen for relevant messages.
-            if cmd_sub.socket.poll(timeout=1000):
-                topic, n = cmd_sub.recv()
-                if "notify.eye_process.should_start" in topic:
-                    eye_id = n["eye_id"]
-                    Process(
-                        target=eye,
-                        name="eye{}".format(eye_id),
-                        args=(
-                            timebase,
-                            eye_procs_alive[eye_id],
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            eye_id,
-                            n.get("overwrite_cap_settings"),
-                            parsed_args.hide_ui,
-                            parsed_args.debug,
-                            n.get("pub_socket_hwm"),
-                            parsed_args.app,  # parent_application
-                            parsed_args.skip_driver_installation,
-                        ),
-                    ).start()
-                elif "notify.player_process.should_start" in topic:
-                    Process(
-                        target=player,
-                        name="player",
-                        args=(
-                            n["rec_dir"],
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            parsed_args.debug,
-                        ),
-                    ).start()
-                elif "notify.world_process.should_start" in topic:
-                    Process(
-                        target=world,
-                        name="world",
-                        args=(
-                            timebase,
-                            eye_procs_alive,
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            parsed_args.port,
-                            parsed_args.hide_ui,
-                            parsed_args.debug,
-                            parsed_args.skip_driver_installation,
-                        ),
-                    ).start()
-                elif "notify.clear_settings_process.should_start" in topic:
-                    Process(
-                        target=clear_settings, name="clear_settings", args=(user_dir,)
-                    ).start()
-                elif "notify.service_process.should_start" in topic:
-                    Process(
-                        target=service,
-                        name="service",
-                        args=(
-                            timebase,
-                            eye_procs_alive,
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            parsed_args.port,
-                            parsed_args.hide_ui,
-                            parsed_args.debug,
-                        ),
-                    ).start()
-                elif "notify.player_drop_process.should_start" in topic:
-                    Process(
-                        target=player_drop,
-                        name="player",
-                        args=(
-                            n["rec_dir"],
-                            ipc_pub_url,
-                            ipc_sub_url,
-                            ipc_push_url,
-                            user_dir,
-                            app_version,
-                            parsed_args.debug,
-                        ),
-                    ).start()
-                elif "notify.circle_detector_process.should_start" in topic:
-                    Process(
-                        target=circle_detector,
-                        name="circle_detector",
-                        args=(ipc_push_url, n["pair_url"], n["source_path"]),
-                    ).start()
-                elif "notify.meta.should_doc" in topic:
-                    cmd_push.notify(
-                        {
-                            "subject": "meta.doc",
-                            "actor": "launcher",
-                            "doc": launcher.__doc__,
-                        }
+        try:
+            while True:
+                # listen for relevant messages.
+                if cmd_sub.socket.poll(timeout=1000):
+                    topic, n = cmd_sub.recv()
+                    process_notification(
+                        topic,
+                        n,
+                        timebase,
+                        eye_procs_alive,
+                        ipc_pub_url,
+                        ipc_sub_url,
+                        ipc_push_url,
+                        cmd_push,
+                        user_dir,
+                        app_version,
+                        parsed_args,
                     )
-                elif "notify.launcher_process.should_stop" in topic:
-                    if parsed_args.app == "capture":
-                        cmd_push.notify({"subject": "world_process.should_stop"})
-                    elif parsed_args.app == "service":
-                        cmd_push.notify({"subject": "service_process.should_stop"})
-                    elif parsed_args.app == "player":
-                        cmd_push.notify({"subject": "player_process.should_stop"})
+                else:
+                    if not active_children():
+                        break
+        except KeyboardInterrupt:
+            logging.warning(
+                f"Launcher shutting down with active children: {active_children()}"
+            )
+            # TODO: join with timeout and kill after
+        else:
+            for p in active_children():
+                p.join()
 
-            else:
-                if not active_children():
-                    break
 
-        for p in active_children():
-            p.join()
+def process_notification(
+    topic,
+    notification,
+    timebase,
+    eye_procs_alive,
+    ipc_pub_url,
+    ipc_sub_url,
+    ipc_push_url,
+    cmd_push,
+    user_dir,
+    app_version,
+    parsed_args,
+):
+    if "notify.eye_process.should_start" in topic:
+        eye_id = notification["eye_id"]
+        Process(
+            target=eye,
+            name=f"eye{eye_id}",
+            args=(
+                timebase,
+                eye_procs_alive[eye_id],
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                eye_id,
+                notification.get("overwrite_cap_settings"),
+                parsed_args.hide_ui,
+                parsed_args.debug,
+                notification.get("pub_socket_hwm"),
+                parsed_args.app,  # parent_application
+                parsed_args.skip_driver_installation,
+            ),
+        ).start()
+    elif "notify.player_process.should_start" in topic:
+        Process(
+            target=player,
+            name="player",
+            args=(
+                notification["rec_dir"],
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                parsed_args.debug,
+            ),
+        ).start()
+    elif "notify.world_process.should_start" in topic:
+        Process(
+            target=world,
+            name="world",
+            args=(
+                timebase,
+                eye_procs_alive,
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                parsed_args.port,
+                parsed_args.hide_ui,
+                parsed_args.debug,
+                parsed_args.skip_driver_installation,
+            ),
+        ).start()
+    elif "notify.clear_settings_process.should_start" in topic:
+        Process(target=clear_settings, name="clear_settings", args=(user_dir,)).start()
+    elif "notify.service_process.should_start" in topic:
+        Process(
+            target=service,
+            name="service",
+            args=(
+                timebase,
+                eye_procs_alive,
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                parsed_args.port,
+                parsed_args.hide_ui,
+                parsed_args.debug,
+            ),
+        ).start()
+    elif "notify.player_drop_process.should_start" in topic:
+        Process(
+            target=player_drop,
+            name="player",
+            args=(
+                notification["rec_dir"],
+                ipc_pub_url,
+                ipc_sub_url,
+                ipc_push_url,
+                user_dir,
+                app_version,
+                parsed_args.debug,
+            ),
+        ).start()
+    elif "notify.circle_detector_process.should_start" in topic:
+        Process(
+            target=circle_detector,
+            name="circle_detector",
+            args=(ipc_push_url, notification["pair_url"], notification["source_path"]),
+        ).start()
+    elif "notify.meta.should_doc" in topic:
+        cmd_push.notify(
+            {
+                "subject": "meta.doc",
+                "actor": "launcher",
+                "doc": launcher.__doc__,
+            }
+        )
+    elif "notify.launcher_process.should_stop" in topic:
+        if parsed_args.app == "capture":
+            cmd_push.notify({"subject": "world_process.should_stop"})
+        elif parsed_args.app == "service":
+            cmd_push.notify({"subject": "service_process.should_stop"})
+        elif parsed_args.app == "player":
+            cmd_push.notify({"subject": "player_process.should_stop"})
 
 
 if __name__ == "__main__":
     freeze_support()
-    if platform.system() == "Darwin":
-        set_start_method("spawn")
+    set_start_method("spawn")
     launcher()

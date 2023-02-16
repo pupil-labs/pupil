@@ -26,6 +26,7 @@ from pyglui import cygl, ui
 from version_utils import parse_version
 
 from .base_backend import Base_Manager, Base_Source, InitialisationError, SourceInfo
+from .neon_backend.definitions import SCENE_CAM_SPEC, CameraSpec
 from .utils import Check_Frame_Stripes, Exposure_Time
 
 # check versions for our own depedencies as they are fast-changing
@@ -62,7 +63,7 @@ class UVC_Source(Base_Source):
         uid=None,
         uvc_controls={},
         check_stripes=True,
-        exposure_mode="manual",
+        exposure_mode="auto",
         *args,
         **kwargs,
     ):
@@ -93,9 +94,7 @@ class UVC_Source(Base_Source):
             except uvc.InitError:
                 logger.error("Camera failed to initialize.")
             except uvc.DeviceNotFoundError:
-                logger.warning(
-                    "No camera found that matched {}".format(preferred_names)
-                )
+                logger.warning(f"No camera found that matched {preferred_names}")
 
         # otherwise we use name or preffered_names
         else:
@@ -144,9 +143,7 @@ class UVC_Source(Base_Source):
             self.name_backup = (self.name,)
             self.frame_size_backup = frame_size
             self.frame_rate_backup = frame_rate
-            controls_dict = dict(
-                [(c.display_name, c) for c in self.uvc_capture.controls]
-            )
+            controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
             try:
                 self.exposure_time_backup = controls_dict[
                     "Absolute Exposure Time"
@@ -167,6 +164,8 @@ class UVC_Source(Base_Source):
             (0x046D, 0x0843, "Logitech Webcam C930e"),
             (0x17EF, 0x480F, "Lenovo Integrated Camera"),
             (0x0C45, 0x64AB, "Pupil Cam2 ID0"),
+            (0x04B4, 0x0036, "Neon Sensor Module v1"),
+            (0x0BDA, 0x3036, "Neon Scene Camera v1"),
         ]
         ids_present = 0
         ids_to_install = []
@@ -292,8 +291,15 @@ class UVC_Source(Base_Source):
             )
             self.ts_offset = -0.1
 
+        # Set NEON bandwidth factors
+        if self.uvc_capture.name in CameraSpec.spec_by_name():
+            cam = self.uvc_capture.name
+            spec = CameraSpec.spec_by_name()[cam]
+            self.uvc_capture.bandwidth_factor = spec.bandwidth_factor
+            logger.debug(f"Set {cam} bandwidth_factor to {spec.bandwidth_factor}")
+
         # UVC setting quirks:
-        controls_dict = dict([(c.display_name, c) for c in self.uvc_capture.controls])
+        controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
 
         if (
             ("Pupil Cam2" in self.uvc_capture.name)
@@ -357,9 +363,7 @@ class UVC_Source(Base_Source):
             if self.exposure_mode == "auto":
                 # special settings apply to both, Pupil Cam2 and Cam3
                 special_settings = {200: 28, 180: 31}
-                controls_dict = dict(
-                    [(c.display_name, c) for c in self.uvc_capture.controls]
-                )
+                controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
                 self.preferred_exposure_time = Exposure_Time(
                     max_ET=special_settings.get(self.frame_rate, 32),
                     frame_rate=self.frame_rate,
@@ -386,6 +390,27 @@ class UVC_Source(Base_Source):
             except KeyError:
                 pass
 
+        elif self.uvc_capture.name == SCENE_CAM_SPEC.name:
+            controls = {
+                "Backlight Compensation": 2,
+                "Brightness": 0,
+                "Contrast": 32,
+                "Gain": 64,
+                "Hue": 0,
+                "Saturation": 64,
+                "Sharpness": 50,
+                "Gamma": 300,
+                "White Balance temperature": 4600,
+            }
+            for key, value in controls.items():
+                try:
+                    controls_dict[key].value = value
+                except KeyError:
+                    logger.debug(
+                        f"Setting {key} to {value} failed: Unknown control. Known "
+                        f"controls: {list(controls_dict)}"
+                    )
+
         else:
             self.uvc_capture.bandwidth_factor = 2.0
             try:
@@ -398,9 +423,7 @@ class UVC_Source(Base_Source):
             try:
                 c.value = uvc_controls[c.display_name]
             except KeyError:
-                logger.debug(
-                    'No UVC setting "{}" found from settings.'.format(c.display_name)
-                )
+                logger.debug(f'No UVC setting "{c.display_name}" found from settings.')
 
         if self.should_check_stripes:
             self.stripe_detector = Check_Frame_Stripes()
@@ -427,14 +450,14 @@ class UVC_Source(Base_Source):
         for d in self.devices:
             for name in names:
                 if d["name"] == name:
-                    logger.info("Found device. {}.".format(name))
+                    logger.info(f"Found device. {name}.")
                     if self.uvc_capture:
                         self._re_init_capture(d["uid"])
                     else:
                         self._init_capture(d["uid"], backup_uvc_controls)
                     return
         raise InitialisationError(
-            "Could not find Camera {} during re initilization.".format(names)
+            f"Could not find Camera {names} during re initilization."
         )
 
     def _restart_logic(self):
@@ -479,7 +502,7 @@ class UVC_Source(Base_Source):
                 self.frame_rate = self.frame_rate
                 logger.debug("Stripes detected")
 
-        except uvc.StreamError:
+        except (uvc.StreamError, TimeoutError):
             self._recent_frame = None
             self._restart_logic()
         except (AttributeError, uvc.InitError):
@@ -551,9 +574,7 @@ class UVC_Source(Base_Source):
         size = self.uvc_capture.frame_sizes[best_size_idx]
         if tuple(size) != tuple(new_size):
             logger.warning(
-                "{} resolution capture mode not available. Selected {}.".format(
-                    new_size, size
-                )
+                f"{new_size} resolution capture mode not available. Selected {size}."
             )
         self.uvc_capture.frame_size = size
         self.frame_size_backup = size
@@ -564,6 +585,21 @@ class UVC_Source(Base_Source):
 
         if self.should_check_stripes:
             self.stripe_detector = Check_Frame_Stripes()
+
+    @property
+    def bandwidth_factor(self) -> float:
+        return self.uvc_capture.bandwidth_factor if self.uvc_capture else float("nan")
+
+    @bandwidth_factor.setter
+    def bandwidth_factor(self, value: float):
+        if isinstance(value, str):
+            try:
+                value = float(value)
+            except ValueError as err:
+                logger.debug("err")
+                return
+        if self.uvc_capture and not np.isnan(value):
+            self.uvc_capture.bandwidth_factor = value
 
     @property
     def should_check_stripes(self):
@@ -584,9 +620,9 @@ class UVC_Source(Base_Source):
         rate = self.uvc_capture.frame_rates[best_rate_idx]
         if rate != new_rate:
             logger.warning(
-                "{}fps capture mode not available at ({}) on '{}'. Selected {}fps. ".format(
-                    new_rate, self.uvc_capture.frame_size, self.uvc_capture.name, rate
-                )
+                f"{new_rate} fps capture mode not available at "
+                f"{self.uvc_capture.frame_size} on {self.uvc_capture.name!r}. "
+                f"Selected {rate} fps."
             )
         self.uvc_capture.frame_rate = rate
         self.frame_rate_backup = rate
@@ -615,9 +651,7 @@ class UVC_Source(Base_Source):
     def exposure_time(self):
         if self.uvc_capture:
             try:
-                controls_dict = dict(
-                    [(c.display_name, c) for c in self.uvc_capture.controls]
-                )
+                controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
                 return controls_dict["Absolute Exposure Time"].value
             except KeyError:
                 return None
@@ -627,9 +661,7 @@ class UVC_Source(Base_Source):
     @exposure_time.setter
     def exposure_time(self, new_et):
         try:
-            controls_dict = dict(
-                [(c.display_name, c) for c in self.uvc_capture.controls]
-            )
+            controls_dict = {c.display_name: c for c in self.uvc_capture.controls}
             if abs(new_et - controls_dict["Absolute Exposure Time"].value) >= 1:
                 controls_dict["Absolute Exposure Time"].value = new_et
         except KeyError:
@@ -782,6 +814,15 @@ class UVC_Source(Base_Source):
                 "Absolute Exposure Time",
             ]
 
+        sensor_control.append(
+            ui.Text_Input(
+                "bandwidth_factor",
+                self,
+                label="Bandwidth factor",
+                getter=lambda: f"{self.bandwidth_factor:.2f}",
+            )
+        )
+
         for control in self.uvc_capture.controls:
             c = None
             ctl_name = control.display_name
@@ -907,11 +948,19 @@ class UVC_Manager(Base_Manager):
         }
         # Do not show RealSense cameras in selection, since they are not supported
         # anymore in Pupil Capture since v1.22 and won't work.
-        self.ignore_patterns = ["RealSense"]
+        self.ignore_name_patterns = ["RealSense"]
 
     def get_devices(self):
         self.devices.update()
-        if len(self.devices) == 0:
+        uvc_auto_selection_devices = [
+            device
+            for device in self.devices
+            if not any(
+                pattern in device["name"] for pattern in self.ignore_name_patterns
+            )
+            and "Neon" not in device["name"]  # Only ignore Neon in get_devices()
+        ]
+        if len(uvc_auto_selection_devices) == 0:
             return []
         else:
             return [SourceInfo(label="Local USB", manager=self, key="usb")]
@@ -925,7 +974,9 @@ class UVC_Manager(Base_Manager):
                 key=f"cam.{device['uid']}",
             )
             for device in self.devices
-            if not any(pattern in device["name"] for pattern in self.ignore_patterns)
+            if not any(
+                pattern in device["name"] for pattern in self.ignore_name_patterns
+            )
         ]
 
     def activate(self, key):

@@ -8,19 +8,17 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
 import abc
 import logging
+import os
 
 import numpy as np
-
 from file_methods import Persistent_Dict
 from observable import Observable
 from plugin import Plugin
 
 from .storage import ScanPathStorage
 from .tasks import ScanPathBackgroundTask, ScanPathPreprocessingTask
-
 
 logger = logging.getLogger(__name__)
 

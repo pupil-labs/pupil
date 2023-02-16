@@ -12,7 +12,6 @@ import itertools
 
 import cv2
 import numpy as np
-
 from head_pose_tracker.function import utils
 
 

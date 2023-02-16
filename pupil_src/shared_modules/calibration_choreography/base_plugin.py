@@ -15,15 +15,10 @@ import logging
 import typing as T
 
 import audio
-from pyglui import ui
-from plugin import Plugin
-from hotkey import Hotkey
-
+from gaze_mapping import GazerHMD3D, default_gazer_class, registered_gazer_classes
 from gaze_mapping.gazer_base import GazerBase
-from gaze_mapping import default_gazer_class
-from gaze_mapping import GazerHMD3D
-from gaze_mapping import registered_gazer_classes
-
+from hotkey import Hotkey
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
@@ -360,6 +355,8 @@ class CalibrationChoreographyPlugin(Plugin):
         ui_text.text = self.selected_gazer_class._gazer_description_text()
 
     def init_ui(self):
+        from pyglui import ui
+
         desc_text = ui.Info_Text(self._choreography_description_text())
 
         self.__ui_selector_choreography = ui.Selector(

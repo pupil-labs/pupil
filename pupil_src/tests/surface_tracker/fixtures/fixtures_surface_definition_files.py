@@ -17,7 +17,6 @@ from file_methods import Persistent_Dict
 
 from . import surfaces_serialized_v00_square, surfaces_serialized_v01_mixed
 
-
 __all__ = [
     "surface_definition_v00_dir",
     "surface_definition_v01_before_update_dir",

@@ -11,10 +11,9 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 
 import ndsi
-from pyglui import ui
-
 import os_utils
 from plugin import Plugin
+from pyglui import ui
 
 os_utils.patch_pyre_zhelper_cdll()
 logger = logging.getLogger(__name__)

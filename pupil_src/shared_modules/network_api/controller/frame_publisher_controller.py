@@ -11,10 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import typing as T
 
-from observable import Observable
-
 from network_api.model import FrameFormat
-
+from observable import Observable
 
 logger = logging.getLogger(__name__)
 

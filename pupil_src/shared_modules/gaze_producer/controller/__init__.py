@@ -12,6 +12,6 @@ from gaze_producer.controller.calculate_all_controller import CalculateAllContro
 from gaze_producer.controller.calibration_controller import CalibrationController
 from gaze_producer.controller.gaze_mapper_controller import GazeMapperController
 from gaze_producer.controller.reference_location_controllers import (
-    ReferenceEditController,
     ReferenceDetectionController,
+    ReferenceEditController,
 )

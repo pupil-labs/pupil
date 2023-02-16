@@ -44,5 +44,5 @@ class FrameFetcher:
             try:
                 self.current_frame = self.source.get_frame()
             except EndofVideoError:
-                logger.info("End of video {}.".format(self.source.source_path))
+                logger.info(f"End of video {self.source.source_path}.")
         return self.current_frame

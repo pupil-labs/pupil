@@ -14,7 +14,6 @@ import tasklib
 from gaze_producer import worker
 from observable import Observable
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -42,6 +41,7 @@ class CalibrationController(Observable):
                 self._calibration_storage.save_to_disk()
                 self.on_calibration_computed(calibration)
 
+        calibration.status = "Recalculating..."
         if len(self._reference_location_storage.items) == 0:
             error_message = f"You first need to detect reference locations before calculating the calibration '{calibration.name}'"
             self._abort_calculation(calibration, error_message)

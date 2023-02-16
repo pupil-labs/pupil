@@ -13,7 +13,6 @@ import types
 from unittest import mock
 
 import pytest
-
 from observable import Observable, ObserverError, ReplaceWrapperError
 
 

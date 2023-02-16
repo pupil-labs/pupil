@@ -8,22 +8,22 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import platform
+
 import logging
+import platform
 import socket
 
-import numpy as np
-
-from OpenGL.GL import GL_COLOR_BUFFER_BIT
-
-import glfw
 import gl_utils
+import glfw
+import numpy as np
 from gl_utils import GLFWErrorReporting
+from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
 GLFWErrorReporting.set_default()
 
-from pyglui import ui, cygl
 from plugin import System_Plugin_Base
+from pyglui import cygl, ui
+from video_capture.neon_backend.plugin import Neon_Manager
 
 # UI Platform tweaks
 if platform.system() == "Linux":
@@ -171,10 +171,25 @@ class Service_UI(System_Plugin_Base):
                 getter=lambda: g_pool.eye_procs_alive[1].value,
             )
         )
-
         g_pool.menubar.append(
-            ui.Info_Text("Service Version: {}".format(g_pool.version))
+            ui.Info_Text(
+                "To use Neon, connect it to your PC and click the button below."
+            )
         )
+        g_pool.menubar.append(
+            ui.Button(
+                "Activate Neon",
+                lambda: self.notify_all(
+                    {
+                        "subject": Neon_Manager.SUBJECT_REQUEST_AUTO_ACTIVATE,
+                        "scene": False,
+                        "eyes": True,
+                    }
+                ),
+            )
+        )
+
+        g_pool.menubar.append(ui.Info_Text(f"Service Version: {g_pool.version}"))
 
         g_pool.menubar.append(ui.Button("Restart with default settings", reset_restart))
 
@@ -261,12 +276,12 @@ class Service_UI(System_Plugin_Base):
     def start_stop_eye(self, eye_id, make_alive):
         if make_alive:
             n = {
-                "subject": "eye_process.should_start.{}".format(eye_id),
+                "subject": f"eye_process.should_start.{eye_id}",
                 "eye_id": eye_id,
             }
         else:
             n = {
-                "subject": "eye_process.should_stop.{}".format(eye_id),
+                "subject": f"eye_process.should_stop.{eye_id}",
                 "eye_id": eye_id,
                 "delay": 0.2,
             }

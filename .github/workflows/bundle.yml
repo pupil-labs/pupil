@@ -1,0 +1,95 @@
+name: Bundle Pupil Core
+
+on:
+  push:
+    tags:
+      - "**"
+  workflow_dispatch:
+    inputs:
+      notarize_on_macos:
+        description: 'Notarize on macOS'
+        required: true
+        type: boolean
+
+jobs:
+  Bundle:
+    name: Bundle ${{ matrix.platform }}
+    strategy:
+      fail-fast: False
+      matrix:
+        platform:
+          - windows-latest
+          - macOS-11
+          - ubuntu-18.04
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install Pupil Core dependencies
+        env:
+          ARCHFLAGS: "-arch x86_64"
+        run: |
+          python -m pip install -U pip wheel
+          python -m pip install -r requirements.txt -r requirements-bundle.txt
+      - name: Install Linux-specific dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get install libportaudio2
+      - name: Bundle on Windows
+        if: runner.os == 'Windows'
+        run: .\reproducible_build.ps1
+        shell: powershell
+        working-directory: deployment
+      - name: Import macOS codesign certificates
+        if: runner.os == 'macOS'
+        uses: apple-actions/import-codesign-certs@v1
+        with:
+          p12-file-base64: ${{ secrets.MACOS_CERTIFICATE }}
+          p12-password: ${{ secrets.MACOS_CERTIFICATE_PWD }}
+      - name: Bundle on Unix
+        if: runner.os != 'Windows'
+        run: ./reproducible_build.sh
+        working-directory: deployment
+        env:
+          MACOS_SHOULD_SIGN_AND_NOTARIZE: >
+            ${{
+              inputs.notarize_on_macos ||
+              (github.event_name == 'push' && contains(github.ref, 'refs/tags/'))
+            }}
+          MACOS_CODESIGN_IDENTITY: ${{ secrets.MACOS_CODESIGN_IDENTITY }}
+          MACOS_NOTARYTOOL_APPLE_ID: ${{ secrets.MACOS_NOTARYTOOL_APPLE_ID }}
+          MACOS_NOTARYTOOL_TEAM_ID: ${{ secrets.MACOS_NOTARYTOOL_TEAM_ID }}
+          MACOS_NOTARYTOOL_APPSPECIFIC_PASSWORD: ${{ secrets.MACOS_NOTARYTOOL_APPSPECIFIC_PASSWORD }}
+      - name: Upload build as artifact
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: bundle-${{ matrix.platform }}
+          path: |
+            deployment/*.rar
+            deployment/*.app
+            deployment/*.dmg
+            deployment/*.json
+            deployment/*.zip
+
+  draft_release:
+    name: Draft Github release
+    needs: Bundle
+    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+      - name: Create Github release draft
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            *.rar
+            *.dmg
+            *.zip
+          draft: true
+          name: Pupil Capture, Player, and Service release

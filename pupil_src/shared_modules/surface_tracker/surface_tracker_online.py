@@ -12,13 +12,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+import gl_utils
 import pyglui
 import pyglui.cygl.utils as pyglui_utils
-import gl_utils
 
 from .gui import Heatmap_Mode
-from .surface_tracker import Surface_Tracker
 from .surface_online import Surface_Online
+from .surface_tracker import Surface_Tracker
 
 
 class Surface_Tracker_Online(Surface_Tracker):
@@ -164,9 +164,7 @@ class Surface_Tracker_Online(Surface_Tracker):
             # surface.update_location() once. This will define the surface and allow us
             # to save it.
             if self.markers and self.current_frame is not None:
-                surface = self.Surface_Class(
-                    name="Surface {:}".format(len(self.surfaces) + 1)
-                )
+                surface = self.Surface_Class(name=f"Surface {len(self.surfaces) + 1}")
                 self.add_surface(surface)
                 surface.update_location(
                     self.current_frame.index, self.markers, self.camera_model

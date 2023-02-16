@@ -11,19 +11,18 @@ See COPYING and COPYING.LESSER for license details.
 from collections import namedtuple
 
 import numpy as np
-
-from observable import Observable
 from background_helper import IPC_Logging_Task_Proxy
-
-from .base import _BaseTask
+from observable import Observable
 from scan_path.algorithm import ScanPathAlgorithm
 from scan_path.utils import (
+    SCAN_PATH_GAZE_DATUM_DTYPE,
     FakeGPool,
     generate_frames,
-    SCAN_PATH_GAZE_DATUM_DTYPE,
-    scan_path_zeros_numpy_array,
     scan_path_numpy_array_from,
+    scan_path_zeros_numpy_array,
 )
+
+from .base import _BaseTask
 
 
 class ScanPathBackgroundTask(Observable, _BaseTask):

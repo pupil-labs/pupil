@@ -10,10 +10,9 @@ See COPYING and COPYING.LESSER for license details.
 """
 import abc
 
-from pyglui import ui
-
-from task_manager import TaskManager
 from plugin import Plugin
+from pyglui import ui
+from task_manager import TaskManager
 
 
 class VideoExporter(TaskManager, Plugin, abc.ABC):

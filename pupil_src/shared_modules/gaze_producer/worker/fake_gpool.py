@@ -8,11 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import os
 import logging
+import os
 from time import time
 from types import SimpleNamespace
-
 
 logger = logging.getLogger(__name__)
 

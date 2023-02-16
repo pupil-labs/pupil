@@ -12,11 +12,10 @@ import logging
 import time
 
 import ndsi
-from pyglui import ui
-from version_utils import parse_version
-
 import os_utils
 from camera_models import Camera_Model
+from pyglui import ui
+from version_utils import parse_version
 
 from .base_backend import Base_Manager, Base_Source, SourceInfo
 
@@ -131,11 +130,11 @@ class NDSI_Source(Base_Source):
 
     @property
     def name(self):
-        return "{}".format(self._sensor_name)
+        return f"{self._sensor_name}"
 
     @property
     def host(self):
-        return "{}".format(self._host_name)
+        return f"{self._host_name}"
 
     @property
     def online(self):
@@ -279,7 +278,7 @@ class NDSI_Source(Base_Source):
         # closure factory
         def make_value_change_fn(ctrl_id):
             def initiate_value_change(val):
-                logger.debug("{}: {} >> {}".format(self.sensor, ctrl_id, val))
+                logger.debug(f"{self.sensor}: {ctrl_id} >> {val}")
                 self.sensor.set_control_value(ctrl_id, val)
 
             return initiate_value_change
@@ -332,9 +331,9 @@ class NDSI_Source(Base_Source):
                     self.control_id_ui_mapping[ctrl_id] = ctrl_ui
                     menu.append(ctrl_ui)
                 else:
-                    logger.error("Did not generate UI for {}".format(ctrl_id))
+                    logger.error(f"Did not generate UI for {ctrl_id}")
             except Exception:
-                logger.error("Exception for control:\n{}".format(ctrl_dict))
+                logger.error(f"Exception for control:\n{ctrl_dict}")
                 import traceback as tb
 
                 tb.print_exc()
@@ -511,7 +510,7 @@ class NDSI_Manager(Base_Manager):
 
         elif event["subject"] == "attach":
             if event["sensor_type"] == "video":
-                logger.debug("attached: {}".format(event))
+                logger.debug(f"attached: {event}")
                 self.notify_all({"subject": "backend.ndsi_source_found"})
 
     def recover(self):

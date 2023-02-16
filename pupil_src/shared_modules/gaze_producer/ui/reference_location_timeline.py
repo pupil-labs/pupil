@@ -8,7 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from plugin_timeline import Row, BarsElementTs, RangeElementFramePerc
+from plugin_timeline import BarsElementTs, RangeElementFramePerc, Row
 
 
 class ReferenceLocationTimeline:

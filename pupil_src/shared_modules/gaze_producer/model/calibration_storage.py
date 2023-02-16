@@ -8,29 +8,28 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from collections import namedtuple
 import copy
 import logging
 import os
 import pathlib
+from collections import namedtuple
 
 import file_methods as fm
 import make_unique
-
-from storage import Storage
-from gaze_producer import model
-from observable import Observable
 from gaze_mapping import (
     default_gazer_class,
+    gazer_classes_by_class_name,
     registered_gazer_classes,
     user_selectable_gazer_classes,
-    gazer_classes_by_class_name,
+    user_selectable_gazer_classes_posthoc,
 )
 from gaze_mapping.notifications import (
-    CalibrationSetupNotification,
     CalibrationResultNotification,
+    CalibrationSetupNotification,
 )
-
+from gaze_producer import model
+from observable import Observable
+from storage import Storage
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +114,7 @@ class CalibrationStorage(Storage, Observable):
             and calibration.is_offline_calibration
         )
         if is_calib_editable:
-            available_gazer_classes = user_selectable_gazer_classes()
+            available_gazer_classes = user_selectable_gazer_classes_posthoc()
         else:
             available_gazer_classes = registered_gazer_classes()
         gazer_class_names = gazer_classes_by_class_name(available_gazer_classes).keys()
@@ -170,8 +169,7 @@ class CalibrationStorage(Storage, Observable):
             pass
         self._load_recorded_calibrations()
 
-    def _load_calibration_from_file(self, file_name):
-        file_path = os.path.join(self._calibration_folder, file_name)
+    def _load_calibration_from_file(self, file_path):
         calibration_dict = self._load_data_from_file(file_path)
         if not calibration_dict:
             return

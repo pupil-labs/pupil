@@ -24,7 +24,7 @@ VIDEO_EXTS = ("mp4", "mjpeg", "h264", "mkv", "avi", "fake")
 VIDEO_TIME_EXTS = VIDEO_EXTS + ("time",)
 
 
-class Exposure_Time(object):
+class Exposure_Time:
     def __init__(self, max_ET, frame_rate, mode="manual"):
         self.mode = mode
         self.ET_thres = 1, min(10000 / frame_rate, max_ET)
@@ -78,7 +78,7 @@ class Exposure_Time(object):
                 return next_ET
 
 
-class Check_Frame_Stripes(object):
+class Check_Frame_Stripes:
     def __init__(
         self,
         check_freq_init=0.1,
@@ -125,16 +125,16 @@ class Check_Frame_Stripes(object):
         num_local_optimum = [0, 0]
         if self.row_index is None:
             self.row_index = np.linspace(
-                8, frame_gray.shape[0] - 8, num=self.len_row_index, dtype=np.int
+                8, frame_gray.shape[0] - 8, num=self.len_row_index, dtype=np.int64
             )
             self.col_index = np.linspace(
-                8, frame_gray.shape[1] - 8, num=self.len_col_index, dtype=np.int
+                8, frame_gray.shape[1] - 8, num=self.len_col_index, dtype=np.int64
             )
         for n in [0, 1]:
             if n == 0:
-                arrs = np.array(frame_gray[self.row_index, :], dtype=np.int)
+                arrs = np.array(frame_gray[self.row_index, :], dtype=np.int64)
             else:
-                arrs = np.array(frame_gray[:, self.col_index], dtype=np.int)
+                arrs = np.array(frame_gray[:, self.col_index], dtype=np.int64)
                 arrs = np.transpose(arrs)
 
             local_max_union = set()
@@ -206,7 +206,11 @@ class Video:
             return cont
 
     def _open_container(self):
-        cont = av.open(self.path)
+        cont = av.open(self.path, format=os.path.splitext(self.path)[-1][1:])
+        try:
+            cont.streams.video[0].thread_type = "AUTO"
+        except AttributeError:
+            pass
         return cont
 
     def load_ts(self):
@@ -221,6 +225,7 @@ class Video:
         packets = container.demux(video=0)
         # last pts is invalid
         self._pts = np.array([packet.pts for packet in packets][:-1])
+        self._pts.sort()
         return self._pts
 
     @property

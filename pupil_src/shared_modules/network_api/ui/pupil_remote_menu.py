@@ -11,11 +11,9 @@ See COPYING and COPYING.LESSER for license details.
 import logging
 import socket
 
+from network_api.controller import PupilRemoteController
 from observable import Observable
 from pyglui import ui
-
-from network_api.controller import PupilRemoteController
-
 
 logger = logging.getLogger(__name__)
 

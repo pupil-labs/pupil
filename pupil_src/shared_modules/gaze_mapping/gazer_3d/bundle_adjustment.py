@@ -10,7 +10,8 @@ See COPYING and COPYING.LESSER for license details.
 """
 import cv2
 import numpy as np
-from scipy import optimize as scipy_optimize, sparse as scipy_sparse
+from scipy import optimize as scipy_optimize
+from scipy import sparse as scipy_sparse
 
 from . import utils
 

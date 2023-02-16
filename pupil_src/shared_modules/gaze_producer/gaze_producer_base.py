@@ -9,12 +9,12 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import abc
-from pyglui import ui
 
 import data_changed
-from observable import Observable
 import player_methods as pm
+from observable import Observable
 from plugin import System_Plugin_Base
+from pyglui import ui
 
 
 class GazeProducerBase(Observable, System_Plugin_Base):

@@ -12,10 +12,9 @@ import logging
 from types import SimpleNamespace
 
 import cv2
+import file_methods as fm
 import numpy as np
 import pupil_apriltags
-
-import file_methods as fm
 import video_capture
 from methods import normalize
 from stdlib_utils import unique

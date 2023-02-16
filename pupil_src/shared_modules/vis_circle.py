@@ -8,11 +8,11 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
+from methods import denormalize
 from player_methods import transparent_circle
 from plugin import Plugin
 from pyglui import ui
-
-from methods import denormalize
 
 
 class Vis_Circle(Plugin):

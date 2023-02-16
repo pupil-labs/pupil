@@ -1,20 +1,29 @@
-"""
-(*)~---------------------------------------------------------------------------
-Pupil - eye tracking platform
-Copyright (C) 2012-2022 Pupil Labs
-
-Distributed under the terms of the GNU
-Lesser General Public License (LGPL v3.0).
-See COPYING and COPYING.LESSER for license details.
----------------------------------------------------------------------------~(*)
-"""
+import logging
 import os
+import pathlib
 import re
 import shutil
+import subprocess
 import textwrap
-from pathlib import Path
+from contextlib import contextmanager
 from typing import List
+from uuid import UUID
 from uuid import uuid4 as new_guid
+
+from . import ParsedVersion
+
+
+def create_compressed_msi(directory: pathlib.Path, parsed_version: ParsedVersion):
+    generate_msi_installer(directory, parsed_version)
+    subprocess.call(
+        [
+            r"C:\Program Files\WinRAR\Rar.exe",
+            "a",
+            f"{directory.name}.msi.rar",
+            f"{directory.name}.msi",
+        ]
+    )
+
 
 # NOTE: you will need to have the WiX Toolset installed in order to run this script!
 # 1. Download `wix311.exe` from https://github.com/wixtoolset/wix3/releases/tag/wix3112rtm
@@ -22,57 +31,109 @@ from uuid import uuid4 as new_guid
 # 3. Now add the binaries to the PATH. For default installation, they should be in
 # C:\Program Files (x86)\WiX Toolset v3.11\bin
 
-for child in Path(".").iterdir():
-    if child.is_dir():
-        match = re.search(
-            r"pupil_v(?P<major>[0-9]+)\.(?P<minor>[0-9]+)-(?P<patch>[0-9]+)-\w+_windows_x64",
-            child.name,
+
+def generate_msi_installer(base_dir: pathlib.Path, parsed_version: ParsedVersion):
+    logging.info(f"Generating msi installer for Pupil Core {parsed_version}")
+    # NOTE: MSI only allows versions in the form of x.x.x.x, where all x are
+    # integers, so we need to replace the '-' before patch with a '.'. Also we
+    # want to prefix 'v' for display.
+    raw_version = (
+        f"{parsed_version.major}.{parsed_version.minor}.{parsed_version.micro}"
+    )
+    version = f"v{raw_version}"
+
+    product_name = f"Pupil Core {version}"
+    company_short = "Pupil Labs"
+    manufacturer = "Pupil Labs GmbH"
+
+    package_description = f"{company_short} {product_name}"
+
+    # NOTE: Generating new GUIDs for product and upgrade code means that different
+    # installations will not conflict. This is the easiest workflow for enabling customers
+    # to install different versions alongside. This will however also mean that in the case
+    # of a patch, the users will always also have to uninstall the old version manually.
+    product_guid = new_guid()
+    product_upgrade_code = new_guid()
+
+    capture_data = SoftwareComponent(base_dir, "capture", version)
+    player_data = SoftwareComponent(base_dir, "player", version)
+    service_data = SoftwareComponent(base_dir, "service", version)
+
+    wix_file = base_dir / f"{base_dir.name}.wxs"
+    logging.debug(f"Generating WiX file at {wix_file}")
+
+    with wix_file.open("w") as f:
+        f.write(
+            fill_template(
+                capture_data=capture_data,
+                player_data=player_data,
+                service_data=service_data,
+                company_short=company_short,
+                manufacturer=manufacturer,
+                package_description=package_description,
+                product_name=product_name,
+                product_guid=product_guid,
+                product_upgrade_code=product_upgrade_code,
+                raw_version=raw_version,
+                version=version,
+            )
         )
-        if match is not None:
-            # NOTE: MSI only allows versions in the form of x.x.x.x, where all x are
-            # integers, so we need to replace the '-' before patch with a '.'. Also we
-            # want to prefix 'v' for display.
-            raw_version = f"{match['major']}.{match['minor']}.{match['patch']}"
-            version = f"v{raw_version}"
-            base_dir = child
-            print(f"Found release dir for version '{version}': {base_dir.name}")
-            break
-else:
-    raise RuntimeError("Could not find any release dir!")
 
-product_name = f"Pupil {version}"
-company_short = "Pupil-Labs"
-manufacturer = "Pupil-Labs GmbH"
+    with set_directory(base_dir):
+        logging.debug("Running candle")
+        subprocess.call(
+            [
+                r"C:\Program Files (x86)\WiX Toolset v3.11\bin\candle.exe",
+                f"{base_dir.name}.wxs",
+            ]
+        )
+        logging.debug("Running light")
+        subprocess.call(
+            [
+                r"C:\Program Files (x86)\WiX Toolset v3.11\bin\light.exe",
+                "-ext",
+                "WixUIExtension",
+                f"{base_dir.name}.wixobj",
+            ]
+        )
+        logging.debug("Copy Installer")
+        shutil.move(f"{base_dir.name}.msi", f"../{base_dir.name}.msi")
 
-package_description = f"{company_short} {product_name}"
+        logging.debug("Cleanup")
+        pathlib.Path(base_dir.name + ".wxs").unlink()
+        pathlib.Path(base_dir.name + ".wixobj").unlink()
+        pathlib.Path(base_dir.name + ".wixpdb").unlink()
+        logging.debug("Finished!")
 
-# NOTE: Generating new GUIDs for product and upgrade code means that different
-# installations will not conflict. This is the easiest workflow for enabling customers
-# to install different versions alongside. This will however also mean that in the case
-# of a patch, the users will always also have to uninstall the old version manually.
-product_guid = new_guid()
-product_upgrade_code = new_guid()
+
+@contextmanager
+def set_directory(path: pathlib.Path):
+    # https://dev.to/teckert/changing-directory-with-a-python-context-manager-2bj8
+    origin = pathlib.Path().absolute()
+    try:
+        os.chdir(path)
+        yield
+    finally:
+        os.chdir(origin)
 
 
 class SoftwareComponent:
     """Represents capture, player or service and collects all info for WiX XML."""
 
-    def __init__(self, base_dir: Path, name: str, version: str):
+    def __init__(self, base_dir: pathlib.Path, name: str, version: str):
         self.name = name
-        self.base_dir = base_dir
-        for p in self.base_dir.iterdir():
-            if p.is_dir() and p.name.startswith(f"pupil_{self.name}_windows_x64"):
-                self.dir = p
-                break
+        self.dir = base_dir / f"Pupil {name.capitalize()}"
 
         self.display_name = f"Pupil {self.name.capitalize()} {version}"
 
         self.counter = 0
-        self.component_ids = []
+        self.component_ids: list[str] = []
         self.directory_root = []
         self.crawl_directory(directory=self.dir, tree_root=self.directory_root)
 
-    def crawl_directory(self, directory: Path, tree_root: List) -> None:
+    def crawl_directory(
+        self, directory: pathlib.Path, tree_root: list[dict[str, str]]
+    ) -> None:
         for p in directory.iterdir():
             self.counter += 1
 
@@ -80,7 +141,7 @@ class SoftwareComponent:
                 if re.search(r"pupil_\w*\.exe", p.name):
                     # skip executable
                     continue
-                component = {
+                component: dict[str, str] = {
                     "type": "component",
                     "id": f"FileComponent{self.counter}{self.name}",
                     "guid": new_guid(),
@@ -148,16 +209,24 @@ class SoftwareComponent:
 
     def icon_data(self) -> str:
         cap = self.name.capitalize()
-        return f"""
+        return rf"""
         <Icon Id="{cap}Icon.exe" SourceFile="{self.dir.name}\pupil_{self.name}.exe" />"""
 
 
-capture_data = SoftwareComponent(base_dir, "capture", version)
-player_data = SoftwareComponent(base_dir, "player", version)
-service_data = SoftwareComponent(base_dir, "service", version)
-
-
-template = f"""
+def fill_template(
+    capture_data: SoftwareComponent,
+    player_data: SoftwareComponent,
+    service_data: SoftwareComponent,
+    company_short: str,
+    manufacturer: str,
+    package_description: str,
+    product_name: str,
+    product_guid: str | UUID,
+    product_upgrade_code: str | UUID,
+    raw_version: str,
+    version: str,
+):
+    return f"""
 <?xml version='1.0' encoding='windows-1252'?>
 <Wix xmlns='http://schemas.microsoft.com/wix/2006/wi'>
     <Product Name='{product_name}' Id='{product_guid}' UpgradeCode='{product_upgrade_code}'
@@ -187,7 +256,7 @@ template = f"""
                 <Directory Id="ProgramMenuDir" Name="{product_name}">
                     <Component Id="ProgramMenuDir" Guid="{new_guid()}">
                         <RemoveFolder Id='ProgramMenuDir' On='uninstall' />
-                        <RegistryValue Root='HKCU' Key='Software\[Manufacturer]\[ProductName]\{version}' Type='string' Value='' KeyPath='yes' />
+                        <RegistryValue Root='HKCU' Key='Software\\[Manufacturer]\\[ProductName]\\{version}' Type='string' Value='' KeyPath='yes' />
                     </Component>
                 </Directory>
             </Directory>
@@ -258,25 +327,4 @@ template = f"""
 
     </Product>
 </Wix>
-"""
-
-wix_file = base_dir / f"{base_dir.name}.wxs"
-print(f"Generating WiX file at {wix_file}")
-with wix_file.open("w") as f:
-    f.write(template.strip())
-
-os.chdir(str(base_dir))
-print("Running candle")
-os.system(f'candle.exe "{base_dir.name}.wxs"')
-print("Running light")
-os.system(f'light.exe -ext WixUIExtension "{base_dir.name}.wixobj"')
-print("Done.")
-
-print("Copy Installer")
-shutil.copyfile(f"{base_dir.name}.msi", f"../{base_dir.name}.msi")
-print("Cleanup")
-Path(f"{base_dir.name}.wxs").unlink()
-Path(f"{base_dir.name}.wixobj").unlink()
-Path(f"{base_dir.name}.wixpdb").unlink()
-Path(f"{base_dir.name}.msi").unlink()
-print("Finished!")
+    """.strip()

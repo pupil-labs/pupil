@@ -17,11 +17,12 @@ import typing
 import file_methods
 
 from .surface import Surface
-from .surface_serializer import InvalidSurfaceDefinition
-from .surface_serializer import _Surface_Serializer_Base
-from .surface_serializer import _Surface_Serializer_V00
-from .surface_serializer import _Surface_Serializer_V01
-
+from .surface_serializer import (
+    InvalidSurfaceDefinition,
+    _Surface_Serializer_Base,
+    _Surface_Serializer_V00,
+    _Surface_Serializer_V01,
+)
 
 logger = logging.getLogger(__name__)
 

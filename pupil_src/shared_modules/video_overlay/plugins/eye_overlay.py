@@ -119,7 +119,7 @@ class Eye_Overlay(Observable, Plugin):
         if eye_videos:
             return str(eye_videos[0])
         else:
-            return "/not/found/eye{}.mp4".format(eye_id)
+            return f"/not/found/eye{eye_id}.mp4"
 
     def get_init_dict(self):
         return {

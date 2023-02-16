@@ -15,18 +15,17 @@ import os.path
 import typing as T
 from abc import ABC, abstractmethod
 from multiprocessing import cpu_count
-from time import sleep, monotonic
+from time import monotonic, sleep
 
 import av
 import numpy as np
+from camera_models import Camera_Model
+from methods import container_decode, iter_catch, make_change_loglevel_fn
+from pupil_recording import PupilRecording
 from pyglui import ui
 
-from camera_models import Camera_Model
-from methods import make_change_loglevel_fn, iter_catch, container_decode
-from pupil_recording import PupilRecording
-
 from .base_backend import Base_Manager, Base_Source, EndofVideoError, Playback_Source
-from .utils import VideoSet, InvalidContainerError
+from .utils import InvalidContainerError, VideoSet
 
 logger = logging.getLogger(__name__)
 av.logging.set_level(av.logging.ERROR)
@@ -65,7 +64,7 @@ class Frame:
     @property
     def img(self):
         if self._img is None:
-            self._img = self._av_frame.to_nd_array(format="bgr24")
+            self._img = self._av_frame.to_ndarray(format="bgr24")
         return self._img
 
     @property
@@ -186,7 +185,7 @@ class OnDemandDecoder(Decoder):
         self.video_stream = video_stream
 
     def seek(self, pts_position):
-        self.video_stream.seek(pts_position)
+        self.container.seek(pts_position, stream=self.video_stream)
 
     def get_frame_iterator(self):
         frames = container_decode(self.container, self.video_stream)
@@ -326,7 +325,10 @@ class File_Source(Playback_Source, Base_Source):
             return BrokenStream()
 
         logger.debug(f"loaded videostream: {str(video_stream)}")
-        video_stream.thread_count = cpu_count()
+        try:
+            video_stream.thread_count = cpu_count()
+        except RuntimeError:
+            pass
 
         if should_buffer:
             return BufferedDecoder(container, video_stream)
@@ -607,7 +609,7 @@ class File_Source(Playback_Source, Base_Source):
                 "frame_rate",
                 label="Frame rate",
                 setter=lambda x: None,
-                getter=lambda: "{:.0f} FPS".format(self.frame_rate),
+                getter=lambda: f"{self.frame_rate:.0f} FPS",
             )
         )
 

@@ -48,6 +48,7 @@ class Surface_Offline(Surface):
         state = self.__dict__.copy()
         # Remove the unpicklable entries.
         del state["on_surface_change"]
+        del state["location_cache_filler"]
         return state
 
     def __setstate__(self, state):

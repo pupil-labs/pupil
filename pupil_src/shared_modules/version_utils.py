@@ -1,19 +1,20 @@
-# -*- coding: utf-8 -*-
 # Author: Douglas Creager <dcreager@dcreager.net>
 # Changes, Additions: Moritz Kassner <moritz@pupil-labs.com>, Will Patera <will@pupil-labs.com>
 # This file is placed into the public domain.
 
-from subprocess import check_output, CalledProcessError, STDOUT
-import os, sys
-import packaging.version
-import typing as T
-
 import logging
+import os
+import pathlib
+import sys
+import typing as T
+from subprocess import STDOUT, CalledProcessError, check_output
+
+import packaging.version
 
 logger = logging.getLogger(__name__)
 
 
-def get_tag_commit() -> T.Optional[T.AnyStr]:
+def get_tag_commit() -> T.Optional[str]:
     """
     returns string: 'tag'-'commits since tag'-'7 digit commit id'
     """
@@ -27,17 +28,17 @@ def get_tag_commit() -> T.Optional[T.AnyStr]:
         desc_tag = desc_tag.replace("\n", "")  # strip newlines
         return desc_tag
     except CalledProcessError as e:
-        logger.error('Error calling git: "{}" \n output: "{}"'.format(e, e.output))
+        logger.error(f'Error calling git: "{e}" \n output: "{e.output}"')
         return None
     except OSError as e:
-        logger.error('Could not call git, is it installed? error msg: "{}"'.format(e))
+        logger.error(f'Could not call git, is it installed? error msg: "{e}"')
         return None
 
 
 ParsedVersion = T.Union[packaging.version.LegacyVersion, packaging.version.Version]
 
 
-def parse_version(vstring) -> ParsedVersion:
+def parse_version(vstring: str) -> ParsedVersion:
     return packaging.version.parse(vstring)
 
 
@@ -68,6 +69,8 @@ def pupil_version_string() -> str:
     if "-" in version:
         parts = version.split("-")
         version = ".".join(parts[:-1])
+    if version_parsed.is_prerelease:
+        version += "".join(map(str, version_parsed.pre))
     return version
 
 
@@ -75,7 +78,7 @@ def get_version():
     # get the current software version
     if getattr(sys, "frozen", False):
         version_file = os.path.join(sys._MEIPASS, "_version_string_")
-        with open(version_file, "r") as f:
+        with open(version_file) as f:
             version_string = f.read()
     else:
         version_string = pupil_version_string()
@@ -83,16 +86,16 @@ def get_version():
     return parse_version(version_string)
 
 
-def write_version_file(target_dir):
+def write_version_file(target_dir: str) -> pathlib.Path:
     version_string = pupil_version_string()
-    print(f"Current version of Pupil: {version_string}")
-
     version_file = os.path.join(target_dir, "_version_string_")
+    logger.debug(f"Writing Pupil Core version '{version_string}' to {version_file}")
     with open(version_file, "w") as f:
         f.write(version_string)
-    print(f"Wrote version into: {version_file}")
+    return pathlib.Path(version_file)
 
 
 if __name__ == "__main__":
-    print(get_tag_commit())
-    print(pupil_version_string())
+    print(f"{get_tag_commit()=}")
+    print(f"{pupil_version_string()=}")
+    print(f"{pupil_version()=}")

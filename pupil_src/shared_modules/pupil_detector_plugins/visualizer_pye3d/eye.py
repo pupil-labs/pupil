@@ -24,7 +24,7 @@ from .utilities import (
 
 class BasicEye(PosedObject):
     def __init__(self):
-        super(BasicEye, self).__init__(pose=np.eye(4), extrinsics=None, children=())
+        super().__init__(pose=np.eye(4), extrinsics=None, children=())
 
         self._gaze_vector = PosedObject()
         self.eyeball_center = [0.0, 0.0, 0.0]
@@ -59,7 +59,7 @@ class BasicEye(PosedObject):
         return (self._gaze_vector.pose @ self.pose)[:3, 2]
 
     def __str__(self):
-        return "\n".join("{}:{}".format(k, v) for k, v in self.__dict__.items())
+        return "\n".join(f"{k}:{v}" for k, v in self.__dict__.items())
 
 
 class LeGrandEye(BasicEye):
@@ -71,7 +71,7 @@ class LeGrandEye(BasicEye):
         n_refraction=1.3375,
         camera=None,
     ):
-        super(LeGrandEye, self).__init__()
+        super().__init__()
 
         self.model_type = "LeGrand"
 

@@ -39,6 +39,17 @@ _transformations_to_new_style = {
 def update_recording(rec_dir: str):
     recording_type = get_recording_type(rec_dir)
 
+    if recording_type == RecordingType.CLOUD_CSV_EXPORT:
+        raise InvalidRecordingException(
+            "Pupil Cloud CSV exports\nare not supported in Pupil Player",
+            recovery="Open the CSV files in the\nanalysis tool of your choice instead",
+        )
+    if recording_type == RecordingType.NEON:
+        raise InvalidRecordingException(
+            "Neon Companion app recordings\nare not supported in Pupil Player",
+            recovery="You can view them in Pupil Cloud instead",
+        )
+
     if recording_type == RecordingType.INVISIBLE:
         # NOTE: there is an issue with PI recordings, where sometimes multiple parts of
         # the recording are stored as an .mjpeg and .mp4, but for the same part number.

@@ -8,7 +8,8 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-from plugin_timeline import Row, RangeElementFrameIdx, BarsElementTs
+
+from plugin_timeline import BarsElementTs, RangeElementFrameIdx, Row
 
 
 class OfflineHeadPoseTrackerTimeline:

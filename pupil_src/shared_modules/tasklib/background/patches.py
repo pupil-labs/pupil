@@ -38,6 +38,7 @@ class IPCLoggingPatch(Patch):
 
     def apply(self):
         import logging
+
         import zmq
         import zmq_tools
 

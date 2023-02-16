@@ -8,8 +8,10 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import tasklib.background
+
 import logging
+
+import tasklib.background
 
 logger = logging.getLogger(__name__)
 

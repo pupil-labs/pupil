@@ -8,12 +8,12 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
-import typing
+
+import collections
 import functools
 import itertools
 import operator
-import collections
-
+import typing
 
 is_none = functools.partial(operator.is_, None)
 

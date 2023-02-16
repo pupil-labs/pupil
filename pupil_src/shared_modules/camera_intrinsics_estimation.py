@@ -9,34 +9,31 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import cv2
+import gl_utils
+import glfw
 import numpy as np
+import OpenGL.GL as gl
+from camera_models import Fisheye_Dist_Camera, Radial_Dist_Camera
 from gl_utils import (
+    GLFWErrorReporting,
     adjust_gl_view,
-    clear_gl_screen,
     basic_gl_setup,
+    clear_gl_screen,
+    draw_circle_filled_func_builder,
     make_coord_system_norm_based,
 )
-from camera_models import Fisheye_Dist_Camera, Radial_Dist_Camera
-
-
-import OpenGL.GL as gl
 from pyglui import ui
-from pyglui.cygl.utils import draw_polyline, RGBA, draw_gl_texture
+from pyglui.cygl.utils import RGBA, draw_gl_texture, draw_polyline
 from pyglui.pyfontstash import fontstash
 from pyglui.ui import get_opensans_font_path
 
-import glfw
-import gl_utils
-from gl_utils import draw_circle_filled_func_builder, GLFWErrorReporting
-
 GLFWErrorReporting.set_default()
-
-from plugin import Plugin
-
-from hotkey import Hotkey
 
 # logging
 import logging
+
+from hotkey import Hotkey
+from plugin import Plugin
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +112,8 @@ class Camera_Intrinsics_Estimation(Plugin):
 
         if self.monitor_idx not in get_monitors_idx_list()[0]:
             logger.warning(
-                "Monitor at index %s no longer availalbe using default" % idx
+                f"Monitor at index {self.monitor_idx} no longer availalbe. "
+                "Using default instead."
             )
             self.monitor_idx = 0
 
@@ -181,7 +179,7 @@ class Camera_Intrinsics_Estimation(Plugin):
     def advance(self, _):
         if self.count == 10:
             logger.info("Capture 10 calibration patterns.")
-            self.button.status_text = "{:d} to go".format(self.count)
+            self.button.status_text = f"{self.count:d} to go"
             self.calculated = False
             self.img_points = []
             self.obj_points = []
@@ -303,7 +301,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                     self.g_pool.capture.name, img_shape, camera_matrix, dist_coefs
                 )
             else:
-                raise ValueError("Unkown distortion model: {}".format(self.dist_mode))
+                raise ValueError(f"Unkown distortion model: {self.dist_mode}")
         except ValueError as e:
             raise e
         except Exception as e:
@@ -313,7 +311,7 @@ class Camera_Intrinsics_Estimation(Plugin):
             )
             return
 
-        logger.info("Calibrated Camera, RMS:{}".format(rms))
+        logger.info(f"Calibrated Camera, RMS:{rms}")
 
         camera_model.save(self.g_pool.user_dir)
         self.g_pool.capture.intrinsics = camera_model
@@ -326,15 +324,22 @@ class Camera_Intrinsics_Estimation(Plugin):
             return
         if self.collect_new:
             img = frame.img
-            status, grid_points = cv2.findCirclesGrid(
-                img, (4, 11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID
-            )
+            try:
+                status, grid_points = cv2.findCirclesGrid(
+                    img, (4, 11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID
+                )
+            except cv2.error:
+                logger.exception(
+                    f"Exception in cv2.findCirclesGrid() using shape={img.shape!r} "
+                    f"dtype={img.dtype!r}"
+                )
+                return
             if status:
                 self.img_points.append(grid_points)
                 self.obj_points.append(self.obj_grid)
                 self.collect_new = False
                 self.count -= 1
-                self.button.status_text = "{:d} to go".format(self.count)
+                self.button.status_text = f"{self.count:d} to go"
 
         if self.count <= 0 and not self.calculated:
             self.calculate()
@@ -360,7 +365,7 @@ class Camera_Intrinsics_Estimation(Plugin):
         if self._window:
             self.gl_display_in_window()
 
-        if self.show_undistortion:
+        if self.show_undistortion and self.undist_img is not None:
             gl.glPushMatrix()
             make_coord_system_norm_based()
             draw_gl_texture(self.undist_img)
@@ -399,7 +404,7 @@ class Camera_Intrinsics_Estimation(Plugin):
             self.glfont.draw_text(
                 p_window_size[0] / 2.0,
                 p_window_size[1] / 4.0,
-                "Touch {} more times to close window.".format(self.clicks_to_close),
+                f"Touch {self.clicks_to_close} more times to close window.",
             )
 
         glfw.swap_buffers(self._window)

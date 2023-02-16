@@ -21,7 +21,7 @@ from OpenGL.GL import (
 from OpenGL.GLU import gluPerspective
 
 
-class Trackball(object):
+class Trackball:
     def __init__(self, fov=30):
         super().__init__()
 
@@ -69,7 +69,7 @@ class Trackball(object):
         self.window = w, h
 
     def __repr__(self):
-        return "Trackball: viewing distance: %s, roll: %2.0fdeg, pitch %2.0fdeg" % (
+        return "Trackball: viewing distance: {}, roll: {:2.0f}deg, pitch {:2.0f}deg".format(
             self.distance,
             self.roll,
             self.pitch,

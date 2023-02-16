@@ -14,12 +14,11 @@ import traceback
 import uuid
 
 import msgpack
+import os_utils
 import zmq
+from plugin import Plugin
 from pyglui import ui
 from pyre import Pyre, PyreEvent, zhelper
-
-import os_utils
-from plugin import Plugin
 from zmq_tools import Msg_Dispatcher, Msg_Receiver
 
 os_utils.patch_pyre_zhelper_cdll()

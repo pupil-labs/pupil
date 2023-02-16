@@ -9,20 +9,19 @@ See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
 import collections
+import contextlib
 import platform
 import typing as T
-import contextlib
 
-import OpenGL.GL as gl
-import glfw
 import gl_utils
+import glfw
+import OpenGL.GL as gl
 from gl_utils import GLFWErrorReporting
 
 GLFWErrorReporting.set_default()
 
-from pyglui.cygl.utils import draw_polyline
-
 from observable import Observable
+from pyglui.cygl.utils import draw_polyline
 
 from .gui_monitor import GUIMonitor
 

@@ -13,7 +13,6 @@ import logging
 
 import cv2
 import numpy as np
-
 from pupil_detector_plugins import color_scheme
 
 logger = logging.getLogger(__name__)

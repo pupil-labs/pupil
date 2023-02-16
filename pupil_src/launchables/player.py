@@ -8,9 +8,11 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+import asyncio
 import os
 import platform
 import signal
+from functools import partial
 from types import SimpleNamespace
 
 # UI Platform tweaks
@@ -32,16 +34,15 @@ def player(
     rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version, debug
 ):
     # general imports
-    from time import sleep
     import logging
     from glob import glob
-    from time import time, strftime, localtime
+    from time import localtime, sleep, strftime, time
+
+    import numpy as np
 
     # networking
     import zmq
     import zmq_tools
-
-    import numpy as np
 
     # zmq ipc setup
     zmq_ctx = zmq.Context()
@@ -67,81 +68,75 @@ def player(
         IPCLoggingPatch.ipc_push_url = ipc_push_url
 
         # imports
-        from file_methods import Persistent_Dict, next_export_sub_dir
-
-        from OpenGL.GL import GL_COLOR_BUFFER_BIT
-
         # display
         import glfw
+        from file_methods import Persistent_Dict, next_export_sub_dir
         from gl_utils import GLFWErrorReporting
+        from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
         GLFWErrorReporting.set_default()
 
         # check versions for our own depedencies as they are fast-changing
-        from pyglui import __version__ as pyglui_version
-
-        from pyglui import ui, cygl
-        from pyglui.cygl.utils import Named_Texture, RGBA
         import gl_utils
-
-        # capture
-        from video_capture import File_Source
-
-        # helpers/utils
-        from version_utils import parse_version
-        from methods import normalize, denormalize, delta_t, get_system_info
         import player_methods as pm
-        from pupil_recording import PupilRecording
+        from annotations import Annotation_Player
+        from audio_playback import Audio_Playback
+        from blink_detection import Offline_Blink_Detection
         from csv_utils import write_key_value_file
+
+        # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
+        from fixation_detector import Offline_Fixation_Detector
+        from gaze_producer.gaze_from_offline_calibration import (
+            GazeFromOfflineCalibration,
+        )
+        from gaze_producer.gaze_from_recording import GazeFromRecording
+        from head_pose_tracker.offline_head_pose_tracker import (
+            Offline_Head_Pose_Tracker,
+        )
         from hotkey import Hotkey
+        from imu_timeline import IMUTimeline
+        from log_display import Log_Display
+        from log_history import Log_History
+        from methods import delta_t, denormalize, get_system_info, normalize
 
         # Plug-ins
         from plugin import Plugin, Plugin_List, import_runtime_plugins
         from plugin_manager import Plugin_Manager
-        from vis_circle import Vis_Circle
-        from vis_cross import Vis_Cross
-        from vis_polyline import Vis_Polyline
-        from vis_light_points import Vis_Light_Points
-        from vis_watermark import Vis_Watermark
-        from vis_fixation import Vis_Fixation
-
-        from seek_control import Seek_Control
-        from surface_tracker import Surface_Tracker_Offline
-
-        # from marker_auto_trim_marks import Marker_Auto_Trim_Marks
-        from fixation_detector import Offline_Fixation_Detector
-        from log_display import Log_Display
-        from annotations import Annotation_Player
-        from raw_data_exporter import Raw_Data_Exporter
-        from log_history import Log_History
+        from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
         from pupil_producers import (
             DisabledPupilProducer,
-            Pupil_From_Recording,
             Offline_Pupil_Detection,
+            Pupil_From_Recording,
         )
-        from gaze_producer.gaze_from_recording import GazeFromRecording
-        from gaze_producer.gaze_from_offline_calibration import (
-            GazeFromOfflineCalibration,
+        from pupil_recording import (
+            InvalidRecordingException,
+            PupilRecording,
+            assert_valid_recording_type,
         )
-        from imu_timeline import IMUTimeline
-        from pupil_detector_plugins.detector_base_plugin import PupilDetectorPlugin
+        from pyglui import __version__ as pyglui_version
+        from pyglui import cygl, ui
+        from pyglui.cygl.utils import RGBA, Named_Texture
+        from raw_data_exporter import Raw_Data_Exporter
+        from seek_control import Seek_Control
+        from surface_tracker import Surface_Tracker_Offline
         from system_graphs import System_Graphs
         from system_timelines import System_Timelines
-        from blink_detection import Offline_Blink_Detection
-        from audio_playback import Audio_Playback
-        from video_export.plugins.imotions_exporter import iMotions_Exporter
-        from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
-        from video_export.plugins.world_video_exporter import World_Video_Exporter
-        from head_pose_tracker.offline_head_pose_tracker import (
-            Offline_Head_Pose_Tracker,
-        )
-        from video_capture import File_Source
-        from video_overlay.plugins import Video_Overlay, Eye_Overlay
 
-        from pupil_recording import (
-            assert_valid_recording_type,
-            InvalidRecordingException,
-        )
+        # helpers/utils
+        from version_utils import parse_version
+
+        # capture
+        from video_capture import File_Source
+        from video_export.plugins.eye_video_exporter import Eye_Video_Exporter
+        from video_export.plugins.imotions_exporter import iMotions_Exporter
+        from video_export.plugins.world_video_exporter import World_Video_Exporter
+        from video_overlay.plugins import Eye_Overlay, Video_Overlay
+        from vis_circle import Vis_Circle
+        from vis_cross import Vis_Cross
+        from vis_fixation import Vis_Fixation
+        from vis_light_points import Vis_Light_Points
+        from vis_polyline import Vis_Polyline
+        from vis_watermark import Vis_Watermark
 
         assert parse_version(pyglui_version) >= parse_version(
             "1.31.0"
@@ -320,7 +315,7 @@ def player(
                     break
 
         def _restart_with_recording(rec_dir):
-            logger.debug("Starting new session with '{}'".format(rec_dir))
+            logger.debug(f"Starting new session with '{rec_dir}'")
             ipc_pub.notify(
                 {"subject": "player_drop_process.should_start", "rec_dir": rec_dir}
             )
@@ -335,8 +330,8 @@ def player(
         meta_info = recording.meta_info
 
         # log info about Pupil Platform and Platform in player.log
-        logger.info("Application Version: {}".format(app_version))
-        logger.info("System Info: {}".format(get_system_info()))
+        logger.info(f"Application Version: {app_version}")
+        logger.info(f"System Info: {get_system_info()}")
         logger.debug(f"Debug flag: {debug}")
 
         icon_bar_width = 50
@@ -356,13 +351,25 @@ def player(
         g_pool.camera_render_size = None
 
         video_path = recording.files().core().world().videos()[0].resolve()
-        File_Source(
-            g_pool,
-            timing="external",
-            source_path=video_path,
-            buffered_decoding=True,
-            fill_gaps=True,
-        )
+        try:
+            File_Source(
+                g_pool,
+                timing="external",
+                source_path=video_path,
+                buffered_decoding=True,
+                fill_gaps=True,
+            )
+        except AttributeError:
+            logger.warning(
+                "Buffered decoder not available. Falling back to on demand decoder."
+            )
+            File_Source(
+                g_pool,
+                timing="external",
+                source_path=video_path,
+                buffered_decoding=False,
+                fill_gaps=True,
+            )
 
         # load session persistent settings
         session_settings = Persistent_Dict(
@@ -430,7 +437,7 @@ def player(
             export_dir = next_export_sub_dir(export_dir)
 
             os.makedirs(export_dir)
-            logger.info('Created export dir at "{}"'.format(export_dir))
+            logger.info(f'Created export dir at "{export_dir}"')
 
             export_info = {
                 "Player Software Version": str(g_pool.version),
@@ -802,10 +809,7 @@ def player(
         glfw.destroy_window(main_window)
 
     except Exception:
-        import traceback
-
-        trace = traceback.format_exc()
-        logger.error("Process Player crashed with trace:\n{}".format(trace))
+        logger.exception("Process Player crashed with trace:")
     finally:
         logger.info("Process shutting down.")
         ipc_pub.notify({"subject": "player_process.stopped"})
@@ -817,11 +821,11 @@ def player_drop(
 ):
     # general imports
     import logging
+    from time import sleep
 
     # networking
     import zmq
     import zmq_tools
-    from time import sleep
 
     # zmq ipc setup
     zmq_ctx = zmq.Context()
@@ -837,23 +841,27 @@ def player_drop(
     logger = logging.getLogger(__name__)
 
     try:
+        from plugin import import_runtime_plugins
+
+        import_runtime_plugins(os.path.join(user_dir, "plugins", "recording-upgrades"))
+
         import glfw
         from gl_utils import GLFWErrorReporting
 
         GLFWErrorReporting.set_default()
 
         import gl_utils
-        from OpenGL.GL import glClearColor
-        from version_utils import parse_version
-        from file_methods import Persistent_Dict
-        from pyglui.pyfontstash import fontstash
-        from pyglui.ui import get_roboto_font_path
         import player_methods as pm
+        from file_methods import Persistent_Dict
+        from OpenGL.GL import glClearColor
         from pupil_recording import (
-            assert_valid_recording_type,
             InvalidRecordingException,
+            assert_valid_recording_type,
         )
         from pupil_recording.update import update_recording
+        from pyglui.pyfontstash import fontstash
+        from pyglui.ui import get_roboto_font_path
+        from version_utils import parse_version
 
         process_was_interrupted = False
 
@@ -875,7 +883,7 @@ def player_drop(
             try:
                 assert_valid_recording_type(rec_dir)
             except InvalidRecordingException as err:
-                logger.error(str(err))
+                logger.exception(str(err))
                 rec_dir = None
         # load session persistent settings
         session_settings = Persistent_Dict(
@@ -945,11 +953,11 @@ def player_drop(
             if rec_dir:
                 try:
                     assert_valid_recording_type(rec_dir)
-                    logger.info("Starting new session with '{}'".format(rec_dir))
-                    text = "Updating recording format."
+                    logger.info(f"Starting new session with '{rec_dir}'")
+                    text = "Updating recording format\n."
                     tip = "This may take a while!"
                 except InvalidRecordingException as err:
-                    logger.error(str(err))
+                    logger.exception(str(err))
                     if err.recovery:
                         text = err.reason
                         tip = err.recovery
@@ -967,13 +975,42 @@ def player_drop(
 
             if rec_dir:
                 try:
-                    update_recording(rec_dir)
+
+                    async def update_ui():
+                        nonlocal text
+                        indefinitive_progress = 0
+                        base_text = text
+                        while True:
+                            text = base_text + "." * indefinitive_progress
+                            indefinitive_progress += 1
+                            indefinitive_progress %= 3
+
+                            gl_utils.clear_gl_screen()
+                            top_y = display_multiline_string(
+                                text, font_size=51, top_y=216
+                            )
+                            display_multiline_string(
+                                tip, font_size=42, top_y=top_y + 50
+                            )
+                            glfw.swap_buffers(window)
+                            glfw.poll_events()
+                            await asyncio.sleep(1.0)
+
+                    async def update_recording_without_blocking_ui():
+                        updating_ui = asyncio.create_task(update_ui())
+
+                        loop = asyncio.get_running_loop()
+                        update_this_recording = partial(update_recording, rec_dir)
+                        await loop.run_in_executor(None, update_this_recording)
+
+                    asyncio.run(update_recording_without_blocking_ui())
+
                 except AssertionError as err:
-                    logger.error(str(err))
+                    logger.exception(str(err))
                     tip = "Oops! There was an error updating the recording."
                     rec_dir = None
                 except InvalidRecordingException as err:
-                    logger.error(str(err))
+                    logger.exception(str(err))
                     if err.recovery:
                         text = err.reason
                         tip = err.recovery
@@ -995,10 +1032,8 @@ def player_drop(
             )
 
     except Exception:
-        import traceback
-
-        trace = traceback.format_exc()
-        logger.error("Process player_drop crashed with trace:\n{}".format(trace))
+        logger.exception("Process player_drop crashed with trace:")
+        raise
 
     finally:
         sleep(1.0)
@@ -1008,8 +1043,9 @@ def player_profiled(
     rec_dir, ipc_pub_url, ipc_sub_url, ipc_push_url, user_dir, app_version, debug
 ):
     import cProfile
-    import subprocess
     import os
+    import subprocess
+
     from .player import player
 
     cProfile.runctx(
