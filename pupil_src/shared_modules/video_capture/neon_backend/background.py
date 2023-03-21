@@ -75,15 +75,12 @@ class BackgroundCameraSharingManager:
         ipc_push_url: str,
         topic_prefix: str = "shared_camera.",
     ):
-        with (
-            NetworkInterface(
-                topic_prefix=topic_prefix,
-                ipc_pub_url=ipc_pub_url,
-                ipc_sub_url=ipc_sub_url,
-                ipc_push_url=ipc_push_url,
-            ) as network,
-            contextlib.suppress(KeyboardInterrupt),
-        ):
+        with NetworkInterface(
+            topic_prefix=topic_prefix,
+            ipc_pub_url=ipc_pub_url,
+            ipc_sub_url=ipc_sub_url,
+            ipc_push_url=ipc_push_url,
+        ) as network, contextlib.suppress(KeyboardInterrupt):
             process_started_event.set()
 
             camera_model = cm.Camera_Model.from_file(
