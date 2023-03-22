@@ -281,11 +281,11 @@ def eye(
             cpu_graph.draw()
 
             # render GUI
-            try:
-                clipboard = glfw.get_clipboard_string(main_window).decode()
-            except (AttributeError, glfw.GLFWError):
-                # clipboard is None, might happen on startup
-                clipboard = ""
+            # try:
+            #     clipboard = glfw.get_clipboard_string(main_window).decode()
+            # except (AttributeError, glfw.GLFWError):
+            #     # clipboard is None, might happen on startup
+            clipboard = ""
             g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()
             if user_input.clipboard != clipboard:
