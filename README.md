@@ -46,7 +46,7 @@ All setup and dependency installation instructions are contained in this repo. A
 
 ### Installing Dependencies and Code
 
-To run the source code, you will need Python 3.7 or newer!
+To run the source code, you will need Python 3.7 or newer! We target Python 3.11 in our newer bundles and we recommend you to do the same.
 
 Note: It is recommended to install the requirements into a
 [virtual environment](https://docs.python.org/3/tutorial/venv.html).
