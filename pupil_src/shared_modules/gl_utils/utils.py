@@ -129,6 +129,20 @@ def is_window_visible(window):
     return visible and not iconified
 
 
+def window_focus_clipboard_callback(g_pool, window, focused):
+    if focused:
+        try:
+            clipboard = glfw.get_clipboard_string(window).decode()
+        except (AttributeError, glfw.GLFWError):
+            # clipboard is None, might happen on startup
+            clipboard = ""
+        g_pool.gui.update_clipboard(clipboard)
+        user_input = g_pool.gui.update()
+        if user_input.clipboard != clipboard:
+            # only write to clipboard if content changed
+            glfw.set_clipboard_string(main_window, user_input.clipboard)
+
+
 def cvmat_to_glmat(m):
     mat = np.eye(4, dtype=np.float32)
     mat = mat.flatten()
