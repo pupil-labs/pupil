@@ -12,8 +12,8 @@ import os
 import platform
 import signal
 import time
-from types import SimpleNamespace
 from functools import partial
+from types import SimpleNamespace
 
 
 class Is_Alive_Manager:

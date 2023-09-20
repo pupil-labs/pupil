@@ -21,10 +21,11 @@ from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
 GLFWErrorReporting.set_default()
 
+from functools import partial
+
 from plugin import System_Plugin_Base
 from pyglui import cygl, ui
 from video_capture.neon_backend.plugin import Neon_Manager
-from functools import partial
 
 # UI Platform tweaks
 if platform.system() == "Linux":

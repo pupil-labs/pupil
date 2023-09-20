@@ -14,7 +14,6 @@ import platform
 import signal
 from functools import partial
 from types import SimpleNamespace
-from functools import partial
 
 # UI Platform tweaks
 if platform.system() == "Linux":

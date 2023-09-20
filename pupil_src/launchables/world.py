@@ -11,8 +11,8 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import platform
 import signal
-from types import SimpleNamespace
 from functools import partial
+from types import SimpleNamespace
 
 
 def world(
