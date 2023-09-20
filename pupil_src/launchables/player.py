@@ -665,7 +665,7 @@ def player(
         glfw.set_cursor_pos_callback(main_window, on_pos)
         glfw.set_scroll_callback(main_window, on_scroll)
         glfw.set_drop_callback(main_window, on_drop)
-        glfw.set_window_focus_callback( main_window, on_focus)
+        glfw.set_window_focus_callback(main_window, on_focus)
 
         toggle_general_settings(True)
 
