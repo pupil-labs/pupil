@@ -97,6 +97,12 @@ cd pupil_src
 python main.py capture # or player/service
 ```
 
+#### macOS 12 Monterey and newer
+Note: Due to [technical limitations](https://github.com/libusb/libusb/issues/1014) on macOS 12 Monterey and newer, Pupil Capture and Pupil Service need to be started with administrator privileges to get access to the video camera feeds. To do that, prepend the python command with `sudo`. E.g.,:
+```sh
+sudo python main.py capture
+```
+
 #### Command Line Arguments
 
 The following arguments are supported:
