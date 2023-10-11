@@ -15,23 +15,7 @@ import typing as T
 
 from typing_extensions import Self, TypedDict
 
-if sys.version_info < (3, 9):
-
-    def get_type_hints(cls):
-        return cls.__annotations__
-
-else:
-    # Starting in Python 3.10, __annotations__ does no longer contain the annotations
-    # of the parent class. `_SerializedNamedTupleMixin.sanitize_serialized_dict`
-    # depends on the earlier implementation.
-    # We do not use `inspect.get_annotations()` as a replacement for two reasons:
-    # 1. It also does not include the base classes' annoations
-    # 2. The annotations might not be evaluated yet, containing `typing.ForwardRef`
-    #    instances
-    #
-    # `typing.get_type_hints` implements the desired behavior but is only available in
-    # Python 3.9 or newer
-    from typing import get_type_hints
+from typing import get_type_hints
 
 
 # TODO: Consider extending this pattern for notifications through the entire codebase and/or replace with dataclasses with Python 3.7
