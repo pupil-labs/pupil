@@ -654,6 +654,8 @@ def player(
             ),
         )
 
+        on_focus = partial(gl_utils.window_focus_clipboard_callback, g_pool)
+
         # Register callbacks main_window
         glfw.set_framebuffer_size_callback(main_window, on_resize)
         glfw.set_key_callback(main_window, on_window_key)
@@ -662,6 +664,7 @@ def player(
         glfw.set_cursor_pos_callback(main_window, on_pos)
         glfw.set_scroll_callback(main_window, on_scroll)
         glfw.set_drop_callback(main_window, on_drop)
+        glfw.set_window_focus_callback(main_window, on_focus)
 
         toggle_general_settings(True)
 
@@ -741,16 +744,7 @@ def player(
 
                 gl_utils.glViewport(0, 0, *window_size)
 
-                try:
-                    clipboard = glfw.get_clipboard_string(main_window).decode()
-                except (AttributeError, glfw.GLFWError):
-                    # clipbaord is None, might happen on startup
-                    clipboard = ""
-                g_pool.gui.update_clipboard(clipboard)
                 user_input = g_pool.gui.update()
-                if user_input.clipboard and user_input.clipboard != clipboard:
-                    # only write to clipboard if content changed
-                    glfw.set_clipboard_string(main_window, user_input.clipboard)
 
                 for b in user_input.buttons:
                     button, action, mods = b

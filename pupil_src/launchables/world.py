@@ -11,6 +11,7 @@ See COPYING and COPYING.LESSER for license details.
 import os
 import platform
 import signal
+from functools import partial
 from types import SimpleNamespace
 
 
@@ -344,16 +345,7 @@ def world(
                 p.gl_display()
 
             gl_utils.glViewport(0, 0, *window_size)
-            try:
-                clipboard = glfw.get_clipboard_string(main_window).decode()
-            except (AttributeError, glfw.GLFWError):
-                # clipboard is None, might happen on startup
-                clipboard = ""
-            g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()
-            if user_input.clipboard != clipboard:
-                # only write to clipboard if content changed
-                glfw.set_clipboard_string(main_window, user_input.clipboard)
 
             for button, action, mods in user_input.buttons:
                 x, y = glfw.get_cursor_pos(main_window)
@@ -674,6 +666,8 @@ def world(
                 g_pool.plugin_by_name[default_capture_name], default_capture_settings
             )
 
+        on_focus = partial(gl_utils.window_focus_clipboard_callback, g_pool)
+
         # Register callbacks main_window
         glfw.set_framebuffer_size_callback(main_window, on_resize)
         glfw.set_key_callback(main_window, on_window_key)
@@ -682,6 +676,7 @@ def world(
         glfw.set_cursor_pos_callback(main_window, on_pos)
         glfw.set_scroll_callback(main_window, on_scroll)
         glfw.set_drop_callback(main_window, on_drop)
+        glfw.set_window_focus_callback(main_window, on_focus)
 
         # gl_state settings
         gl_utils.basic_gl_setup()
@@ -781,16 +776,8 @@ def world(
                     p.gl_display()
 
                 gl_utils.glViewport(0, 0, *window_size)
-                try:
-                    clipboard = glfw.get_clipboard_string(main_window).decode()
-                except (AttributeError, glfw.GLFWError):
-                    # clipboard is None, might happen on startup
-                    clipboard = ""
-                g_pool.gui.update_clipboard(clipboard)
+
                 user_input = g_pool.gui.update()
-                if user_input.clipboard != clipboard:
-                    # only write to clipboard if content changed
-                    glfw.set_clipboard_string(main_window, user_input.clipboard)
 
                 for button, action, mods in user_input.buttons:
                     x, y = glfw.get_cursor_pos(main_window)

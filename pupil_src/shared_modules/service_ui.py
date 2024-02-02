@@ -21,6 +21,8 @@ from OpenGL.GL import GL_COLOR_BUFFER_BIT
 
 GLFWErrorReporting.set_default()
 
+from functools import partial
+
 from plugin import System_Plugin_Base
 from pyglui import cygl, ui
 from video_capture.neon_backend.plugin import Neon_Manager
@@ -193,6 +195,8 @@ class Service_UI(System_Plugin_Base):
 
         g_pool.menubar.append(ui.Button("Restart with default settings", reset_restart))
 
+        on_focus = partial(gl_utils.window_focus_clipboard_callback, g_pool)
+
         # Register callbacks main_window
         glfw.set_framebuffer_size_callback(main_window, on_resize)
         glfw.set_key_callback(main_window, on_window_key)
@@ -200,6 +204,7 @@ class Service_UI(System_Plugin_Base):
         glfw.set_mouse_button_callback(main_window, on_window_mouse_button)
         glfw.set_cursor_pos_callback(main_window, on_pos)
         glfw.set_scroll_callback(main_window, on_scroll)
+        glfw.set_window_focus_callback(main_window, on_focus)
         g_pool.gui.configuration = ui_config
         gl_utils.basic_gl_setup()
 
@@ -217,16 +222,6 @@ class Service_UI(System_Plugin_Base):
             gl_utils.glViewport(0, 0, *self.window_size)
             glfw.poll_events()
             self.gl_display()
-            try:
-                clipboard = glfw.get_clipboard_string(self.g_pool.main_window).decode()
-            except (AttributeError, glfw.GLFWError):
-                # clipbaord is None, might happen on startup
-                clipboard = ""
-            self.g_pool.gui.update_clipboard(clipboard)
-            user_input = self.g_pool.gui.update()
-            if user_input.clipboard and user_input.clipboard != clipboard:
-                # only write to clipboard if content changed
-                glfw.set_clipboard_string(self.g_pool.main_window, user_input.clipboard)
 
             glfw.swap_buffers(self.g_pool.main_window)
         else:

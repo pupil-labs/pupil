@@ -12,6 +12,7 @@ import os
 import platform
 import signal
 import time
+from functools import partial
 from types import SimpleNamespace
 
 
@@ -281,16 +282,7 @@ def eye(
             cpu_graph.draw()
 
             # render GUI
-            try:
-                clipboard = glfw.get_clipboard_string(main_window).decode()
-            except (AttributeError, glfw.GLFWError):
-                # clipboard is None, might happen on startup
-                clipboard = ""
-            g_pool.gui.update_clipboard(clipboard)
             user_input = g_pool.gui.update()
-            if user_input.clipboard != clipboard:
-                # only write to clipboard if content changed
-                glfw.set_clipboard_string(main_window, user_input.clipboard)
 
             for button, action, mods in user_input.buttons:
                 x, y = glfw.get_cursor_pos(main_window)
@@ -564,6 +556,8 @@ def eye(
         g_pool.writer = None
         g_pool.rec_path = None
 
+        on_focus = partial(gl_utils.window_focus_clipboard_callback, g_pool)
+
         # Register callbacks main_window
         glfw.set_framebuffer_size_callback(main_window, on_resize)
         glfw.set_window_iconify_callback(main_window, on_iconify)
@@ -573,6 +567,7 @@ def eye(
         glfw.set_cursor_pos_callback(main_window, on_pos)
         glfw.set_scroll_callback(main_window, on_scroll)
         glfw.set_drop_callback(main_window, on_drop)
+        glfw.set_window_focus_callback(main_window, on_focus)
 
         # load last gui configuration
         g_pool.gui.configuration = session_settings.get("ui_config", {})
