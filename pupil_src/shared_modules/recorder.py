@@ -393,6 +393,8 @@ class Recorder(System_Plugin_Base):
                 writer.append(note_dict)
             except FileNotFoundError:
                 continue
+            except ValueError:
+                continue
 
         self.pldata_writers["notify"] = writer
 
