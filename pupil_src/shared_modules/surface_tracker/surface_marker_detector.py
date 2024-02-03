@@ -30,6 +30,7 @@ __all__ = [
 
 @enum.unique
 class MarkerType(enum.Enum):
+    SCREEN_MARKER = "screen_marker"
     SQUARE_MARKER = "square_marker"
     APRILTAG_MARKER = "apriltag_marker"
 
@@ -51,17 +52,22 @@ class MarkerDetectorMode(T.NamedTuple):
 
     @classmethod
     def all_supported_cases(cls) -> T.Set["MarkerDetectorMode"]:
+        all_screen = {cls(MarkerType.SCREEN_MARKER, None)}
         all_square = {cls(MarkerType.SQUARE_MARKER, None)}
         all_apriltag = {
             cls(MarkerType.APRILTAG_MARKER, family) for family in ApriltagFamily
         }
-        return all_square | all_apriltag
+        return all_square | all_apriltag | all_screen
 
     @classmethod
     def from_marker(cls, marker: Surface_Marker) -> "MarkerDetectorMode":
         marker_type = marker.marker_type
         if marker_type == Surface_Marker_Type.SQUARE:
             return cls(MarkerType.SQUARE_MARKER, None)
+
+        if marker_type == Surface_Marker_Type.SCREEN:
+            return cls(MarkerType.SCREEN_MARKER, None)
+
         if marker_type == Surface_Marker_Type.APRILTAG_V3:
             return cls(
                 MarkerType.APRILTAG_MARKER, ApriltagFamily(marker.raw_marker.tag_family)
@@ -74,6 +80,8 @@ class MarkerDetectorMode(T.NamedTuple):
     def label(self) -> str:
         if self.marker_type == MarkerType.SQUARE_MARKER:
             return "Legacy square markers"
+        if self.marker_type == MarkerType.SCREEN_MARKER:
+            return "Screen marker"
         if self.marker_type == MarkerType.APRILTAG_MARKER:
             return f"Apriltag ({self.family.value})"
         raise ValueError(f"Unlabeled surface marker mode: {self}")
@@ -187,6 +195,84 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         markers = map(Surface_Marker.from_square_tag_detection, markers)
         markers = filter(self._surface_marker_filter, markers)
         return markers
+
+class Screen_Marker_Detector(Surface_Base_Marker_Detector):
+    def __init__(
+        self,
+        marker_min_perimeter: int = ...,
+        square_marker_inverted_markers: bool = ...,
+        square_marker_use_online_mode: bool = ...,
+    ):
+        self.__marker_min_perimeter = (
+            marker_min_perimeter if marker_min_perimeter is not ... else 60
+        )
+        self.__inverted_markers = (
+            square_marker_inverted_markers
+            if square_marker_inverted_markers is not ...
+            else False
+        )
+        self.__previous_raw_markers = []
+        self.__previous_frame_index = -1
+        self.use_online_mode = (
+            square_marker_use_online_mode
+            if square_marker_use_online_mode is not ...
+            else False
+        )
+
+    @property
+    def inverted_markers(self) -> bool:
+        return self.__inverted_markers
+
+    @inverted_markers.setter
+    def inverted_markers(self, value: bool):
+        self.__inverted_markers = value
+
+    @property
+    def marker_min_perimeter(self) -> int:
+        return self.__marker_min_perimeter
+
+    @marker_min_perimeter.setter
+    def marker_min_perimeter(self, value: int):
+        self.__marker_min_perimeter = value
+
+    def _surface_marker_filter(self, marker: Surface_Marker) -> bool:
+        return self.marker_min_perimeter <= marker.perimeter
+
+    def detect_markers_iter(
+        self, gray_img, frame_index: int
+    ) -> T.Iterable[Surface_Marker]:
+        if self.use_online_mode:
+            true_detect_every_frame = 3
+        else:
+            true_detect_every_frame = 1
+            # in offline mode we can get non-monotonic data,
+            # in which case the previous data is invalid
+            if frame_index != self.__previous_frame_index + 1:
+                self.__previous_raw_markers = []
+            # TODO: Does this mean that seeking in the recording while the
+            # surface is being detected will essentially compromise the data? As
+            # in these cases we cannot use the previous frame data for inferring
+            # better marker positions. But if we would not have seeked we could
+            # have used this information! This looks like an inconsistency!
+
+        grid_size = 5
+        aperture = 9
+        min_perimeter = self.marker_min_perimeter
+
+        markers = square_marker_detect.detect_screen_robust(
+            gray_img=gray_img,
+            prev_markers=self.__previous_raw_markers,
+            true_detect_every_frame=true_detect_every_frame,
+            invert_image=self.__inverted_markers,
+        )
+        # Robust marker detection requires previous markers to be in a different
+        # format than the surface tracker.
+        self.__previous_raw_markers = markers
+        self.__previous_frame_index = frame_index
+        markers = map(Surface_Marker.from_square_tag_detection, markers)
+        markers = filter(self._surface_marker_filter, markers)
+        return markers
+
 
 
 class Surface_Apriltag_V3_Marker_Detector_Params:
@@ -302,6 +388,12 @@ class MarkerDetectorController(Surface_Base_Marker_Detector):
                 f"\tapriltag_quad_decimate={self._apriltag_quad_decimate}\n"
                 f"\tapriltag_decode_sharpening={self._apriltag_decode_sharpening}\n"
                 ")"
+            )
+        elif self._marker_detector_mode.marker_type == MarkerType.SCREEN_MARKER:
+            self.__detector = Screen_Marker_Detector(
+                marker_min_perimeter=self._marker_min_perimeter,
+                square_marker_inverted_markers=self._square_marker_inverted_markers,
+                square_marker_use_online_mode=self._square_marker_use_online_mode,
             )
         elif self._marker_detector_mode.marker_type == MarkerType.SQUARE_MARKER:
             self.__detector = Surface_Square_Marker_Detector(

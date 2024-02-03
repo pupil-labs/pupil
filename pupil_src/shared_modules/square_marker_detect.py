@@ -159,6 +159,78 @@ def correct_gradient(gray_img, r):
         # px outside of img frame, let the other method check
         return True
 
+def sortCorners(corners, center):
+    """
+    corners : list of points
+    center : point
+    """
+    top = [corner for corner in corners if corner[1] < center[1]]
+    bot = [corner for corner in corners if corner[1] >= center[1]]
+
+    corners = np.zeros(shape=(4,2))
+
+    if (len(top) == 2) and (len(bot) == 2):
+        tl, tr = sorted(top, key=lambda p: p[0])
+        bl, br = sorted(bot, key=lambda p: p[0])
+
+    corners[0] = np.array(tl)
+    corners[1] = np.array(tr)
+    corners[2] = np.array(br)
+    corners[3] = np.array(bl)
+
+    return corners
+
+criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
+
+def detect_screen_corners_as_markers(gray_img):
+    edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, -5)
+
+    *_, contours, hierarchy = cv2.findContours(edges,
+                                    mode=cv2.RETR_TREE,
+                                    method=cv2.CHAIN_APPROX_SIMPLE,offset=(0,0)) #TC89_KCOS
+
+    hierarchy = hierarchy[0]
+    contours = np.array(contours, dtype=object)
+    contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
+
+    # logging.info(np. __version__)
+    # 1.26.1
+
+    # logging.info(cv2. __version__)
+    # 4.8.1
+
+    # logging.info(str(contours))
+    contours = np.array([c for c in contours if cv2.contourArea(c) > (20 * 2500)], dtype=object)
+
+    screen_corners = []
+    if len(contours) > 0:
+        contours = contours[0].astype(np.int32)
+
+        epsilon = cv2.arcLength(contours, True)*0.1
+        aprox_contours = [cv2.approxPolyDP(contours, epsilon, True)]
+        rect_cand = [r for r in aprox_contours if r.shape[0]==4]
+
+        for count, r in enumerate(rect_cand):
+            r = np.float32(r)
+            cv2.cornerSubPix(gray_img, r, (3,3), (-1,-1), criteria)
+            corners = np.array([r[0][0], r[1][0], r[2][0], r[3][0]])
+            centroid = corners.sum(axis=0, dtype='float64')*0.25
+            centroid.shape = (2)
+
+            corners = sortCorners(corners, centroid)
+            r[0][0], r[1][0], r[2][0], r[3][0] = corners[0], corners[1], corners[2], corners[3]
+
+            corner = {'id':32+count,
+                        'verts':r.tolist(),
+                        'perimeter':cv2.arcLength(r,closed=True),
+                        'centroid':centroid.tolist(),
+                        "frames_since_true_detection":0,
+                        "id_confidence":1.,
+                        "soft_id": 32+count,}
+
+            screen_corners.append(corner)
+
+    return screen_corners
 
 def detect_markers(
     gray_img, grid_size, min_marker_perimeter=40, aperture=11, visualize=False
@@ -173,7 +245,7 @@ def detect_markers(
 
     # remove extra encapsulation
     hierarchy = hierarchy[0]
-    contours = np.array(contours)
+    contours = np.array(contours, dtype=object)
     # keep only contours                        with parents     and      children
     contained_contours = contours[
         np.logical_and(hierarchy[:, 3] >= 0, hierarchy[:, 2] >= 0)
@@ -380,6 +452,91 @@ lk_params = dict(
 
 prev_img = None
 tick = 0
+
+def detect_screen_robust(
+    gray_img,
+    prev_markers,
+    true_detect_every_frame=1,
+    invert_image=False,
+):
+    global prev_img
+
+    if invert_image:
+        gray_img = 255 - gray_img
+
+    global tick
+    if tick == 0:
+        tick = true_detect_every_frame
+        new_markers = detect_screen_corners_as_markers(gray_img)
+    else:
+        new_markers = []
+    tick -= 1
+
+    if prev_img is not None and prev_img.shape == gray_img.shape and prev_markers:
+        new_ids = [m["id"] for m in new_markers]
+
+        # any old markers not found in the new list?
+        not_found = [m for m in prev_markers if m["id"] not in new_ids and m["id"] >= 0]
+        if not_found:
+            prev_pts = np.array(
+                [np.array(m["verts"], dtype=np.float32) for m in not_found]
+            )
+            prev_pts = np.vstack(prev_pts)
+            new_pts, flow_found, err = cv2.calcOpticalFlowPyrLK(
+                prev_img, gray_img, prev_pts, None, minEigThreshold=0.01, **lk_params
+            )
+            for marker_idx in range(flow_found.shape[0] // 4):
+                m = not_found[marker_idx]
+                m_slc = slice(marker_idx * 4, marker_idx * 4 + 4)
+                if flow_found[m_slc].sum() >= 4:
+                    found, _ = np.where(flow_found[m_slc])
+                    # calculate differences
+                    old_verts = prev_pts[m_slc][found, :]
+                    new_verts = new_pts[m_slc][found, :]
+                    vert_difs = new_verts - old_verts
+                    # calc mean dif
+                    mean_dif = vert_difs.mean(axis=0)
+                    # take n-1 closest difs
+                    dist_variance = np.linalg.norm(mean_dif - vert_difs, axis=1)
+                    if max(np.abs(dist_variance).flatten()) > 5:
+                        m["frames_since_true_detection"] = 100
+                    else:
+                        closest_mean_dif = np.argsort(dist_variance, axis=0)[:-1, 0]
+                        # recalc mean dif
+                        mean_dif = vert_difs[closest_mean_dif].mean(axis=0)
+                        # apply mean dif
+                        proj_verts = prev_pts[m_slc] + mean_dif
+                        m["verts"] = new_verts.tolist()
+                        m["centroid"] = new_verts.sum(axis=0) / 4.0
+                        m["centroid"].shape = 2
+                        m["centroid"] = m["centroid"].tolist()
+                        m["frames_since_true_detection"] += 1
+                        # m['opf_vel'] = mean_dif
+                else:
+                    m["frames_since_true_detection"] = 100
+
+        # cocatenating like this will favour older markers in the doublication deletion process
+        markers = [
+            m for m in not_found if m["frames_since_true_detection"] < 5
+        ] + new_markers
+        if markers:  # del double detected markers
+            min_distace = min(m["perimeter"] for m in markers) / 4.0
+            # min_distace = 50
+            if len(markers) > 1:
+                remove = set()
+                close_markers = get_close_markers(markers, min_distance=min_distace)
+                for f, s in close_markers.T:
+                    # remove the markers further down in the list
+                    remove.add(s)
+                remove = list(remove)
+                remove.sort(reverse=True)
+                for i in remove:
+                    del markers[i]
+    else:
+        markers = new_markers
+
+    prev_img = gray_img.copy()
+    return markers
 
 
 def detect_markers_robust(
