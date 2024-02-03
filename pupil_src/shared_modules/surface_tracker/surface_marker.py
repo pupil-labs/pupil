@@ -185,6 +185,7 @@ class _Square_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker
     def tag_id(self) -> Surface_Marker_TagID:
         return Surface_Marker_TagID(int(self.raw_id))
 
+
 class _Screen_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker):
     __slots__ = ()
 
@@ -219,6 +220,7 @@ class _Screen_Marker_Detection(_Square_Marker_Detection_Raw, Surface_Base_Marker
     @property
     def tag_id(self) -> Surface_Marker_TagID:
         return Surface_Marker_TagID(int(self.raw_id))
+
 
 _Apriltag_V3_Marker_Detection_Raw = collections.namedtuple(
     "Apriltag_V3_Marker_Detection",

@@ -159,6 +159,7 @@ def correct_gradient(gray_img, r):
         # px outside of img frame, let the other method check
         return True
 
+
 def sortCorners(corners, center):
     """
     corners : list of points
@@ -167,7 +168,7 @@ def sortCorners(corners, center):
     top = [corner for corner in corners if corner[1] < center[1]]
     bot = [corner for corner in corners if corner[1] >= center[1]]
 
-    corners = np.zeros(shape=(4,2))
+    corners = np.zeros(shape=(4, 2))
 
     if (len(top) == 2) and (len(bot) == 2):
         tl, tr = sorted(top, key=lambda p: p[0])
@@ -180,18 +181,22 @@ def sortCorners(corners, center):
 
     return corners
 
+
 criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.001)
 
-def detect_screen_corners_as_markers(gray_img):
-    edges = cv2.adaptiveThreshold(gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, -5)
 
-    *_, contours, hierarchy = cv2.findContours(edges,
-                                    mode=cv2.RETR_TREE,
-                                    method=cv2.CHAIN_APPROX_SIMPLE,offset=(0,0)) #TC89_KCOS
+def detect_screen_corners_as_markers(gray_img):
+    edges = cv2.adaptiveThreshold(
+        gray_img, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 25, -5
+    )
+
+    *_, contours, hierarchy = cv2.findContours(
+        edges, mode=cv2.RETR_TREE, method=cv2.CHAIN_APPROX_SIMPLE, offset=(0, 0)
+    )  # TC89_KCOS
 
     hierarchy = hierarchy[0]
     contours = np.array(contours, dtype=object)
-    contours = contours[np.logical_and(hierarchy[:,3]>=0, hierarchy[:,2]>=0)]
+    contours = contours[np.logical_and(hierarchy[:, 3] >= 0, hierarchy[:, 2] >= 0)]
 
     # logging.info(np. __version__)
     # 1.26.1
@@ -200,37 +205,47 @@ def detect_screen_corners_as_markers(gray_img):
     # 4.8.1
 
     # logging.info(str(contours))
-    contours = np.array([c for c in contours if cv2.contourArea(c) > (20 * 2500)], dtype=object)
+    contours = np.array(
+        [c for c in contours if cv2.contourArea(c) > (20 * 2500)], dtype=object
+    )
 
     screen_corners = []
     if len(contours) > 0:
         contours = contours[0].astype(np.int32)
 
-        epsilon = cv2.arcLength(contours, True)*0.1
+        epsilon = cv2.arcLength(contours, True) * 0.1
         aprox_contours = [cv2.approxPolyDP(contours, epsilon, True)]
-        rect_cand = [r for r in aprox_contours if r.shape[0]==4]
+        rect_cand = [r for r in aprox_contours if r.shape[0] == 4]
 
         for count, r in enumerate(rect_cand):
             r = np.float32(r)
-            cv2.cornerSubPix(gray_img, r, (3,3), (-1,-1), criteria)
+            cv2.cornerSubPix(gray_img, r, (3, 3), (-1, -1), criteria)
             corners = np.array([r[0][0], r[1][0], r[2][0], r[3][0]])
-            centroid = corners.sum(axis=0, dtype='float64')*0.25
-            centroid.shape = (2)
+            centroid = corners.sum(axis=0, dtype="float64") * 0.25
+            centroid.shape = 2
 
             corners = sortCorners(corners, centroid)
-            r[0][0], r[1][0], r[2][0], r[3][0] = corners[0], corners[1], corners[2], corners[3]
+            r[0][0], r[1][0], r[2][0], r[3][0] = (
+                corners[0],
+                corners[1],
+                corners[2],
+                corners[3],
+            )
 
-            corner = {'id':32+count,
-                        'verts':r.tolist(),
-                        'perimeter':cv2.arcLength(r,closed=True),
-                        'centroid':centroid.tolist(),
-                        "frames_since_true_detection":0,
-                        "id_confidence":1.,
-                        "soft_id": 32+count,}
+            corner = {
+                "id": 32 + count,
+                "verts": r.tolist(),
+                "perimeter": cv2.arcLength(r, closed=True),
+                "centroid": centroid.tolist(),
+                "frames_since_true_detection": 0,
+                "id_confidence": 1.0,
+                "soft_id": 32 + count,
+            }
 
             screen_corners.append(corner)
 
     return screen_corners
+
 
 def detect_markers(
     gray_img, grid_size, min_marker_perimeter=40, aperture=11, visualize=False
@@ -452,6 +467,7 @@ lk_params = dict(
 
 prev_img = None
 tick = 0
+
 
 def detect_screen_robust(
     gray_img,

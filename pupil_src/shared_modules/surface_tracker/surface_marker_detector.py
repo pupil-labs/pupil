@@ -196,6 +196,7 @@ class Surface_Square_Marker_Detector(Surface_Base_Marker_Detector):
         markers = filter(self._surface_marker_filter, markers)
         return markers
 
+
 class Screen_Marker_Detector(Surface_Base_Marker_Detector):
     def __init__(
         self,
@@ -272,7 +273,6 @@ class Screen_Marker_Detector(Surface_Base_Marker_Detector):
         markers = map(Surface_Marker.from_square_tag_detection, markers)
         markers = filter(self._surface_marker_filter, markers)
         return markers
-
 
 
 class Surface_Apriltag_V3_Marker_Detector_Params:
