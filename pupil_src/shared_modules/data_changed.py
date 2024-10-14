@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 """
 Contains classes to announce available data between different plugins. Data (e.g.
 pupil positions or gaze) is produced by some plugins and consumed by others. Data
