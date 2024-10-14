@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import os
 import signal
 
@@ -297,9 +298,9 @@ def service(
         session_settings["version"] = str(g_pool.version)
         session_settings["eye0_process_alive"] = eye_procs_alive[0].value
         session_settings["eye1_process_alive"] = eye_procs_alive[1].value
-        session_settings[
-            "min_calibration_confidence"
-        ] = g_pool.min_calibration_confidence
+        session_settings["min_calibration_confidence"] = (
+            g_pool.min_calibration_confidence
+        )
         session_settings["audio_mode"] = audio.get_audio_mode()
         session_settings.close()
 

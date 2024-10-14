@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import player_methods as pm
 from head_pose_tracker import controller, storage
 from head_pose_tracker import ui as plugin_ui
