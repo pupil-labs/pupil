@@ -83,14 +83,14 @@ def generate_msi_installer(base_dir: pathlib.Path, parsed_version: ParsedVersion
         logging.debug("Running candle")
         subprocess.call(
             [
-                r"C:\Program Files (x86)\WiX Toolset v3.11\bin\candle.exe",
+                "C:\\Program Files (x86)\\WiX Toolset v3.14\\bin\\candle.exe",
                 f"{base_dir.name}.wxs",
             ]
         )
         logging.debug("Running light")
         subprocess.call(
             [
-                r"C:\Program Files (x86)\WiX Toolset v3.11\bin\light.exe",
+                "C:\Program Files (x86)\WiX Toolset v3.14\\bin\\light.exe",
                 "-ext",
                 "WixUIExtension",
                 f"{base_dir.name}.wixobj",
