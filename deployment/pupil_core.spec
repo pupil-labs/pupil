@@ -102,7 +102,7 @@ def main():
             upx=True,
             console=True,
             icon=str(icon_path),
-            resources=[f"{icon_path},ICON"],
+            resources=[f"{icon_path},ICON,icon"],
             target_arch="x86_64",
             codesign_identity=codesign_identity,
             entitlements_file="entitlements.plist",
