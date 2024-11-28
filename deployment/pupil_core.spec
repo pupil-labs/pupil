@@ -6,6 +6,7 @@ import pathlib
 import platform
 import sys
 from importlib.resources import files
+from pathlib import Path
 
 import PyInstaller
 from PyInstaller.utils.hooks import collect_all
@@ -68,10 +69,15 @@ def main():
         all_binaries.extend(binaries)
         all_hidden_imports.extend(hiddenimports)
 
+    runtime_hooks = []
     if current_platform == SupportedPlatform.linux:
-        runtime_hooks = ["runtime_hook_sounddevice.py"]
-    else:
-        runtime_hooks = []
+        runtime_hooks.append("runtime_hook_sounddevice.py")
+
+    elif current_platform == SupportedPlatform.windows:
+        import pyglui
+
+        pyglui_lib_path = str(Path(pyglui.__file__).parent) + '.libs'
+        all_binaries.append((os.path.join(pyglui_lib_path, 'msvcp140.dll'), 'pyglui.libs'))
 
     a = Analysis(
         ["../pupil_src/main.py"],
