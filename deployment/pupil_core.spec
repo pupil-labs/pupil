@@ -57,6 +57,9 @@ def main():
         "pylsl",
         "sklearn",
         "glfw",
+        "cysignals",
+        "scipy._lib.array_api_compat.numpy.fft",
+        "scipy.special._special_ufuncs",
     ):
         datas, binaries, hiddenimports = collect_all(
             name, exclude_datas=["**/__pycache__"]
