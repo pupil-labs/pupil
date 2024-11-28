@@ -142,8 +142,6 @@ def main():
             # required for 17.10 interoperability.
             binaries = (b for b in binaries if not "libdrm.so.2" in b[0])
             binaries = list(binaries)
-        elif current_platform == SupportedPlatform.macos:
-            binaries = [b for b in binaries if ".dylibs" not in b[0]]
 
         whitelist = {"cv2"}
         blacklist_ext = {
