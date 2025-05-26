@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import abc
 import functools
 import logging
@@ -162,7 +163,9 @@ class Surface_File_Store(_Surface_File_Store_Base):
 
     def __init__(self, parent_dir, **kwargs):
         super().__init__(parent_dir=parent_dir, **kwargs)
-        self.__versioned_file_stores: Surface_File_Store.Versioned_File_Store_Mapping = {
+        self.__versioned_file_stores: (
+            Surface_File_Store.Versioned_File_Store_Mapping
+        ) = {
             0: _Surface_File_Store_V00(parent_dir=parent_dir),
             1: _Surface_File_Store_V01(parent_dir=parent_dir),
             # Add any new file store versions here...
