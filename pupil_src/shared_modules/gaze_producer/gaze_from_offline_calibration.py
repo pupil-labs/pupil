@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import data_changed
 from gaze_producer import controller, model
 from gaze_producer import ui as plugin_ui

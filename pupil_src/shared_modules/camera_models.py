@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import abc
 import ast
 import logging
@@ -350,8 +351,7 @@ class Camera_Model(abc.ABC):
         return (fx + fy) / 2
 
     @abc.abstractmethod
-    def undistort(self, img: npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]:
-        ...
+    def undistort(self, img: npt.NDArray[np.uint8]) -> npt.NDArray[np.uint8]: ...
 
     @abc.abstractmethod
     def unprojectPoints(
@@ -359,8 +359,7 @@ class Camera_Model(abc.ABC):
         pts_2d: npt.NDArray[np.float64],
         use_distortion: bool = True,
         normalize: bool = False,
-    ) -> npt.NDArray[np.float64]:
-        ...
+    ) -> npt.NDArray[np.float64]: ...
 
     @abc.abstractmethod
     def projectPoints(
@@ -369,14 +368,12 @@ class Camera_Model(abc.ABC):
         rvec: T.Optional[npt.NDArray[np.float64]] = None,
         tvec: T.Optional[npt.NDArray[np.float64]] = None,
         use_distortion: bool = True,
-    ):
-        ...
+    ): ...
 
     @abc.abstractmethod
     def undistort_points_to_ideal_point_coordinates(
         self, points: npt.NDArray[np.float64]
-    ) -> npt.NDArray[np.float64]:
-        ...
+    ) -> npt.NDArray[np.float64]: ...
 
     def undistort_points_on_image_plane(
         self, points: npt.NDArray[np.float64]
@@ -401,8 +398,7 @@ class Camera_Model(abc.ABC):
         useExtrinsicGuess: bool = False,
         rvec: T.Optional[np.ndarray] = None,
         tvec: T.Optional[np.ndarray] = None,
-    ):
-        ...
+    ): ...
 
     subclass_by_cam_type: T.Dict[str, T.Type["Camera_Model"]] = dict()
 

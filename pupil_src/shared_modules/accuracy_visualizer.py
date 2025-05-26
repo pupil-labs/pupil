@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 import traceback
 import typing as T
@@ -273,10 +274,12 @@ class Accuracy_Visualizer(Plugin):
                 self,
                 "Angular Accuracy",
                 setter=ignore,
-                getter=lambda: f"{self.accuracy.result:.3f} deg. Samples used: "
-                f"{self.accuracy.num_used} / {self.accuracy.num_total}"
-                if self.accuracy is not None
-                else "Not available",
+                getter=lambda: (
+                    f"{self.accuracy.result:.3f} deg. Samples used: "
+                    f"{self.accuracy.num_used} / {self.accuracy.num_total}"
+                    if self.accuracy is not None
+                    else "Not available"
+                ),
             )
         )
         self.menu.append(ui.Info_Text(precision_help))
@@ -286,10 +289,12 @@ class Accuracy_Visualizer(Plugin):
                 self,
                 "Angular Precision",
                 setter=ignore,
-                getter=lambda: f"{self.precision.result:.3f} deg. Samples used: "
-                f"{self.precision.num_used} / {self.precision.num_total}"
-                if self.precision is not None
-                else "Not available",
+                getter=lambda: (
+                    f"{self.precision.result:.3f} deg. Samples used: "
+                    f"{self.precision.num_used} / {self.precision.num_total}"
+                    if self.precision is not None
+                    else "Not available"
+                ),
             )
         )
 

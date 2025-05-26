@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 from .draw import draw_circle_filled_func_builder
 from .trackball import Trackball
 from .utils import (

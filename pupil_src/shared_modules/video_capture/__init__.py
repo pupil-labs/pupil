@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 """
 Video Capture provides the interface to get frames from diffferent backends.
 Backends consist of a manager and at least one source class. The manager

@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v5.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -15,12 +15,12 @@ repos:
       - id: mixed-line-ending
 
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 25.1.0
     hooks:
       - id: black
 
   - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
+    rev: v3.20.0
     hooks:
       - id: pyupgrade
         name: PyUpgrade 3.6+
@@ -28,12 +28,12 @@ repos:
         exclude: ^bin/
 
   - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
+    rev: 6.0.1
     hooks:
       - id: isort
         args: [--profile, black]
 
   - repo: https://github.com/asottile/setup-cfg-fmt
-    rev: v2.2.0
+    rev: v2.8.0
     hooks:
       - id: setup-cfg-fmt

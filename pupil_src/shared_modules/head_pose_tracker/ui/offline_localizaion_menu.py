@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 from pyglui import ui
 
 
@@ -63,9 +64,9 @@ class OfflineLocalizationMenu:
 
     def _create_calculate_button(self):
         return ui.Button(
-            label="Recalculate"
-            if self._localization_storage.calculated
-            else "Calculate",
+            label=(
+                "Recalculate" if self._localization_storage.calculated else "Calculate"
+            ),
             function=self._on_click_calculate,
         )
 
