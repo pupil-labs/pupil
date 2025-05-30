@@ -38,11 +38,11 @@ Read the [Pupil Core user guide](https://docs.pupil-labs.com/core/ "Pupil Core u
 ## Developers
 There are a number of ways you can interact with Pupil Core software as a developer:
 
-- [Use the API](https://docs.pupil-labs.com/developer/core/network-api/): Use the network based real-time API to communicate with Pupil over the network and integrate with your application.
-- [Develop a Plugin](https://docs.pupil-labs.com/developer/core/plugin-api/): Plugins are loaded at runtime from the app bundle. Note: if your plugin requires Python libraries that are not included in the application bundle, then you will need to run from source.
-- [Run from Source](#installing-dependencies): Can't do what you need to do with the network based api or plugin? Then get ready to dive into the inner workings of Pupil and run from source!
+- [Use the API](https://docs.pupil-labs.com/core/developer/): Use the network based real-time API to communicate with Pupil over the network and integrate with your application.
+- [Develop a Plugin](https://docs.pupil-labs.com/core/developer/plugin-api/#plugin-api): Plugins are loaded at runtime from the app bundle. Note: if your plugin requires Python libraries that are not included in the application bundle, then you will need to run from source.
+- Run from Source: Can't do what you need to do with the network based api or plugin? Then get ready to dive into the inner workings of Pupil and run from source!
 
-All setup and dependency installation instructions are contained in this repo. All other developer documentation is [here](https://docs.pupil-labs.com/developer/core/overview/ "Pupil Core developer docs").
+All setup and dependency installation instructions are contained in this repo. All other developer documentation is [here](https://docs.pupil-labs.com/core/developer/#overview).
 
 ### Installing Dependencies and Code
 
