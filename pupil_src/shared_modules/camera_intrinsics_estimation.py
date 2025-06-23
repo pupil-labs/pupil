@@ -329,7 +329,7 @@ class Camera_Intrinsics_Estimation(Plugin):
                     img, (4, 11), flags=cv2.CALIB_CB_ASYMMETRIC_GRID
                 )
             except cv2.error:
-                logger.exception(
+                logger.warning(
                     f"Exception in cv2.findCirclesGrid() using shape={img.shape!r} "
                     f"dtype={img.dtype!r}"
                 )
