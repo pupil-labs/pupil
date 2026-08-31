@@ -192,7 +192,6 @@ True
 
 """
 
-
 import math
 
 import numpy
