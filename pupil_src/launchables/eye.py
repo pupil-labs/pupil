@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import os
 import platform
 import signal
@@ -840,8 +841,7 @@ def eye_profiled(
     from .eye import eye
 
     cProfile.runctx(
-        dedent(
-            """
+        dedent("""
             eye(
                 timebase,
                 is_alive_flag,
@@ -858,8 +858,7 @@ def eye_profiled(
                 parent_application,
                 skip_driver_installation
             )
-            """
-        ),
+            """),
         {
             "timebase": timebase,
             "is_alive_flag": is_alive_flag,
