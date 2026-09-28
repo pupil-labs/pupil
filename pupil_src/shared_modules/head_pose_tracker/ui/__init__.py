@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 from head_pose_tracker.ui import gl_renderer_utils
 from head_pose_tracker.ui.detection_renderer import DetectionRenderer
 from head_pose_tracker.ui.gl_window import GLWindow

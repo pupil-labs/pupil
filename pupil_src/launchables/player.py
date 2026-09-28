@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import asyncio
 import os
 import platform
@@ -775,9 +776,9 @@ def player(
 
         session_settings["loaded_plugins"] = g_pool.plugins.get_initializers()
         session_settings["min_data_confidence"] = g_pool.min_data_confidence
-        session_settings[
-            "min_calibration_confidence"
-        ] = g_pool.min_calibration_confidence
+        session_settings["min_calibration_confidence"] = (
+            g_pool.min_calibration_confidence
+        )
         session_settings["ui_config"] = g_pool.gui.configuration
         session_settings["window_position"] = glfw.get_window_pos(main_window)
         session_settings["version"] = str(g_pool.version)

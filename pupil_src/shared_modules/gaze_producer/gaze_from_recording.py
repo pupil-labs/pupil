@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import file_methods as fm
 import player_methods as pm
 from gaze_producer.gaze_producer_base import GazeProducerBase

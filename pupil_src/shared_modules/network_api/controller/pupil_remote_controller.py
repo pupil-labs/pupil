@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 import socket
 from time import sleep
@@ -23,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 
 class PupilRemoteController(Observable):
-
     """Pupil Remote Controller
 
     Send simple string messages to control Pupil Capture functions:

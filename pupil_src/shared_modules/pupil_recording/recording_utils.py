@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import enum
 import os
 from pathlib import Path
@@ -206,15 +207,13 @@ def _attempt_changing_file_owners_on_macOS(rec_dir: str):
 
     logger = logging.getLogger(__name__)
     user = getpass.getuser()
-    ask_for_permissions_to_change_ownership = textwrap.dedent(
-        f"""
+    ask_for_permissions_to_change_ownership = textwrap.dedent(f"""
         set theDialogText to "Pupil Player does not have sufficient file permissions to process this recording. If you proceed Player will change the file ownership to get the neccessary access."
         set continueText to "Proceed with administrator privileges"
         set cancelText to "Cancel"
         display dialog theDialogText buttons {{cancelText, continueText}} default button continueText cancel button cancelText
         do shell script "chown -R {user} '{rec_dir}'" with administrator privileges
-        """
-    )
+        """)
 
     try:
         logger.debug(
