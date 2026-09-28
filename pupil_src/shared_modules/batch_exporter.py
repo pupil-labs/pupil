@@ -438,8 +438,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=dedent(
-            """\
+        description=dedent("""\
             ***************************************************
             Batch process recordings to produce visualizations
             The default visualization will use simple_circle
@@ -454,8 +453,7 @@ def main():
                 -e : Specify export directory if you dont want the export saved within each recording dir.
                 -p : Export a 120 frame preview only.
             ***************************************************\
-        """
-        ),
+        """),
     )
     parser.add_argument("-d", "--rec-dir", required=True)
     parser.add_argument("-s", "--settings-file", required=True)
