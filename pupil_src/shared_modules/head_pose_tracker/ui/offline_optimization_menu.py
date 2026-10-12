@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 
 from pyglui import ui
@@ -113,9 +114,9 @@ class OfflineOptimizationMenu:
 
     def _create_calculate_button(self):
         return ui.Button(
-            label="Recalculate"
-            if self._optimization_storage.calculated
-            else "Calculate",
+            label=(
+                "Recalculate" if self._optimization_storage.calculated else "Calculate"
+            ),
             function=self._on_calculate_button_clicked,
         )
 

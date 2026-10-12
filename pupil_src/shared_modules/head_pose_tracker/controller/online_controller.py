@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import tasklib
 from head_pose_tracker import worker
 from head_pose_tracker.function import pick_key_markers

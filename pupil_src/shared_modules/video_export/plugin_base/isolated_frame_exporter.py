@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import abc
 import os
 from glob import glob
@@ -88,7 +89,7 @@ def _convert_video_file(
 
     export_start, export_stop = export_range  # export_stop is exclusive
     export_window = pm.exact_window(world_timestamps, (export_start, export_stop - 1))
-    (export_from_index, export_to_index) = pm.find_closest(
+    export_from_index, export_to_index = pm.find_closest(
         input_source.timestamps, export_window
     )
 
