@@ -33,32 +33,20 @@ import textwrap
 import xml.parsers.expat
 
 # Python 2.x/3.x compatibility
-if sys.version_info[0] >= 3:
-    PYTHON_3 = True
+PYTHON_3 = True
 
-    def compat_iteritems(x):
-        return x.items()  # No iteritems() in Python 3
+def compat_iteritems(x):
+    return x.items()  # No iteritems() in Python 3
 
-    def compat_itervalues(x):
-        return x.values()  # No itervalues() in Python 3
+def compat_itervalues(x):
+    return x.values()  # No itervalues() in Python 3
 
-    def compat_keys(x):
-        return list(x.keys())  # keys() is a generator in Python 3
+def compat_keys(x):
+    return list(x.keys())  # keys() is a generator in Python 3
 
-    basestring = str  # No class basestring in Python 3
-    unichr = chr  # No unichr in Python 3
-    xrange = range  # No xrange in Python 3
-else:
-    PYTHON_3 = False
-
-    def compat_iteritems(x):
-        return x.iteritems()
-
-    def compat_itervalues(x):
-        return x.itervalues()
-
-    def compat_keys(x):
-        return x.keys()
+basestring = str  # No class basestring in Python 3
+unichr = chr  # No unichr in Python 3
+xrange = range  # No xrange in Python 3
 
 
 try:
@@ -3356,7 +3344,7 @@ def main():
         default=1.0,
         help="skew the colorization curve.  Values < 1.0 give more variety to lower percentages.  Values > 1.0 give less variety to lower percentages",
     )
-    (options, args) = optparser.parse_args(sys.argv[1:])
+    options, args = optparser.parse_args(sys.argv[1:])
 
     if len(args) > 1 and options.format != "pstats":
         optparser.error("incorrect number of arguments")
