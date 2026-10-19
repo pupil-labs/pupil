@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import importlib
 import logging
 import os
@@ -211,9 +212,9 @@ class Plugin:
         if self.g_pool.app == "exporter":
             if notification.get("delay", 0):
                 notification["_notify_time_"] = time() + notification["delay"]
-                self.g_pool.delayed_notifications[
-                    notification["subject"]
-                ] = notification
+                self.g_pool.delayed_notifications[notification["subject"]] = (
+                    notification
+                )
             else:
                 self.g_pool.notifications.append(notification)
         else:
