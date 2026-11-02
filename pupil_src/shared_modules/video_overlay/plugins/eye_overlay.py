@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import player_methods as pm
 from observable import Observable
 from plugin import Plugin

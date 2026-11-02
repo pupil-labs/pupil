@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 from .surface import Surface
 from .surface_marker_detector import MarkerDetectorController
 

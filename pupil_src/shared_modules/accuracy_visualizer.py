@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 import traceback
 import typing as T
@@ -204,22 +205,14 @@ class Accuracy_Visualizer(Plugin):
         mapping_error_help = """The mapping error (orange line) is the angular
                              distance between mapped pupil positions (red) and
                              their corresponding reference points (blue).
-                             """.replace(
-            "\n", " "
-        ).replace(
-            "  ", ""
-        )
+                             """.replace("\n", " ").replace("  ", "")
 
         calib_area_help = """The calibration area (green) is defined as the
                           convex hull of the reference points that were used
                           for calibration. 2D mapping looses accuracy outside
                           of this area. It is recommended to calibrate a big
                           portion of the subject's field of view.
-                          """.replace(
-            "\n", " "
-        ).replace(
-            "  ", ""
-        )
+                          """.replace("\n", " ").replace("  ", "")
         self.menu.append(ui.Info_Text(calib_area_help))
         self.menu.append(
             ui.Switch("vis_mapping_error", self, label="Visualize mapping error")
@@ -234,9 +227,7 @@ class Accuracy_Visualizer(Plugin):
                           that were collected during calibration. The outlier threshold
                           discards samples with high angular errors.""".replace(
             "\n", " "
-        ).replace(
-            "  ", ""
-        )
+        ).replace("  ", "")
         self.menu.append(ui.Info_Text(general_help))
 
         # self.menu.append(ui.Info_Text(''))
@@ -251,17 +242,13 @@ class Accuracy_Visualizer(Plugin):
                         between fixation locations and the corresponding
                         locations of the fixation targets.""".replace(
             "\n", " "
-        ).replace(
-            "  ", ""
-        )
+        ).replace("  ", "")
 
         precision_help = """Precision is calculated as the Root Mean Square (RMS)
                             of the angular distance (in degrees of visual angle)
                             between successive samples during a fixation.""".replace(
             "\n", " "
-        ).replace(
-            "  ", ""
-        )
+        ).replace("  ", "")
 
         def ignore(_):
             pass
@@ -273,10 +260,12 @@ class Accuracy_Visualizer(Plugin):
                 self,
                 "Angular Accuracy",
                 setter=ignore,
-                getter=lambda: f"{self.accuracy.result:.3f} deg. Samples used: "
-                f"{self.accuracy.num_used} / {self.accuracy.num_total}"
-                if self.accuracy is not None
-                else "Not available",
+                getter=lambda: (
+                    f"{self.accuracy.result:.3f} deg. Samples used: "
+                    f"{self.accuracy.num_used} / {self.accuracy.num_total}"
+                    if self.accuracy is not None
+                    else "Not available"
+                ),
             )
         )
         self.menu.append(ui.Info_Text(precision_help))
@@ -286,10 +275,12 @@ class Accuracy_Visualizer(Plugin):
                 self,
                 "Angular Precision",
                 setter=ignore,
-                getter=lambda: f"{self.precision.result:.3f} deg. Samples used: "
-                f"{self.precision.num_used} / {self.precision.num_total}"
-                if self.precision is not None
-                else "Not available",
+                getter=lambda: (
+                    f"{self.precision.result:.3f} deg. Samples used: "
+                    f"{self.precision.num_used} / {self.precision.num_total}"
+                    if self.precision is not None
+                    else "Not available"
+                ),
             )
         )
 

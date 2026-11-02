@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import abc
 import logging
 
@@ -52,7 +53,7 @@ class StorageEditMenu(plugin_ui.SelectAndRefreshMenu, abc.ABC):
     def items(self):
         # storages are just iterable, but we need things like len() and
         # access by index, so we return a list
-        return [item for item in self._storage]
+        return [*self._storage]
 
     @property
     def item_labels(self):
