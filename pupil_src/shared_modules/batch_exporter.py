@@ -97,7 +97,7 @@ class Batch_Export(System_Plugin_Base):
     def recent_events(self, events):
         if self.process:
             try:
-                recent = [d for d in self.process.fetch()]
+                recent = [*self.process.fetch()]
             except Exception as e:
                 self.status, self.progress = f"{type(e).__name__}: {e}", 0
             else:
@@ -377,7 +377,7 @@ class Batch_Exporter(Plugin):
 
     def recent_events(self, events):
         if self.search_task:
-            recent = [d for d in self.search_task.fetch()]
+            recent = [*self.search_task.fetch()]
             if recent:
                 currently_avail = [rec["source"] for rec in self.available_exports]
                 self.available_exports.extend(
@@ -438,8 +438,7 @@ def main():
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        description=dedent(
-            """\
+        description=dedent("""\
             ***************************************************
             Batch process recordings to produce visualizations
             The default visualization will use simple_circle
@@ -454,8 +453,7 @@ def main():
                 -e : Specify export directory if you dont want the export saved within each recording dir.
                 -p : Export a 120 frame preview only.
             ***************************************************\
-        """
-        ),
+        """),
     )
     parser.add_argument("-d", "--rec-dir", required=True)
     parser.add_argument("-s", "--settings-file", required=True)

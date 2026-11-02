@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 import time
 
@@ -506,7 +507,7 @@ class NDSI_Manager(Base_Manager):
     def on_event(self, caller, event):
         if event["subject"] == "detach":
             logger.debug("detached: %s" % event)
-            sensors = [s for s in self.network.sensors.values()]
+            sensors = [*self.network.sensors.values()]
 
         elif event["subject"] == "attach":
             if event["sensor_type"] == "video":
