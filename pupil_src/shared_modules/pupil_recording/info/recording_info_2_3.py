@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 from version_utils import ParsedVersion, parse_version
 
 from . import RecordingInfoFile

@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 """
 Fixations general knowledge from literature review
     + Goldberg et al. - fixations rarely < 100ms and range between 200ms and 400ms in

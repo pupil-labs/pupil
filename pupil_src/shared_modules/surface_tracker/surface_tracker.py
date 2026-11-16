@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 import typing as T
 from abc import ABCMeta, abstractmethod
@@ -166,7 +167,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
             self.gui,
             label="Heatmap Mode",
             labels=[e.value for e in self.supported_heatmap_modes],
-            selection=[e for e in self.supported_heatmap_modes],
+            selection=[*self.supported_heatmap_modes],
         )
         self.menu.append(ui.Info_Text(self.ui_info_text))
         self.menu.append(
@@ -204,7 +205,7 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
                 self.marker_detector,
                 label="Marker type",
                 labels=[mode.label for mode in supported_surface_marker_detector_modes],
-                selection=[mode for mode in supported_surface_marker_detector_modes],
+                selection=[*supported_surface_marker_detector_modes],
                 setter=set_marker_detector_mode,
             )
         )

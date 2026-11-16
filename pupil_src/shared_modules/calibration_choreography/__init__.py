@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 from .base_plugin import (
     CalibrationChoreographyPlugin,
     ChoreographyAction,

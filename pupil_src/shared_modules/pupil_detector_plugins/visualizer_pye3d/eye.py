@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import cv2
 import numpy as np
 from OpenGL.GL import *
@@ -148,7 +149,7 @@ class LeGrandEye(BasicEye):
             self.rings_eyeball.append(central_ring_rotated)
 
         # IRIS
-        angles = [phi for phi in np.linspace(0, 2 * np.pi, 40)]
+        angles = [*np.linspace(0, 2 * np.pi, 40)]
         self.iris_quads = []
         for i in range(len(angles) - 1):
             self.iris_quads.append(

@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 from head_pose_tracker.worker.detection_worker import (
     offline_detection,
     online_detection,
