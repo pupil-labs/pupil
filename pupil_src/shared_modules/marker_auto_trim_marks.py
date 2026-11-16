@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -154,9 +155,9 @@ class Marker_Auto_Trim_Marks(Plugin):
         if status:
             self.menu[0].text = "Marker Auto uses the marker detector to get markers"
         else:
-            self.menu[
-                0
-            ].text = "Marker Auto Trim Marks: Turn on Offline_Surface_Tracker!"
+            self.menu[0].text = (
+                "Marker Auto Trim Marks: Turn on Offline_Surface_Tracker!"
+            )
 
     def recent_events(self, events):
         frame = events.get("frame")

@@ -8,6 +8,7 @@ Lesser General Public License (LGPL v3.0).
 See COPYING and COPYING.LESSER for license details.
 ---------------------------------------------------------------------------~(*)
 """
+
 import logging
 import typing as T
 
@@ -216,11 +217,13 @@ class PosthocGazerHMD3D(GazerHMD3D):
     def _extract_reference_features(self, ref_data) -> np.ndarray:
         ref_3d = np.array(
             [
-                ref["mm_pos"]
-                if ref["mm_pos"] is not None
-                else self.g_pool.capture.intrinsics.unprojectPoints(
-                    ref["screen_pos"], normalize=True
-                ).reshape(-1)
+                (
+                    ref["mm_pos"]
+                    if ref["mm_pos"] is not None
+                    else self.g_pool.capture.intrinsics.unprojectPoints(
+                        ref["screen_pos"], normalize=True
+                    ).reshape(-1)
+                )
                 for ref in ref_data
             ]
         )
