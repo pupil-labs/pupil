@@ -445,7 +445,7 @@ class Offline_Blink_Detection(Observable, Blink_Detection):
             elif state == "blink ending" and classification >= 0:
                 blink_finished(idx - 1)  # blink ended previously
                 if classification > 0:
-                    start_blink(0)
+                    start_blink(idx)
                 else:
                     blink = None
                     state = "no blink"
