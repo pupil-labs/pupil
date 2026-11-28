@@ -92,7 +92,7 @@ __all__ = [
 # logger.debug(gl.glGetError())
 
 
-_original_gl_error_check = OpenGL.error._ErrorChecker.glCheckError
+_original_gl_error_check = getattr(OpenGL.error._ErrorChecker, "glCheckError", None)
 
 
 def custom_gl_error_handling(
@@ -117,7 +117,21 @@ def custom_gl_error_handling(
             logging.debug("No more errors found in OpenGL error queue!")
 
 
-OpenGL.error._ErrorChecker.glCheckError = custom_gl_error_handling
+def _install_custom_gl_error_handling():
+    if OpenGL.error._ErrorChecker is None or _original_gl_error_check is None:
+        return
+    try:
+        OpenGL.error._ErrorChecker.glCheckError = custom_gl_error_handling
+    except TypeError:
+        # OpenGL_accelerate replaces _ErrorChecker with a C extension type whose
+        # attributes cannot be monkey-patched.
+        logger.debug(
+            "Could not patch OpenGL.error._ErrorChecker.glCheckError; "
+            "using default PyOpenGL error checker."
+        )
+
+
+_install_custom_gl_error_handling()
 
 # END OPENGL DEBUGGING
 ########################################################################################
