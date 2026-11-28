@@ -522,7 +522,11 @@ class GUI:
         self.heatmap_textures.pop(surface)
         self._edit_surf_markers.discard(surface)
         self._edit_surf_corners.discard(surface)
-        self.surface_windows.pop(surface)
+        self.surface_windows.pop(surface).close_window()
+
+    def close_surface_windows(self):
+        for window in self.surface_windows.values():
+            window.close_window()
 
 
 def _get_norm_to_points_trans(points):
