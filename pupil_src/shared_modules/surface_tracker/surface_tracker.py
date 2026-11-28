@@ -561,3 +561,4 @@ class Surface_Tracker(Plugin, metaclass=ABCMeta):
     def cleanup(self):
         self._ui_heatmap_mode_selector = None
         self.save_surface_definitions_to_file()
+        self.gui.close_surface_windows()
