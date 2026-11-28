@@ -43,7 +43,7 @@ def main():
 
     all_datas = []
     all_binaries = []
-    all_hidden_imports = []
+    all_hidden_imports = ["scipy.special._cdflib"]
     for name in (
         "zmq",
         "pyre",
@@ -56,6 +56,7 @@ def main():
         "OpenGL.platform.glx",  # x11 support
         "pylsl",
         "sklearn",
+        "scipy.special",
         "glfw",
     ):
         datas, binaries, hiddenimports = collect_all(

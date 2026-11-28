@@ -110,6 +110,9 @@ def world(
         n = {"subject": "pupil_detector.set_enabled", "value": is_on}
         ipc_pub.notify(n)
 
+    glfw = None
+    g_pool = None
+    main_window = None
     try:
         from background_helper import IPC_Logging_Task_Proxy
 
@@ -837,14 +840,22 @@ def world(
         logger.error(f"Process Capture crashed with trace:\n{trace}")
         raise
     finally:
-        # de-init all running plugins
-        for p in g_pool.plugins:
-            p.alive = False
-        g_pool.plugins.clean()
+        if g_pool is not None:
+            # de-init all running plugins
+            plugins = getattr(g_pool, "plugins", None)
+            if plugins is not None:
+                for p in plugins:
+                    p.alive = False
+                plugins.clean()
 
-        g_pool.gui.terminate()
-        glfw.destroy_window(main_window)
-        glfw.terminate()
+            gui = getattr(g_pool, "gui", None)
+            if gui is not None:
+                gui.terminate()
+
+        if glfw is not None:
+            if main_window is not None:
+                glfw.destroy_window(main_window)
+            glfw.terminate()
 
         # shut down eye processes:
         stop_eye_process(0)
